@@ -1,0 +1,6 @@
+@KidsParadiseByShoptick.APIs_HostAddress = http://localhost:5110
+
+GET {{KidsParadiseByShoptick.APIs_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,11 @@
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\bin\Debug\net9.0\KidsParadiseByShoptick.Domain.deps.json
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\bin\Debug\net9.0\KidsParadiseByShoptick.Domain.dll
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\bin\Debug\net9.0\KidsParadiseByShoptick.Domain.pdb
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.GeneratedMSBuildEditorConfig.editorconfig
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.AssemblyInfoInputs.cache
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.AssemblyInfo.cs
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.csproj.CoreCompileInputs.cache
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.dll
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\refint\KidsParadiseByShoptick.Domain.dll
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\KidsParadiseByShoptick.Domain.pdb
+E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.Domain\obj\Debug\net9.0\ref\KidsParadiseByShoptick.Domain.dll
