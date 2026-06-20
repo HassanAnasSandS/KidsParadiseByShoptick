@@ -1,0 +1,41 @@
+## Visual Studio / IDE
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.pubxml.user
+
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Node / React
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+## Publish / deploy output
+KidsParadiseByShoptick.Published/Live/
+
+## User uploads (runtime content)
+**/uploads/
+KidsParadiseByShoptick.APIs/wwwroot/uploads/
+
+## Vite build assets (rebuilt on npm run build)
+KidsParadiseByShoptick.APIs/wwwroot/assets/
+
+## OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
