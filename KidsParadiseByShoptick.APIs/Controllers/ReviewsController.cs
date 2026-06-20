@@ -29,8 +29,8 @@ public class ReviewsController : ControllerBase
 
     [HttpGet("pending")]
     public async Task<ActionResult<IReadOnlyList<PendingReviewDto>>> GetPending(
-        [FromQuery] string email, CancellationToken cancellationToken)
-        => Ok(await _reviewService.GetPendingForCustomerAsync(email, cancellationToken));
+        [FromQuery] string whatsapp, CancellationToken cancellationToken)
+        => Ok(await _reviewService.GetPendingForCustomerAsync(whatsapp, cancellationToken));
 
     [HttpPost("upload")]
     [RequestSizeLimit(5 * 1024 * 1024)]

@@ -18,12 +18,12 @@ const statusColors: Record<string, string> = {
 
 function OrderCard({
   order,
-  email,
+  whatsapp,
   pendingItems,
   onReviewSuccess,
 }: {
   order: Order;
-  email: string;
+  whatsapp: string;
   pendingItems: PendingReview[];
   onReviewSuccess: () => void;
 }) {
@@ -84,7 +84,7 @@ function OrderCard({
                 <ReviewForm
                   key={`${item.orderId}-${item.toyId}`}
                   item={item}
-                  email={email}
+                  whatsapp={whatsapp}
                   onSuccess={onReviewSuccess}
                 />
               ))}
@@ -98,16 +98,22 @@ function OrderCard({
           )}
 
           {(order.status === 'Confirmed' || order.status === 'Shipped' || order.status === 'Delivered') &&
-            order.advanceAmount != null && (
+            (order.advanceAmount != null || order.discountAmount != null) && (
             <div className="bg-blue-50 rounded-xl p-4 text-sm space-y-2">
               <p className="font-semibold text-slate-700">Payment Details</p>
               <div className="flex justify-between">
                 <span className="text-slate-500">Order Total</span>
                 <span className="font-semibold">{formatPrice(order.total)}</span>
               </div>
+              {(order.discountAmount ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Discount</span>
+                  <span className="font-semibold text-orange-700">-{formatPrice(order.discountAmount!)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500">Advance Paid</span>
-                <span className="font-semibold text-green-700">{formatPrice(order.advanceAmount)}</span>
+                <span className="font-semibold text-green-700">{formatPrice(order.advanceAmount ?? 0)}</span>
               </div>
               <div className="flex justify-between border-t border-blue-100 pt-2">
                 <span className="text-slate-700 font-medium">Balance Due</span>
@@ -118,7 +124,7 @@ function OrderCard({
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="text-slate-500">City:</span> {order.city}</div>
-            <div><span className="text-slate-500">Phone:</span> {order.phone}</div>
+            <div><span className="text-slate-500">WhatsApp:</span> {order.whatsapp}</div>
             <div className="col-span-2 break-words"><span className="text-slate-500">Address:</span> {order.address}</div>
           </div>
 
@@ -141,29 +147,29 @@ function OrderCard({
 
 export function TrackOrderPage() {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState('');
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState('');
+  const [submittedWhatsapp, setSubmittedWhatsapp] = useState<string | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ['track', submittedEmail],
-    queryFn: () => api.trackOrdersByEmail(submittedEmail!),
-    enabled: !!submittedEmail,
+    queryKey: ['track', submittedWhatsapp],
+    queryFn: () => api.trackOrdersByWhatsapp(submittedWhatsapp!),
+    enabled: !!submittedWhatsapp,
     retry: false,
   });
 
   const { data: pendingReviews } = useQuery({
-    queryKey: ['pending-reviews', submittedEmail],
-    queryFn: () => api.getPendingReviews(submittedEmail!),
-    enabled: !!submittedEmail && !!orders?.some((o) => o.status === 'Delivered'),
+    queryKey: ['pending-reviews', submittedWhatsapp],
+    queryFn: () => api.getPendingReviews(submittedWhatsapp!),
+    enabled: !!submittedWhatsapp && !!orders?.some((o) => o.status === 'Delivered'),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmittedEmail(email.trim().toLowerCase());
+    setSubmittedWhatsapp(whatsapp.trim());
   };
 
   const refreshReviews = () => {
-    queryClient.invalidateQueries({ queryKey: ['pending-reviews', submittedEmail] });
+    queryClient.invalidateQueries({ queryKey: ['pending-reviews', submittedWhatsapp] });
     queryClient.invalidateQueries({ queryKey: ['reviews'] });
   };
 
@@ -172,41 +178,40 @@ export function TrackOrderPage() {
       <div className="text-center mb-8">
         <Package className="w-12 h-12 text-brand-600 mx-auto mb-3" />
         <h1 className="text-3xl font-bold text-slate-800">My Orders</h1>
-        <p className="text-slate-500 mt-1">Enter your email to view all your orders</p>
+        <p className="text-slate-500 mt-1">Enter your WhatsApp number to view all your orders</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-slate-100 space-y-4">
         <Input
-          label="Email"
-          type="email"
+          label="WhatsApp Number"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="your@email.com"
+          value={whatsapp}
+          onChange={(e) => setWhatsapp(e.target.value)}
+          placeholder="e.g. 03221234567"
         />
         <Button type="submit" className="w-full"><Search className="w-4 h-4" /> View My Orders</Button>
       </form>
 
-      {isLoading && submittedEmail && (
+      {isLoading && submittedWhatsapp && (
         <div className="mt-6 bg-white rounded-2xl p-6 border skeleton h-48" />
       )}
 
-      {submittedEmail && !isLoading && orders?.length === 0 && (
+      {submittedWhatsapp && !isLoading && orders?.length === 0 && (
         <div className="mt-6 text-center text-slate-500 bg-slate-50 rounded-xl p-6">
-          No orders found for <span className="font-medium text-slate-700">{submittedEmail}</span>
+          No orders found for <span className="font-medium text-slate-700">{submittedWhatsapp}</span>
         </div>
       )}
 
       {orders && orders.length > 0 && (
         <div className="mt-6 space-y-3 animate-fade-in">
           <p className="text-sm text-slate-500">
-            {orders.length} order{orders.length !== 1 ? 's' : ''} found for <span className="font-medium text-slate-700">{submittedEmail}</span>
+            {orders.length} order{orders.length !== 1 ? 's' : ''} found for <span className="font-medium text-slate-700">{submittedWhatsapp}</span>
           </p>
           {orders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
-              email={submittedEmail!}
+              whatsapp={submittedWhatsapp!}
               pendingItems={pendingReviews?.filter((p) => p.orderId === order.id) ?? []}
               onReviewSuccess={refreshReviews}
             />

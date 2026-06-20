@@ -1,8 +1,11 @@
 using System.Text;
 using KidsParadiseByShoptick.Application;
+using KidsParadiseByShoptick.Application.Options;
+using KidsParadiseByShoptick.APIs.Middleware;
 using KidsParadiseByShoptick.Infrastructure;
 using KidsParadiseByShoptick.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 
@@ -13,6 +16,16 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
+builder.Services.AddMemoryCache();
+builder.Services.Configure<SeoOptions>(builder.Configuration.GetSection(SeoOptions.SectionName));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    // Only forward client IP and HTTPS scheme — NOT host (prevents www↔apex rewrite bugs).
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddResponseCaching();
 builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -75,6 +88,15 @@ Directory.CreateDirectory(publishedPath);
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
+// 1) Trust proxy/IIS forwarded headers (HTTPS/host behind reverse proxy)
+app.UseForwardedHeaders();
+
+// 2) Force canonical domain: http→https, non-www→www (301)
+app.UseMiddleware<CanonicalHostMiddleware>();
+
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -86,6 +108,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseResponseCaching();
 
 app.MapControllers();
 app.MapFallbackToFile("index.html");

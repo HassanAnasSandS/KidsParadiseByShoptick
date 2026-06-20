@@ -13,6 +13,8 @@ public static class DependencyInjection
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAdminAuthService, AdminAuthService>();
+        services.AddScoped<ISiteImageService, SiteImageService>();
+        services.AddScoped<ISitemapService, SitemapService>();
         services.AddSingleton<IDeliveryChargeService, DeliveryChargeService>();
         return services;
     }

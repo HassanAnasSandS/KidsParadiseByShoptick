@@ -7,8 +7,10 @@ import { CategoryCard } from '@/components/shop/CategoryCard';
 import { HeroSlider } from '@/components/shop/HeroSlider';
 import { Button } from '@/components/ui/Button';
 import { PAYMENT_POLICY } from '@/lib/utils';
+import { useSiteImages } from '@/hooks/useSiteImages';
 
 export function HomePage() {
+  const { get } = useSiteImages();
   const { data: latest, isLoading: loadingLatest } = useQuery({
     queryKey: ['latest-toys'],
     queryFn: api.getLatestToys,
@@ -47,7 +49,7 @@ export function HomePage() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="relative rounded-3xl overflow-hidden h-48 md:h-56 group">
             <img
-              src="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800&q=80"
+              src={get('banner_new_arrivals')}
               alt=""
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
@@ -62,7 +64,7 @@ export function HomePage() {
           </div>
           <div className="relative rounded-3xl overflow-hidden h-48 md:h-56 group">
             <img
-              src="https://images.unsplash.com/photo-1530324563441-b64b6e1c0d26?w=800&q=80"
+              src={get('banner_perfect_gifts')}
               alt=""
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />

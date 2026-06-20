@@ -8,5 +8,6 @@ public interface IUnitOfWork
     IOrderRepository Orders { get; }
     IReviewRepository Reviews { get; }
     IAdminUserRepository AdminUsers { get; }
+    ISiteImageRepository SiteImages { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

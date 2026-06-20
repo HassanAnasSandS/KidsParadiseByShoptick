@@ -6,8 +6,10 @@ import { api } from '@/api/client';
 import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
+import { useSiteImages } from '@/hooks/useSiteImages';
 
 export function ShopPage() {
+  const { get } = useSiteImages();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
   const categoryId = searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined;
@@ -77,7 +79,7 @@ export function ShopPage() {
     <div>
       <div className="relative h-40 md:h-52 overflow-hidden">
         <img
-          src="/hero/slide-1.jpg"
+          src={get('shop_header')}
           alt=""
           className="w-full h-full object-cover"
         />

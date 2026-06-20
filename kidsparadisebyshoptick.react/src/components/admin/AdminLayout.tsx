@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Package, Tags, ShoppingBag, LogOut, Menu, X, Store, Star } from 'lucide-react';
+import { Package, Tags, ShoppingBag, LogOut, Menu, X, Store, Star, ImageIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BrandName } from '@/components/ui/BrandName';
 
@@ -8,6 +8,7 @@ const nav = [
   { to: '/admin/toys', label: 'Toys', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/reviews', label: 'Reviews', icon: Star },
+  { to: '/admin/customization', label: 'Images', icon: ImageIcon },
 ];
 
 export function AdminLayout() {
@@ -15,7 +16,9 @@ export function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const currentPage = nav.find((n) => n.to === location.pathname)?.label ?? 'Admin';
+  const currentPage =
+    nav.find((n) => n.to === location.pathname)?.label
+    ?? (location.pathname.startsWith('/admin/orders') ? 'Orders' : 'Admin');
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -70,18 +73,21 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {nav.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors ${
-                location.pathname === to ? 'bg-brand-600 text-white' : 'text-slate-300 active:bg-slate-800'
-              }`}
-            >
+          {nav.map(({ to, label, icon: Icon }) => {
+              const active = location.pathname === to || (to === '/admin/orders' && location.pathname.startsWith('/admin/orders'));
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors ${
+                    active ? 'bg-brand-600 text-white' : 'text-slate-300 active:bg-slate-800'
+                  }`}
+                >
               <Icon className="w-5 h-5 shrink-0" />
               <span>{label}</span>
             </Link>
-          ))}
+              );
+            })}
         </nav>
 
         <div className="p-3 border-t border-slate-800 safe-area-pb">
@@ -126,7 +132,7 @@ export function AdminLayout() {
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
           <div className="flex safe-area-pb">
             {nav.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to;
+              const active = location.pathname === to || (to === '/admin/orders' && location.pathname.startsWith('/admin/orders'));
               return (
                 <Link
                   key={to}

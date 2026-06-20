@@ -25,7 +25,7 @@ export function StarRating({ value, onChange, size = 'md' }: { value: number; on
   );
 }
 
-export function ReviewForm({ item, email, onSuccess }: { item: PendingReview; email: string; onSuccess: () => void }) {
+export function ReviewForm({ item, whatsapp, onSuccess }: { item: PendingReview; whatsapp: string; onSuccess: () => void }) {
   const [name, setName] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -36,7 +36,7 @@ export function ReviewForm({ item, email, onSuccess }: { item: PendingReview; em
 
   const submit = useMutation({
     mutationFn: () => api.createReview({
-      email,
+      whatsapp,
       orderId: item.orderId,
       toyId: item.toyId,
       reviewerName: name,

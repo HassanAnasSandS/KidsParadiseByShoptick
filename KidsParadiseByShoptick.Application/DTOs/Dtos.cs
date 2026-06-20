@@ -20,24 +20,24 @@ public record PendingReviewDto(
     int OrderId, string OrderNumber, int ToyId, string ToyName, string? ToyImageUrl);
 
 public record CreateReviewRequest(
-    string Email, int OrderId, int ToyId, string ReviewerName, int Rating, string Comment, string? ImagePath);
+    string Whatsapp, int OrderId, int ToyId, string ReviewerName, int Rating, string Comment, string? ImagePath);
 
 public record AdminUpdateReviewRequest(string ReviewerName, int Rating, string Comment, string? ImagePath);
 
 public record ReviewEligibilityDto(bool CanReview, string? Message);
 
 public record PlaceOrderRequest(
-    string Email, string Name, string Phone, string Whatsapp, string City, string Address,
+    string Name, string Whatsapp, string City, string Address,
     IReadOnlyList<int> ToyIds);
 
 public record OrderItemDto(int ToyId, string ToyName, decimal Price, string? ImageUrl);
 
 public record OrderDto(
     int Id, string OrderNumber, string Status, decimal SubTotal,
-    decimal DeliveryCharge, decimal Total, decimal? AdvanceAmount, decimal BalanceAmount,
+    decimal DeliveryCharge, decimal Total, decimal? AdvanceAmount, decimal? DiscountAmount, decimal BalanceAmount,
     string City, string Address,
-    string Phone, string Whatsapp, string? TrackingNumber,
-    string CustomerName, string CustomerEmail,
+    string Whatsapp, string? TrackingNumber,
+    string CustomerName,
     DateTime CreatedAt, IReadOnlyList<OrderItemDto> Items);
 
 public record OrderPlacedDto(string OrderNumber, decimal Total, decimal DeliveryCharge);
@@ -58,6 +58,17 @@ public record UpdateToyRequest(
     int CategoryId, string Name, decimal Price, decimal? SalePrice,
     IReadOnlyList<string> ImagePaths);
 
-public record UpdateOrderStatusRequest(string Status, string? TrackingNumber, decimal? AdvanceAmount);
+public record UpdateOrderStatusRequest(string Status, string? TrackingNumber, decimal? AdvanceAmount, decimal? DiscountAmount);
+
+public record AdminUpdateOrderRequest(
+    string CustomerName,
+    string Whatsapp,
+    string City,
+    string Address,
+    decimal DeliveryCharge,
+    decimal? AdvanceAmount,
+    decimal? DiscountAmount,
+    string? TrackingNumber,
+    IReadOnlyList<int> ToyIds);
 
 public record UploadResponse(string Path, string Url);

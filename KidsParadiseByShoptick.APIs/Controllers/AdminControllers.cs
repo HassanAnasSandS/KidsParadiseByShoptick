@@ -125,6 +125,43 @@ public class AdminOrdersController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetAll(CancellationToken cancellationToken)
         => Ok(await _orderService.GetAllAdminAsync(cancellationToken));
 
+    [HttpPost]
+    public async Task<ActionResult<OrderPlacedDto>> Create(
+        [FromBody] PlaceOrderRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _orderService.PlaceOrderAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<OrderDto>> GetById(int id, CancellationToken cancellationToken)
+    {
+        var result = await _orderService.GetByIdAdminAsync(id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<OrderDto>> Update(
+        int id, [FromBody] AdminUpdateOrderRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _orderService.UpdateAdminAsync(id, request, cancellationToken);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPatch("{id:int}/status")]
     public async Task<ActionResult<OrderDto>> UpdateStatus(
         int id, [FromBody] UpdateOrderStatusRequest request, CancellationToken cancellationToken)
@@ -158,7 +195,7 @@ public class AdminUploadController : ControllerBase
         if (file is null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded." });
 
-        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif" };
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!allowed.Contains(ext))
             return BadRequest(new { message = "Invalid file type." });
@@ -166,5 +203,57 @@ public class AdminUploadController : ControllerBase
         await using var stream = file.OpenReadStream();
         var path = await _fileStorage.SaveImageAsync(stream, file.FileName, folder, cancellationToken);
         return Ok(new UploadResponse(path, _fileStorage.GetPublicUrl(path)));
+    }
+}
+
+[ApiController]
+[Route("api/admin/site-images")]
+[Authorize(Roles = "Admin")]
+public class AdminSiteImagesController : ControllerBase
+{
+    private readonly ISiteImageService _siteImageService;
+
+    public AdminSiteImagesController(ISiteImageService siteImageService) => _siteImageService = siteImageService;
+
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<SiteImageAdminDto>>> GetAll(CancellationToken cancellationToken)
+        => Ok(await _siteImageService.GetAdminAsync(cancellationToken));
+
+    [HttpPost("{key}/upload")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<SiteImageAdminDto>> Upload(
+        string key, IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No file uploaded." });
+
+        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif" };
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowed.Contains(ext))
+            return BadRequest(new { message = "Invalid file type." });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await _siteImageService.UploadAsync(key, stream, file.FileName, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{key}/custom")]
+    public async Task<ActionResult<SiteImageAdminDto>> Reset(string key, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _siteImageService.ResetAsync(key, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

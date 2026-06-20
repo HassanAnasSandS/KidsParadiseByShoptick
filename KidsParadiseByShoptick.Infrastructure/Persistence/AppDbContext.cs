@@ -15,12 +15,13 @@ public class AppDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
+    public DbSet<SiteImage> SiteImages => Set<SiteImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Customer>(e =>
         {
-            e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.Whatsapp).IsUnique();
             e.Property(x => x.Email).HasMaxLength(256);
             e.Property(x => x.Name).HasMaxLength(200);
             e.Property(x => x.Phone).HasMaxLength(50);
@@ -57,6 +58,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.DeliveryCharge).HasPrecision(18, 2);
             e.Property(x => x.Total).HasPrecision(18, 2);
             e.Property(x => x.AdvanceAmount).HasPrecision(18, 2);
+            e.Property(x => x.DiscountAmount).HasPrecision(18, 2);
             e.Property(x => x.City).HasMaxLength(100);
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.Phone).HasMaxLength(50);
@@ -87,6 +89,15 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.Username).IsUnique();
             e.Property(x => x.Username).HasMaxLength(100);
             e.Property(x => x.Password).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<SiteImage>(e =>
+        {
+            e.HasIndex(x => x.Key).IsUnique();
+            e.Property(x => x.Key).HasMaxLength(100);
+            e.Property(x => x.Label).HasMaxLength(200);
+            e.Property(x => x.Group).HasMaxLength(100);
+            e.Property(x => x.ImagePath).HasMaxLength(500);
         });
     }
 }

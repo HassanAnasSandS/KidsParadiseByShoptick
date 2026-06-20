@@ -8,8 +8,8 @@ import { ReviewForm, StarRatingDisplay } from '@/components/shop/ReviewForm';
 
 export function ReviewsPage() {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState('');
-  const [lookupEmail, setLookupEmail] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [lookupWhatsapp, setLookupWhatsapp] = useState('');
 
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['reviews'],
@@ -17,18 +17,18 @@ export function ReviewsPage() {
   });
 
   const { data: pending } = useQuery({
-    queryKey: ['pending-reviews', lookupEmail],
-    queryFn: () => api.getPendingReviews(lookupEmail),
-    enabled: !!lookupEmail && lookupEmail.includes('@'),
+    queryKey: ['pending-reviews', lookupWhatsapp],
+    queryFn: () => api.getPendingReviews(lookupWhatsapp),
+    enabled: !!lookupWhatsapp,
   });
 
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim().includes('@')) setLookupEmail(email.trim());
+    if (whatsapp.trim()) setLookupWhatsapp(whatsapp.trim());
   };
 
   const refreshPending = () => {
-    queryClient.invalidateQueries({ queryKey: ['pending-reviews', lookupEmail] });
+    queryClient.invalidateQueries({ queryKey: ['pending-reviews', lookupWhatsapp] });
     queryClient.invalidateQueries({ queryKey: ['reviews'] });
   };
 
@@ -79,17 +79,16 @@ export function ReviewsPage() {
 
         <form onSubmit={handleLookup} className="flex flex-col sm:flex-row gap-3 mb-6 max-w-lg">
           <Input
-            label="Your order email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email used at checkout"
+            label="Your WhatsApp number"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="number used at checkout"
             className="flex-1"
           />
           <Button type="submit" className="sm:self-end">Check Orders</Button>
         </form>
 
-        {lookupEmail && pending && pending.length === 0 && (
+        {lookupWhatsapp && pending && pending.length === 0 && (
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
             No items ready to review. Reviews unlock after your order is delivered.
           </p>
@@ -104,7 +103,7 @@ export function ReviewsPage() {
               <ReviewForm
                 key={`${item.orderId}-${item.toyId}`}
                 item={item}
-                email={lookupEmail}
+                whatsapp={lookupWhatsapp}
                 onSuccess={refreshPending}
               />
             ))}

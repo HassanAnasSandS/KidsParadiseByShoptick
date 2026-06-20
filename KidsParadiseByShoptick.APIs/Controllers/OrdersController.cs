@@ -34,12 +34,12 @@ public class OrdersController : ControllerBase
 
     [HttpGet("track")]
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> Track(
-        [FromQuery] string email, CancellationToken cancellationToken)
+        [FromQuery] string whatsapp, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(email))
-            return BadRequest(new { message = "Email is required." });
+        if (string.IsNullOrWhiteSpace(whatsapp))
+            return BadRequest(new { message = "WhatsApp number is required." });
 
-        var result = await _orderService.GetOrdersByEmailAsync(email, cancellationToken);
+        var result = await _orderService.GetOrdersByWhatsappAsync(whatsapp, cancellationToken);
         return Ok(result);
     }
 

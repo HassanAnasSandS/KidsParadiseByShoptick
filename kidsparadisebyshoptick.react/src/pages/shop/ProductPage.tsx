@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ShoppingCart, Truck, Zap } from 'lucide-react';
+import { Star, ShoppingCart, Truck, Zap, ZoomIn, Trash2 } from 'lucide-react';
 import { api, effectivePrice, toyPrimaryImage } from '@/api/client';
 import { useCartStore } from '@/store/cart';
 import { Button } from '@/components/ui/Button';
 import { ToyInquiryButton } from '@/components/shop/ToyInquiryButton';
+import { ImageLightbox } from '@/components/shop/ImageLightbox';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeImage, setActiveImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
+  const removeItem = useCartStore((s) => s.removeItem);
+  const inCart = useCartStore((s) => s.items.some((i) => i.toyId === Number(id)));
 
   const { data: toy, isLoading } = useQuery({
     queryKey: ['toy', id],
@@ -55,6 +59,10 @@ export function ProductPage() {
     });
   };
 
+  const handleRemoveFromCart = () => {
+    removeItem(toy.id);
+  };
+
   const handleOrderNow = () => {
     navigate('/checkout', {
       state: {
@@ -73,9 +81,17 @@ export function ProductPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         <div>
-          <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="group relative w-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm cursor-zoom-in"
+            aria-label="View full size image"
+          >
             <img src={images[activeImage]} alt={toy.name} className="w-full aspect-square object-cover" />
-          </div>
+            <span className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/55 text-white text-xs font-medium px-3 py-1.5 rounded-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <ZoomIn className="w-3.5 h-3.5" /> Tap to zoom
+            </span>
+          </button>
           {images.length > 1 && (
             <div className="flex gap-2 mt-3 overflow-x-auto">
               {images.map((img, i) => (
@@ -124,9 +140,15 @@ export function ProductPage() {
 
           {!toy.isSold && (
             <div className="flex flex-col sm:flex-row gap-3 mt-6">
-              <Button onClick={handleAddToCart} className="w-full sm:w-auto">
-                <ShoppingCart className="w-4 h-4" /> Add to Cart
-              </Button>
+              {inCart ? (
+                <Button variant="danger" onClick={handleRemoveFromCart} className="w-full sm:w-auto">
+                  <Trash2 className="w-4 h-4" /> Remove from Cart
+                </Button>
+              ) : (
+                <Button onClick={handleAddToCart} className="w-full sm:w-auto">
+                  <ShoppingCart className="w-4 h-4" /> Add to Cart
+                </Button>
+              )}
               <Button variant="outline" onClick={handleOrderNow} className="w-full sm:w-auto">
                 <Zap className="w-4 h-4" /> Order Now
               </Button>
@@ -135,6 +157,15 @@ export function ProductPage() {
           )}
         </div>
       </div>
+
+      {lightboxOpen && (
+        <ImageLightbox
+          images={images}
+          initialIndex={activeImage}
+          alt={toy.name}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 }

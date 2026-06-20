@@ -1,3 +1,4 @@
+using KidsParadiseByShoptick.Application;
 using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Domain.Entities;
@@ -29,9 +30,9 @@ public class ReviewService : IReviewService
         return reviews.Select(Map).ToList();
     }
 
-    public async Task<IReadOnlyList<PendingReviewDto>> GetPendingForCustomerAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PendingReviewDto>> GetPendingForCustomerAsync(string whatsapp, CancellationToken cancellationToken = default)
     {
-        var customer = await _unitOfWork.Customers.GetByEmailAsync(email.Trim().ToLower(), cancellationToken);
+        var customer = await _unitOfWork.Customers.GetByWhatsappAsync(whatsapp, cancellationToken);
         if (customer is null) return [];
 
         var orders = await _unitOfWork.Orders.GetDeliveredOrdersForCustomerAsync(customer.Id, cancellationToken);
@@ -62,9 +63,8 @@ public class ReviewService : IReviewService
         if (request.Rating is < 1 or > 5)
             throw new InvalidOperationException("Rating must be between 1 and 5.");
 
-        var email = request.Email.Trim().ToLower();
-        var customer = await _unitOfWork.Customers.GetByEmailAsync(email, cancellationToken)
-            ?? throw new InvalidOperationException("No delivered order found for this email.");
+        var customer = await _unitOfWork.Customers.GetByWhatsappAsync(request.Whatsapp, cancellationToken)
+            ?? throw new InvalidOperationException("No delivered order found for this WhatsApp number.");
 
         var order = await _unitOfWork.Orders.GetWithDetailsAsync(request.OrderId, cancellationToken)
             ?? throw new InvalidOperationException("Order not found.");

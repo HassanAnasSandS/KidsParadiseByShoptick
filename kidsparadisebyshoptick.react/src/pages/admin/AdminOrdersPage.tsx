@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, X, ChevronDown, ChevronUp, Package, Filter } from 'lucide-react';
+import { Search, X, ChevronDown, ChevronUp, Package, Filter, Plus, Pencil } from 'lucide-react';
 import { api } from '@/api/client';
 import type { Order } from '@/api/client';
 import { Input, Select } from '@/components/ui/Input';
@@ -51,8 +52,7 @@ function filterOrders(
       (o) =>
         o.orderNumber.toLowerCase().includes(q) ||
         o.customerName.toLowerCase().includes(q) ||
-        o.customerEmail.toLowerCase().includes(q) ||
-        o.phone.includes(q) ||
+        o.whatsapp.includes(q) ||
         o.whatsapp.includes(q) ||
         (o.trackingNumber?.toLowerCase().includes(q) ?? false)
     );
@@ -80,9 +80,13 @@ function filterOrders(
 }
 
 export function AdminOrdersPage() {
+  const location = useLocation();
   const queryClient = useQueryClient();
+  const created = location.state as { createdOrderNumber?: string; createdTotal?: number; editedOrderNumber?: string } | null;
+  const [successMsg, setSuccessMsg] = useState('');
   const [trackingInputs, setTrackingInputs] = useState<Record<number, string>>({});
   const [advanceInputs, setAdvanceInputs] = useState<Record<number, string>>({});
+  const [discountInputs, setDiscountInputs] = useState<Record<number, string>>({});
   const [statusFilter, setStatusFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('All');
@@ -103,12 +107,14 @@ export function AdminOrdersPage() {
       status,
       trackingNumber,
       advanceAmount,
+      discountAmount,
     }: {
       id: number;
       status: string;
       trackingNumber?: string;
       advanceAmount?: number;
-    }) => api.adminUpdateOrderStatus(id, status, { trackingNumber, advanceAmount }),
+      discountAmount?: number;
+    }) => api.adminUpdateOrderStatus(id, status, { trackingNumber, advanceAmount, discountAmount }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-orders'] }),
   });
 
@@ -116,6 +122,24 @@ export function AdminOrdersPage() {
     const raw = advanceInputs[orderId] ?? (order.advanceAmount != null ? String(order.advanceAmount) : '');
     const value = raw.trim() === '' ? 0 : Number(raw);
     return Number.isFinite(value) ? value : 0;
+  };
+
+  const parseDiscount = (orderId: number, order: Order) => {
+    const raw = discountInputs[orderId] ?? (order.discountAmount != null ? String(order.discountAmount) : '');
+    const value = raw.trim() === '' ? 0 : Number(raw);
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const paymentDetails = (order: Order) =>
+    order.advanceAmount != null || order.discountAmount != null;
+
+  const savePaymentDetails = (order: Order) => {
+    updateMutation.mutate({
+      id: order.id,
+      status: 'Confirmed',
+      advanceAmount: parseAdvance(order.id, order),
+      discountAmount: parseDiscount(order.id, order),
+    });
   };
 
   const showPaymentDetails = (status: string) =>
@@ -160,12 +184,45 @@ export function AdminOrdersPage() {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  useEffect(() => {
+    if (created?.createdOrderNumber) {
+      setSuccessMsg(`Order ${created.createdOrderNumber} created (Pending) — ${formatPrice(created.createdTotal ?? 0)}`);
+      setStatusFilter('Pending');
+      window.history.replaceState({}, document.title);
+    } else if (created?.editedOrderNumber) {
+      setSuccessMsg(`Order ${created.editedOrderNumber} updated successfully`);
+      window.history.replaceState({}, document.title);
+    }
+  }, [created?.createdOrderNumber, created?.createdTotal, created?.editedOrderNumber]);
+
   return (
     <div className="w-full max-w-full overflow-x-hidden">
       <div className="hidden md:flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Orders</h1>
-        <p className="text-sm text-slate-500">{orders?.length ?? 0} total orders</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-slate-500">{orders?.length ?? 0} total orders</p>
+          <Link to="/admin/orders/create">
+            <Button><Plus className="w-4 h-4" /> Create Order</Button>
+          </Link>
+        </div>
       </div>
+
+      <div className="md:hidden fixed bottom-[4.5rem] right-4 z-40">
+        <Link to="/admin/orders/create">
+          <Button className="rounded-full shadow-lg shadow-brand-500/30 px-5">
+            <Plus className="w-5 h-5" />
+          </Button>
+        </Link>
+      </div>
+
+      {successMsg && (
+        <div className="mb-4 flex items-center justify-between gap-3 bg-green-50 border border-green-100 text-green-800 rounded-xl px-4 py-3 text-sm">
+          <span>{successMsg}</span>
+          <button type="button" onClick={() => setSuccessMsg('')} className="text-green-600 hover:text-green-800 shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Status summary */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
@@ -195,7 +252,7 @@ export function AdminOrdersPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search order #, customer, email, phone..."
+              placeholder="Search order #, customer, WhatsApp..."
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
@@ -290,6 +347,14 @@ export function AdminOrdersPage() {
                 {expanded && (
                   <div className="px-4 pb-4 border-t border-slate-100">
                     <div className="pt-4 space-y-4">
+                      {order.status !== 'Cancelled' && (
+                        <Link to={`/admin/orders/${order.id}/edit`}>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                            <Pencil className="w-4 h-4" /> Edit Order
+                          </Button>
+                        </Link>
+                      )}
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-500 mb-1">Update Status</label>
@@ -303,6 +368,7 @@ export function AdminOrdersPage() {
                                   id: order.id,
                                   status,
                                   advanceAmount: parseAdvance(order.id, order),
+                                  discountAmount: parseDiscount(order.id, order),
                                 });
                                 return;
                               }
@@ -315,41 +381,52 @@ export function AdminOrdersPage() {
                           order.status === 'Shipped' ||
                           order.status === 'Delivered' ||
                           order.status === 'Pending') && (
-                          <div className="space-y-2">
-                            <Input
-                              label="Advance Amount (Rs.)"
-                              type="number"
-                              min={0}
-                              max={order.total}
-                              value={advanceInputs[order.id] ?? (order.advanceAmount != null ? String(order.advanceAmount) : '')}
-                              onChange={(e) => setAdvanceInputs((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                              placeholder="e.g. 500 or 1000"
-                            />
+                          <div className="space-y-2 sm:col-span-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <Input
+                                label="Advance Amount (Rs.)"
+                                type="number"
+                                min={0}
+                                max={order.total}
+                                value={advanceInputs[order.id] ?? (order.advanceAmount != null ? String(order.advanceAmount) : '')}
+                                onChange={(e) => setAdvanceInputs((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                placeholder="e.g. 500 or 1000"
+                              />
+                              <Input
+                                label="Discount (Rs.)"
+                                type="number"
+                                min={0}
+                                max={order.total}
+                                value={discountInputs[order.id] ?? (order.discountAmount != null ? String(order.discountAmount) : '')}
+                                onChange={(e) => setDiscountInputs((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                placeholder="e.g. 200 or 500"
+                              />
+                            </div>
                             {order.status === 'Confirmed' && (
                               <Button
                                 size="sm"
                                 className="w-full sm:w-auto"
                                 disabled={updateMutation.isPending}
-                                onClick={() =>
-                                  updateMutation.mutate({
-                                    id: order.id,
-                                    status: 'Confirmed',
-                                    advanceAmount: parseAdvance(order.id, order),
-                                  })
-                                }
+                                onClick={() => savePaymentDetails(order)}
                               >
-                                Save Advance
+                                Save Payment Details
                               </Button>
                             )}
-                            {showPaymentDetails(order.status) && order.advanceAmount != null && (
+                            {showPaymentDetails(order.status) && paymentDetails(order) && (
                               <div className="rounded-xl bg-blue-50 p-3 text-sm space-y-1">
                                 <div className="flex justify-between">
                                   <span className="text-slate-600">Total</span>
                                   <span className="font-semibold">{formatPrice(order.total)}</span>
                                 </div>
+                                {(order.discountAmount ?? 0) > 0 && (
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-600">Discount</span>
+                                    <span className="font-semibold text-orange-700">-{formatPrice(order.discountAmount!)}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between">
                                   <span className="text-slate-600">Advance</span>
-                                  <span className="font-semibold text-green-700">{formatPrice(order.advanceAmount)}</span>
+                                  <span className="font-semibold text-green-700">{formatPrice(order.advanceAmount ?? 0)}</span>
                                 </div>
                                 <div className="flex justify-between border-t border-blue-100 pt-1">
                                   <span className="text-slate-700 font-medium">Balance</span>
@@ -390,14 +467,6 @@ export function AdminOrdersPage() {
                           <span className="text-slate-500">Customer: </span>
                           <span className="font-medium">{order.customerName}</span>
                         </div>
-                        <div className="break-all">
-                          <span className="text-slate-500">Email: </span>
-                          <a href={`mailto:${order.customerEmail}`} className="text-brand-600 hover:underline">{order.customerEmail}</a>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Phone: </span>
-                          <a href={`tel:${order.phone}`} className="text-brand-600 hover:underline">{order.phone}</a>
-                        </div>
                         <div>
                           <span className="text-slate-500">WhatsApp: </span>
                           <a
@@ -429,11 +498,17 @@ export function AdminOrdersPage() {
                           </span>
                           <span className="text-brand-600 text-base">{formatPrice(order.total)}</span>
                         </div>
-                        {showPaymentDetails(order.status) && order.advanceAmount != null && (
+                        {showPaymentDetails(order.status) && paymentDetails(order) && (
                           <div className="mt-3 pt-3 border-t space-y-1 text-sm">
+                            {(order.discountAmount ?? 0) > 0 && (
+                              <div className="flex justify-between text-slate-600">
+                                <span>Discount</span>
+                                <span className="font-medium text-orange-700">-{formatPrice(order.discountAmount!)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between text-slate-600">
                               <span>Advance Paid</span>
-                              <span className="font-medium text-green-700">{formatPrice(order.advanceAmount)}</span>
+                              <span className="font-medium text-green-700">{formatPrice(order.advanceAmount ?? 0)}</span>
                             </div>
                             <div className="flex justify-between font-bold">
                               <span>Balance Due</span>

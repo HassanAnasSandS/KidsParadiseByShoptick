@@ -13,7 +13,8 @@ public class UnitOfWork : IUnitOfWork
         IToyRepository toys,
         IOrderRepository orders,
         IReviewRepository reviews,
-        IAdminUserRepository adminUsers)
+        IAdminUserRepository adminUsers,
+        ISiteImageRepository siteImages)
     {
         _context = context;
         Customers = customers;
@@ -22,6 +23,7 @@ public class UnitOfWork : IUnitOfWork
         Orders = orders;
         Reviews = reviews;
         AdminUsers = adminUsers;
+        SiteImages = siteImages;
     }
 
     public ICustomerRepository Customers { get; }
@@ -30,6 +32,7 @@ public class UnitOfWork : IUnitOfWork
     public IOrderRepository Orders { get; }
     public IReviewRepository Reviews { get; }
     public IAdminUserRepository AdminUsers { get; }
+    public ISiteImageRepository SiteImages { get; }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);

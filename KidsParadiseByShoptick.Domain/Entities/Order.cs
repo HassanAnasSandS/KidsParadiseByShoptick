@@ -10,6 +10,7 @@ public class Order : BaseEntity
     public decimal DeliveryCharge { get; set; }
     public decimal Total { get; set; }
     public decimal? AdvanceAmount { get; set; }
+    public decimal? DiscountAmount { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
     public string City { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;

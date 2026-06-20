@@ -63,6 +63,16 @@ export interface PendingReview {
   toyImageUrl: string | null;
 }
 
+export interface SiteImageAdmin {
+  key: string;
+  label: string;
+  group: string;
+  sortOrder: number;
+  imageUrl: string;
+  defaultUrl: string;
+  isCustom: boolean;
+}
+
 export interface ToyDetail extends ToyListItem {
   categoryId: number;
   averageRating: number | null;
@@ -91,14 +101,13 @@ export interface Order {
   deliveryCharge: number;
   total: number;
   advanceAmount: number | null;
+  discountAmount: number | null;
   balanceAmount: number;
   city: string;
   address: string;
-  phone: string;
   whatsapp: string;
   trackingNumber: string | null;
   customerName: string;
-  customerEmail: string;
   createdAt: string;
   items: OrderItem[];
 }
@@ -119,9 +128,7 @@ export const api = {
   getLatestToys: () => request<ToyListItem[]>('/toys/latest'),
   getToy: (id: number) => request<ToyDetail>(`/toys/${id}`),
   placeOrder: (data: {
-    email: string;
     name: string;
-    phone: string;
     whatsapp: string;
     city: string;
     address: string;
@@ -130,20 +137,20 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  trackOrdersByEmail: (email: string) =>
-    request<Order[]>(`/orders/track?email=${encodeURIComponent(email)}`),
+  trackOrdersByWhatsapp: (whatsapp: string) =>
+    request<Order[]>(`/orders/track?whatsapp=${encodeURIComponent(whatsapp)}`),
   getDeliveryCharge: (city: string) =>
     request<{ deliveryCharge: number }>(`/orders/delivery-charge?city=${encodeURIComponent(city)}`),
   getAllReviews: () => request<Review[]>('/reviews'),
-  getPendingReviews: (email: string) =>
-    request<PendingReview[]>(`/reviews/pending?email=${encodeURIComponent(email)}`),
+  getPendingReviews: (whatsapp: string) =>
+    request<PendingReview[]>(`/reviews/pending?whatsapp=${encodeURIComponent(whatsapp)}`),
   uploadReviewImage: async (file: File) => {
     const form = new FormData();
     form.append('file', file);
     return request<{ path: string; url: string }>('/reviews/upload', { method: 'POST', body: form });
   },
   createReview: (data: {
-    email: string;
+    whatsapp: string;
     orderId: number;
     toyId: number;
     reviewerName: string;
@@ -171,10 +178,40 @@ export const api = {
     request<ToyListItem>(`/admin/toys/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteToy: (id: number) => request<void>(`/admin/toys/${id}`, { method: 'DELETE' }),
   adminGetOrders: () => request<Order[]>('/admin/orders'),
+  adminGetOrder: (id: number) => request<Order>(`/admin/orders/${id}`),
+  adminCreateOrder: (data: {
+    name: string;
+    whatsapp: string;
+    city: string;
+    address: string;
+    toyIds: number[];
+  }) =>
+    request<{ orderNumber: string; total: number; deliveryCharge: number }>('/admin/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  adminUpdateOrder: (
+    id: number,
+    data: {
+      customerName: string;
+      whatsapp: string;
+      city: string;
+      address: string;
+      deliveryCharge: number;
+      advanceAmount?: number;
+      discountAmount?: number;
+      trackingNumber?: string;
+      toyIds: number[];
+    }
+  ) =>
+    request<Order>(`/admin/orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   adminUpdateOrderStatus: (
     id: number,
     status: string,
-    options?: { trackingNumber?: string; advanceAmount?: number }
+    options?: { trackingNumber?: string; advanceAmount?: number; discountAmount?: number }
   ) =>
     request<Order>(`/admin/orders/${id}/status`, {
       method: 'PATCH',
@@ -182,6 +219,7 @@ export const api = {
         status,
         trackingNumber: options?.trackingNumber,
         advanceAmount: options?.advanceAmount,
+        discountAmount: options?.discountAmount,
       }),
     }),
   adminGetReviews: () => request<Review[]>('/admin/reviews'),
@@ -192,6 +230,20 @@ export const api = {
     form.append('file', file);
     return request<{ path: string; url: string }>(`/admin/upload?folder=${folder}`, { method: 'POST', body: form });
   },
+
+  getSiteImages: () => request<Record<string, string>>('/site-images'),
+
+  adminGetSiteImages: () =>
+    request<SiteImageAdmin[]>('/admin/site-images'),
+
+  adminUploadSiteImage: async (key: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<SiteImageAdmin>(`/admin/site-images/${key}/upload`, { method: 'POST', body: form });
+  },
+
+  adminResetSiteImage: (key: string) =>
+    request<SiteImageAdmin>(`/admin/site-images/${key}/custom`, { method: 'DELETE' }),
 };
 
 export function toyPrimaryImage(toy: { imageUrls: string[]; name: string }) {

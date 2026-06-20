@@ -34,6 +34,9 @@ export function Footer() {
             <h4 className="font-semibold text-white mb-3">Quick Links</h4>
             <div className="flex flex-col gap-2 text-sm">
               <Link to="/shop" className="hover:text-white transition-colors">Shop All Toys</Link>
+              <Link to="/about" className="hover:text-white transition-colors">About Us</Link>
+              <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
+              <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
               <Link to="/track-order" className="hover:text-white transition-colors">My Orders</Link>
               <Link to="/cart" className="hover:text-white transition-colors">My Cart</Link>
             </div>

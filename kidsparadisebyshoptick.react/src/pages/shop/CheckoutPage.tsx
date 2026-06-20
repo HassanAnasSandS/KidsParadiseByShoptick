@@ -17,7 +17,7 @@ export function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ email: '', name: '', phone: '', whatsapp: '', city: '', address: '' });
+  const [form, setForm] = useState({ name: '', whatsapp: '', city: '', address: '' });
 
   const deliveryCharge = getDeliveryCharge(form.city);
   const total = checkoutSubTotal() + (form.city.trim() ? deliveryCharge : 0);
@@ -38,7 +38,6 @@ export function CheckoutPage() {
     try {
       const result = await api.placeOrder({
         ...form,
-        whatsapp: form.whatsapp || form.phone,
         toyIds: checkoutItems.map((i) => i.toyId),
       });
       if (!buyNow) clearCart();
@@ -65,8 +64,6 @@ export function CheckoutPage() {
             <h2 className="font-semibold text-slate-800 mb-4">Contact & Delivery</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <Input label="Full Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <Input label="Email *" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <Input label="Phone *" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               <Input label="WhatsApp *" required value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="e.g. 03221234567" />
               <Input label="City *" required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="e.g. Karachi" className="sm:col-span-2" />
             </div>

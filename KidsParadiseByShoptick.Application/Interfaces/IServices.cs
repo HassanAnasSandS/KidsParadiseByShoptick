@@ -29,16 +29,18 @@ public interface IToyService
 public interface IOrderService
 {
     Task<OrderPlacedDto> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<OrderDto>> GetOrdersByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OrderDto>> GetOrdersByWhatsappAsync(string whatsapp, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OrderDto>> GetAllAdminAsync(CancellationToken cancellationToken = default);
+    Task<OrderDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default);
     Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default);
+    Task<OrderDto?> UpdateAdminAsync(int id, AdminUpdateOrderRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IReviewService
 {
     Task<IReadOnlyList<ReviewDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReviewDto>> GetByToyIdAsync(int toyId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<PendingReviewDto>> GetPendingForCustomerAsync(string email, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PendingReviewDto>> GetPendingForCustomerAsync(string whatsapp, CancellationToken cancellationToken = default);
     Task<ReviewDto> CreateAsync(CreateReviewRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReviewDto>> GetAllAdminAsync(CancellationToken cancellationToken = default);
     Task<ReviewDto?> UpdateAdminAsync(int id, AdminUpdateReviewRequest request, CancellationToken cancellationToken = default);

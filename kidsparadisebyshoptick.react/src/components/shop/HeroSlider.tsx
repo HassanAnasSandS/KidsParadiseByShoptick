@@ -1,33 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { BrandName } from '@/components/ui/BrandName';
+import { useSiteImages } from '@/hooks/useSiteImages';
+import type { SiteImageKey } from '@/lib/siteImages';
 
-const slides = [
+const slideMeta = [
   {
-    image: '/hero/slide-1.jpg',
+    imageKey: 'hero_slide_1' as SiteImageKey,
     title: 'Where Every Child\'s Dream Comes True',
     subtitle: 'Unique toys — one of a kind. Grab yours before it\'s gone!',
     cta: 'Shop Now',
     link: '/shop',
   },
   {
-    image: '/hero/slide-2.jpg',
+    imageKey: 'hero_slide_2' as SiteImageKey,
     title: 'Joy in Every Box',
     subtitle: 'Quality toys delivered across Pakistan with love.',
     cta: 'Explore Toys',
     link: '/shop',
   },
   {
-    image: '/hero/slide-3.jpg',
+    imageKey: 'hero_slide_3' as SiteImageKey,
     title: 'Soft Hugs & Big Smiles',
     subtitle: 'From plush friends to learning fun — find the perfect gift.',
     cta: 'Browse Collection',
     link: '/shop',
   },
   {
-    image: '/hero/slide-4.jpg',
+    imageKey: 'hero_slide_4' as SiteImageKey,
     title: 'Easy Ordering',
     subtitle: 'Karachi Rs.300 | Other cities Rs.400 — 10% advance payment required.',
     cta: 'Order Today',
@@ -36,9 +38,15 @@ const slides = [
 ];
 
 export function HeroSlider() {
+  const { get, images } = useSiteImages();
   const [current, setCurrent] = useState(0);
 
-  const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), []);
+  const slides = useMemo(
+    () => slideMeta.map((s) => ({ ...s, image: get(s.imageKey) })),
+    [get, images]
+  );
+
+  const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
   const prev = () => setCurrent((c) => (c - 1 + slides.length) % slides.length);
 
   useEffect(() => {
@@ -52,7 +60,7 @@ export function HeroSlider() {
     <section className="relative h-[420px] md:h-[520px] overflow-hidden rounded-b-3xl shadow-lg bg-slate-900">
       {slides.map((s, i) => (
         <div
-          key={i}
+          key={s.imageKey}
           className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
         >
           <img

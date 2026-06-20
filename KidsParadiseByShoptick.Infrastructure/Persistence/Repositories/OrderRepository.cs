@@ -1,3 +1,4 @@
+using KidsParadiseByShoptick.Application;
 using KidsParadiseByShoptick.Domain.Enums;
 using KidsParadiseByShoptick.Domain.Entities;
 using KidsParadiseByShoptick.Domain.Interfaces;
@@ -20,26 +21,22 @@ public class OrderRepository : Repository<Order>, IOrderRepository
             .ThenInclude(t => t.Images)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    public async Task<Order?> TrackOrderAsync(string email, string orderNumber, CancellationToken cancellationToken = default)
-        => await DbSet
-            .Include(x => x.Customer)
-            .Include(x => x.Items)
-            .ThenInclude(i => i.Toy)
-            .ThenInclude(t => t.Images)
-            .FirstOrDefaultAsync(x =>
-                x.OrderNumber == orderNumber &&
-                x.Customer.Email == email.ToLower(), cancellationToken);
-
-    public async Task<IReadOnlyList<Order>> GetByCustomerEmailAsync(string email, CancellationToken cancellationToken = default)
-        => await DbSet
+    public async Task<IReadOnlyList<Order>> GetByCustomerWhatsappAsync(string whatsapp, CancellationToken cancellationToken = default)
+    {
+        var key = ContactNormalizer.NormalizeWhatsapp(whatsapp);
+        var orders = await DbSet
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Items)
             .ThenInclude(i => i.Toy)
             .ThenInclude(t => t.Images)
-            .Where(x => x.Customer.Email == email.ToLower())
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        return orders
+            .Where(x => ContactNormalizer.NormalizeWhatsapp(x.Customer.Whatsapp) == key)
+            .ToList();
+    }
 
     public async Task<IReadOnlyList<Order>> GetAllWithDetailsAsync(CancellationToken cancellationToken = default)
         => await DbSet
