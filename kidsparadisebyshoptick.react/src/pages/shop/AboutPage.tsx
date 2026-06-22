@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function AboutPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+      <SeoHead
+        title={PAGE_SEO.about.title}
+        description={PAGE_SEO.about.description}
+        path={PAGE_SEO.about.path}
+      />
       <h1 className="text-3xl font-bold text-slate-800 mb-4">About Kids Paradise by Shoptick</h1>
       <div className="prose prose-slate max-w-none space-y-4 text-slate-600 leading-relaxed">
         <p>

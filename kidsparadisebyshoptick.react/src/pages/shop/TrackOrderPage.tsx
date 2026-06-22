@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ReviewForm } from '@/components/shop/ReviewForm';
 import { formatPrice, placeholderImage } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 const statusColors: Record<string, string> = {
   Pending: 'bg-yellow-100 text-yellow-700',
@@ -175,6 +177,11 @@ export function TrackOrderPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead
+        title={PAGE_SEO.trackOrder.title}
+        description={PAGE_SEO.trackOrder.description}
+        path={PAGE_SEO.trackOrder.path}
+      />
       <div className="text-center mb-8">
         <Package className="w-12 h-12 text-brand-600 mx-auto mb-3" />
         <h1 className="text-3xl font-bold text-slate-800">My Orders</h1>

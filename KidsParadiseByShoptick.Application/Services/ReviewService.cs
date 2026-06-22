@@ -139,6 +139,7 @@ public class ReviewService : IReviewService
         r.Rating,
         r.Comment,
         string.IsNullOrWhiteSpace(r.ImagePath) ? null : _fileStorage.GetPublicUrl(r.ImagePath),
+        string.IsNullOrWhiteSpace(r.ImagePath) ? null : r.ImagePath,
         r.Toy?.Name ?? "",
         r.ToyId,
         r.Order?.OrderNumber ?? "",

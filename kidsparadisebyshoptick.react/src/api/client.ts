@@ -1,7 +1,12 @@
+import {
+  clearAdminToken,
+  getAdminToken,
+} from '@/lib/adminAuth';
+
 const API_BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   const headers: Record<string, string> = {
     ...(options?.headers as Record<string, string>),
   };
@@ -16,6 +21,14 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
 
+  if (res.status === 401 && url.includes('/admin/') && !url.includes('/admin/auth/login')) {
+    clearAdminToken();
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && !window.location.pathname.includes('/login')) {
+      window.location.assign('/admin/login');
+    }
+    throw new Error('Session expired. Please sign in again.');
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(err.message || 'Request failed');
@@ -29,6 +42,7 @@ export interface Category {
   id: number;
   name: string;
   imageUrl: string | null;
+  imagePath: string | null;
   toyCount: number;
 }
 
@@ -49,6 +63,7 @@ export interface Review {
   rating: number;
   comment: string;
   imageUrl: string | null;
+  imagePath: string | null;
   toyName: string;
   toyId: number;
   orderNumber: string;
@@ -75,6 +90,7 @@ export interface SiteImageAdmin {
 
 export interface ToyDetail extends ToyListItem {
   categoryId: number;
+  imagePaths: string[];
   averageRating: number | null;
   reviewCount: number;
 }
@@ -159,10 +175,10 @@ export const api = {
     imagePath?: string;
   }) => request<Review>('/reviews', { method: 'POST', body: JSON.stringify(data) }),
 
-  adminLogin: (username: string, password: string) =>
+  adminLogin: (username: string, password: string, rememberMe = false) =>
     request<{ token: string; username: string }>('/admin/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, rememberMe }),
     }),
   adminGetCategories: () => request<Category[]>('/admin/categories'),
   adminCreateCategory: (data: { name: string; imagePath?: string }) =>

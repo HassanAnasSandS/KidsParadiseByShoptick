@@ -2,6 +2,7 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Package, Tags, ShoppingBag, LogOut, Menu, X, Store, Star, ImageIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BrandName } from '@/components/ui/BrandName';
+import { clearAdminToken } from '@/lib/adminAuth';
 
 const nav = [
   { to: '/admin/categories', label: 'Categories', icon: Tags },
@@ -39,7 +40,7 @@ export function AdminLayout() {
   }, [sidebarOpen]);
 
   const logout = () => {
-    localStorage.removeItem('adminToken');
+    clearAdminToken();
     navigate('/admin/login');
   };
 

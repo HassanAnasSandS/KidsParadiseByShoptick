@@ -1,25 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input, PasswordInput } from '@/components/ui/Input';
 import { BrandName } from '@/components/ui/BrandName';
+import {
+  getAdminRememberMe,
+  getRememberedUsername,
+  isAdminLoggedIn,
+  setAdminToken,
+  setRememberedUsername,
+} from '@/lib/adminAuth';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAdminLoggedIn()) {
+      navigate('/admin/categories', { replace: true });
+      return;
+    }
+    setRememberMe(getAdminRememberMe());
+    setUsername(getRememberedUsername());
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const res = await api.adminLogin(username, password);
-      localStorage.setItem('adminToken', res.token);
+      const res = await api.adminLogin(username, password, rememberMe);
+      setAdminToken(res.token, rememberMe);
+      setRememberedUsername(username.trim(), rememberMe);
       navigate('/admin/categories');
     } catch {
       setError('Invalid username or password');
@@ -44,6 +62,15 @@ export function AdminLoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required autoComplete="username" />
           <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-400"
+            />
+            <span className="text-sm text-slate-600">Remember me for 30 days</span>
+          </label>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}

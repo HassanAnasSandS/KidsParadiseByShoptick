@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { StarRating } from '@/components/shop/ReviewForm';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminListImage } from '@/components/admin/AdminListImage';
 
 export function AdminReviewsPage() {
   const queryClient = useQueryClient();
@@ -27,7 +28,7 @@ export function AdminReviewsPage() {
         comment: form.comment,
       };
       if (form.imagePath) data.imagePath = form.imagePath;
-      else if (!form.imageUrl && editing!.imageUrl) data.imagePath = '';
+      else if (!form.imageUrl) data.imagePath = '';
       return api.adminUpdateReview(editing!.id, data);
     },
     onSuccess: () => {
@@ -42,7 +43,7 @@ export function AdminReviewsPage() {
       reviewerName: review.reviewerName,
       rating: review.rating,
       comment: review.comment,
-      imagePath: '',
+      imagePath: review.imagePath ?? '',
       imageUrl: review.imageUrl ?? '',
     });
   };
@@ -56,6 +57,7 @@ export function AdminReviewsPage() {
       setForm((f) => ({ ...f, imagePath: res.path, imageUrl: res.url }));
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -79,14 +81,26 @@ export function AdminReviewsPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Review Image</label>
               {form.imageUrl ? (
                 <div className="flex items-start gap-3">
-                  <img src={form.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover border" />
-                  <button type="button" onClick={() => setForm({ ...form, imagePath: '', imageUrl: '' })} className="text-red-500 text-sm flex items-center gap-1">
-                    <X className="w-4 h-4" /> Remove
-                  </button>
+                  <img src={form.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover border border-slate-200 bg-slate-50" />
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-600 w-fit">
+                      <Upload className="w-4 h-4 shrink-0" />
+                      {uploading ? 'Uploading...' : 'Change image'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, imagePath: '', imageUrl: '' }))}
+                      className="text-red-500 text-sm flex items-center gap-1 w-fit"
+                    >
+                      <X className="w-4 h-4" /> Remove
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <label className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 text-sm text-slate-600 w-fit">
-                  <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Upload image'}
+                  <Upload className="w-4 h-4 shrink-0" />
+                  {uploading ? 'Uploading...' : 'Upload image'}
                   <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
                 </label>
               )}
@@ -107,6 +121,8 @@ export function AdminReviewsPage() {
         ) : reviews?.map((review) => (
           <div key={review.id} className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 flex items-start gap-3">
+              <AdminListImage src={review.imageUrl} name={review.reviewerName} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-slate-800">{review.reviewerName}</p>
@@ -119,9 +135,7 @@ export function AdminReviewsPage() {
                 <p className="text-sm text-brand-600 mt-1">{review.toyName}</p>
                 <p className="text-xs text-slate-400">Order {review.orderNumber} · {new Date(review.createdAt).toLocaleString()}</p>
                 <p className="text-sm text-slate-600 mt-2">{review.comment}</p>
-                {review.imageUrl && (
-                  <img src={review.imageUrl} alt="" className="mt-2 w-20 h-20 rounded-lg object-cover border" />
-                )}
+              </div>
               </div>
               <button type="button" onClick={() => startEdit(review)} className="p-2.5 text-brand-600 hover:bg-brand-50 rounded-xl shrink-0">
                 <Pencil className="w-4 h-4" />

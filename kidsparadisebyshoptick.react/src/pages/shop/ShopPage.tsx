@@ -7,6 +7,8 @@ import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { useSiteImages } from '@/hooks/useSiteImages';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function ShopPage() {
   const { get } = useSiteImages();
@@ -16,7 +18,7 @@ export function ShopPage() {
   const saleFilter = searchParams.get('onSale');
   const onSale = saleFilter === 'true' ? true : saleFilter === 'false' ? false : undefined;
   const sort = searchParams.get('sort') || 'newest';
-  const [page, setPage] = useState(1);
+  const page = Math.max(1, Number(searchParams.get('page') || '1'));
   const [searchInput, setSearchInput] = useState(search);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -50,14 +52,20 @@ export function ShopPage() {
       if (value) next.set(key, value);
       else next.delete(key);
     });
+    next.delete('page');
     setSearchParams(next);
-    setPage(1);
+  };
+
+  const setPage = (nextPage: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextPage <= 1) next.delete('page');
+    else next.set('page', String(nextPage));
+    setSearchParams(next);
   };
 
   const clearFilters = () => {
     setSearchInput('');
     setSearchParams({});
-    setPage(1);
   };
 
   const categoryFilterValue = categoryId ? String(categoryId) : 'All';
@@ -77,6 +85,11 @@ export function ShopPage() {
 
   return (
     <div>
+      <SeoHead
+        title={PAGE_SEO.shop.title}
+        description={PAGE_SEO.shop.description}
+        path={PAGE_SEO.shop.path}
+      />
       <div className="relative h-40 md:h-52 overflow-hidden">
         <img
           src={get('shop_header')}
@@ -215,9 +228,9 @@ export function ShopPage() {
 
         {totalPages > 1 && (
           <div className="flex justify-center gap-2 mt-8">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
             <span className="flex items-center px-4 text-sm text-slate-600">Page {page} of {totalPages}</span>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
           </div>
         )}
       </div>

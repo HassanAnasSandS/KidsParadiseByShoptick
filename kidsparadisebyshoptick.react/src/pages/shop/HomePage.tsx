@@ -8,6 +8,8 @@ import { HeroSlider } from '@/components/shop/HeroSlider';
 import { Button } from '@/components/ui/Button';
 import { PAYMENT_POLICY } from '@/lib/utils';
 import { useSiteImages } from '@/hooks/useSiteImages';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO, buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/seo';
 
 export function HomePage() {
   const { get } = useSiteImages();
@@ -23,6 +25,11 @@ export function HomePage() {
 
   return (
     <div>
+      <SeoHead
+        description={PAGE_SEO.home.description}
+        path={PAGE_SEO.home.path}
+        jsonLd={[buildOrganizationJsonLd(), buildWebSiteJsonLd()]}
+      />
       <HeroSlider />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">

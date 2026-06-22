@@ -75,8 +75,19 @@ public class CategoryService : ICategoryService
         if (entity is null) return null;
 
         entity.Name = request.Name.Trim();
-        if (!string.IsNullOrWhiteSpace(request.ImagePath))
-            entity.ImagePath = request.ImagePath;
+        if (request.ImagePath is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.ImagePath))
+            {
+                _fileStorage.DeleteImage(entity.ImagePath);
+                entity.ImagePath = null;
+            }
+            else if (!string.Equals(entity.ImagePath, request.ImagePath.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                _fileStorage.DeleteImage(entity.ImagePath);
+                entity.ImagePath = request.ImagePath.Trim();
+            }
+        }
         await _unitOfWork.Categories.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -100,7 +111,7 @@ public class CategoryService : ICategoryService
     }
 
     private CategoryDto Map(ToyCategory c, int toyCount) =>
-        new(c.Id, c.Name, ToUrl(c.ImagePath), toyCount);
+        new(c.Id, c.Name, ToUrl(c.ImagePath), c.ImagePath, toyCount);
 
     private string? ToUrl(string? path) =>
         string.IsNullOrWhiteSpace(path) ? null : _fileStorage.GetPublicUrl(path);

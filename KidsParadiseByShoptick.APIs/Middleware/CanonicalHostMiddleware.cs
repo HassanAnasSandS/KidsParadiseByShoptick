@@ -4,12 +4,12 @@ using Microsoft.Extensions.Options;
 namespace KidsParadiseByShoptick.APIs.Middleware;
 
 /// <summary>
-/// Permanently redirects to the canonical www + HTTPS URL only.
-/// Never strips www. Uses the request Host header (not X-Forwarded-Host) to avoid reverse redirects.
+/// Permanently redirects to the configured canonical HTTPS host.
+/// Uses the request Host header (not X-Forwarded-Host) to avoid reverse redirects.
 /// </summary>
 public class CanonicalHostMiddleware
 {
-    private const string WwwHost = "www.kidsparadisethetoyshop.store";
+    private const string DefaultCanonicalHost = "kidsparadise.shoptick.shop";
 
     private readonly RequestDelegate _next;
     private readonly SeoOptions _options;
@@ -30,11 +30,7 @@ public class CanonicalHostMiddleware
 
         var canonicalHost = NormalizeHost(_options.CanonicalHost);
         if (string.IsNullOrEmpty(canonicalHost))
-            canonicalHost = WwwHost;
-
-        // Safety: canonical must be www — never allow apex as redirect target.
-        if (!canonicalHost.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
-            canonicalHost = WwwHost;
+            canonicalHost = DefaultCanonicalHost;
 
         var requestHost = NormalizeHost(context.Request.Host.Host);
         var scheme = GetRequestScheme(context);
@@ -48,7 +44,6 @@ public class CanonicalHostMiddleware
             return;
         }
 
-        // 301 → https://www... only (never www → apex)
         var path = context.Request.PathBase + context.Request.Path;
         var query = context.Request.QueryString.Value ?? string.Empty;
         var location = $"https://{canonicalHost}{path}{query}";
@@ -59,7 +54,6 @@ public class CanonicalHostMiddleware
 
     private static string GetRequestScheme(HttpContext context)
     {
-        // Trust forwarded proto only (TLS terminator). Do NOT trust X-Forwarded-Host.
         var forwardedProto = context.Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(forwardedProto))
             return forwardedProto.Split(',')[0].Trim();

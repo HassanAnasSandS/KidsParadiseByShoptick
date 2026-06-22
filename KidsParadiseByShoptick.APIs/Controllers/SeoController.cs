@@ -1,4 +1,5 @@
 using System.Text;
+using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Application.Options;
 using Microsoft.AspNetCore.Mvc;
@@ -26,16 +27,23 @@ public class SeoController : ControllerBase
     [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> Sitemap(CancellationToken cancellationToken)
     {
-        var baseUrl = ResolveBaseUrl();
-        var cacheKey = $"sitemap-xml:{baseUrl}";
-
-        if (!_cache.TryGetValue(cacheKey, out string? xml))
+        try
         {
-            xml = await _sitemapService.GenerateSitemapXmlAsync(baseUrl, cancellationToken);
-            _cache.Set(cacheKey, xml, TimeSpan.FromMinutes(_seoOptions.SitemapCacheMinutes));
-        }
+            var baseUrl = ResolveBaseUrl();
+            var cacheKey = $"sitemap-xml:{baseUrl}";
 
-        return Content(xml!, "application/xml", Encoding.UTF8);
+            if (!_cache.TryGetValue(cacheKey, out string? xml))
+            {
+                xml = await _sitemapService.GenerateSitemapXmlAsync(baseUrl, cancellationToken);
+                _cache.Set(cacheKey, xml, TimeSpan.FromMinutes(_seoOptions.SitemapCacheMinutes));
+            }
+
+            return Content(xml!, "application/xml; charset=utf-8", Encoding.UTF8);
+        }
+        catch (Exception)
+        {
+            return StatusCode(503, "Sitemap temporarily unavailable.");
+        }
     }
 
     [HttpGet("/robots.txt")]
@@ -47,6 +55,19 @@ public class SeoController : ControllerBase
         var txt = _sitemapService.GenerateRobotsTxt(baseUrl);
         return Content(txt, "text/plain", Encoding.UTF8);
     }
+
+    [HttpGet("/api/seo/config")]
+    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)]
+    public ActionResult<SeoPublicConfigDto> Config()
+        => Ok(new SeoPublicConfigDto(
+            _seoOptions.SiteName,
+            _seoOptions.SiteBaseUrl.TrimEnd('/'),
+            _seoOptions.DefaultTitle,
+            _seoOptions.DefaultDescription,
+            _seoOptions.DefaultKeywords,
+            _seoOptions.DefaultOgImageUrl,
+            _seoOptions.Locale,
+            _seoOptions.Region));
 
     private string ResolveBaseUrl()
         => _seoOptions.SiteBaseUrl.TrimEnd('/');

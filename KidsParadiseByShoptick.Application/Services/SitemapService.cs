@@ -42,13 +42,21 @@ public class SitemapService : ISitemapService
     {
         var root = NormalizeBaseUrl(baseUrl);
         return $"""
+            # Kids Paradise by Shoptick — {root}
             User-agent: *
             Allow: /
+            Disallow: /admin
             Disallow: /admin/
             Disallow: /api/admin/
-            Disallow: /checkout
             Disallow: /cart
+            Disallow: /checkout
             Disallow: /order-success/
+
+            User-agent: Googlebot
+            Allow: /
+
+            User-agent: Bingbot
+            Allow: /
 
             Sitemap: {root}/sitemap.xml
             """;
@@ -59,31 +67,31 @@ public class SitemapService : ISitemapService
         var settings = new XmlWriterSettings
         {
             Indent = true,
-            Encoding = Encoding.UTF8,
+            Encoding = new UTF8Encoding(false),
             Async = false,
         };
 
-        using var sw = new StringWriter();
-        using var writer = XmlWriter.Create(sw, settings);
-
-        writer.WriteStartDocument();
-        writer.WriteStartElement("urlset", SitemapNs);
-
-        foreach (var url in urls)
+        using var ms = new MemoryStream();
+        using (var writer = XmlWriter.Create(ms, settings))
         {
-            writer.WriteStartElement("url", SitemapNs);
-            writer.WriteElementString("loc", SitemapNs, url.Loc);
-            writer.WriteElementString("lastmod", SitemapNs, url.LastMod.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            writer.WriteElementString("changefreq", SitemapNs, url.ChangeFreq);
-            writer.WriteElementString("priority", SitemapNs, url.Priority);
+            writer.WriteStartDocument();
+            writer.WriteStartElement("urlset", SitemapNs);
+
+            foreach (var url in urls)
+            {
+                writer.WriteStartElement("url", SitemapNs);
+                writer.WriteElementString("loc", SitemapNs, url.Loc);
+                writer.WriteElementString("lastmod", SitemapNs, url.LastMod.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                writer.WriteElementString("changefreq", SitemapNs, url.ChangeFreq);
+                writer.WriteElementString("priority", SitemapNs, url.Priority);
+                writer.WriteEndElement();
+            }
+
             writer.WriteEndElement();
+            writer.WriteEndDocument();
         }
 
-        writer.WriteEndElement();
-        writer.WriteEndDocument();
-        writer.Flush();
-
-        return sw.ToString();
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
     private static string NormalizeBaseUrl(string baseUrl)

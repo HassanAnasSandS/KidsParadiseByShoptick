@@ -5,6 +5,8 @@ import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ReviewForm, StarRatingDisplay } from '@/components/shop/ReviewForm';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function ReviewsPage() {
   const queryClient = useQueryClient();
@@ -34,6 +36,11 @@ export function ReviewsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead
+        title={PAGE_SEO.reviews.title}
+        description={PAGE_SEO.reviews.description}
+        path={PAGE_SEO.reviews.path}
+      />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-800">Customer Reviews</h1>
         <p className="text-slate-500 mt-1">See what parents are saying about our toys</p>

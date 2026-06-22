@@ -1,10 +1,17 @@
 import { MessageCircle, MapPin, Truck } from 'lucide-react';
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function ContactPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+      <SeoHead
+        title={PAGE_SEO.contact.title}
+        description={PAGE_SEO.contact.description}
+        path={PAGE_SEO.contact.path}
+      />
       <h1 className="text-3xl font-bold text-slate-800 mb-4">Contact Us</h1>
       <p className="text-slate-600 mb-8 leading-relaxed">
         Questions about kids toys, delivery in Karachi or anywhere in Pakistan? Reach Kids Paradise by Shoptick — your

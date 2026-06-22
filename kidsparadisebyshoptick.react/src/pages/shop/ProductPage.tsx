@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { ToyInquiryButton } from '@/components/shop/ToyInquiryButton';
 import { ImageLightbox } from '@/components/shop/ImageLightbox';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +51,16 @@ export function ProductPage() {
   const price = effectivePrice(toy);
   const onSale = toy.salePrice != null && toy.salePrice < toy.price;
 
+  const productJsonLd = [
+    buildProductJsonLd({ ...toy, price: toy.price, salePrice: toy.salePrice }),
+    buildBreadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Shop', path: '/shop' },
+      { name: toy.categoryName, path: `/shop?categoryId=${toy.categoryId}` },
+      { name: toy.name, path: `/product/${toy.id}` },
+    ]),
+  ];
+
   const handleAddToCart = () => {
     addItem({
       toyId: toy.id,
@@ -79,6 +91,13 @@ export function ProductPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead
+        title={`${toy.name} — Buy Online`}
+        description={`Buy ${toy.name} online at Kids Paradise by Shoptick. ${toy.categoryName}. Rs. ${price.toLocaleString()} with delivery across Pakistan.`}
+        path={`/product/${toy.id}`}
+        image={toyPrimaryImage(toy)}
+        jsonLd={productJsonLd}
+      />
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         <div>
           <button
@@ -87,7 +106,7 @@ export function ProductPage() {
             className="group relative w-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm cursor-zoom-in"
             aria-label="View full size image"
           >
-            <img src={images[activeImage]} alt={toy.name} className="w-full aspect-square object-cover" />
+            <img src={images[activeImage]} alt={toy.name} className="w-full aspect-square object-contain bg-slate-50 p-2" />
             <span className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/55 text-white text-xs font-medium px-3 py-1.5 rounded-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <ZoomIn className="w-3.5 h-3.5" /> Tap to zoom
             </span>
@@ -100,7 +119,7 @@ export function ProductPage() {
                   onClick={() => setActiveImage(i)}
                   className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${activeImage === i ? 'border-brand-500' : 'border-transparent'}`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt="" className="w-full h-full object-contain bg-slate-50 p-0.5" />
                 </button>
               ))}
             </div>

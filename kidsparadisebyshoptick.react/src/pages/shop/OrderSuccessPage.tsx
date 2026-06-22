@@ -4,6 +4,8 @@ import { CheckCircle, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { BrandName } from '@/components/ui/BrandName';
 import { formatPrice, PAYMENT_POLICY } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function OrderSuccessPage() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -22,7 +24,9 @@ export function OrderSuccessPage() {
     }
   };
 
-  return (    <div className="max-w-lg mx-auto px-4 py-20 text-center animate-fade-in">
+  return (
+    <div className="max-w-lg mx-auto px-4 py-20 text-center animate-fade-in">
+      <SeoHead title={PAGE_SEO.orderSuccess.title} description={PAGE_SEO.orderSuccess.description} path={PAGE_SEO.orderSuccess.path} noIndex />
       <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
         <CheckCircle className="w-10 h-10 text-green-600" />
       </div>

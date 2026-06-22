@@ -30,7 +30,11 @@ public class AdminAuthService : IAdminAuthService
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expires = DateTime.UtcNow.AddHours(8);
+        var sessionHours = int.TryParse(_configuration["Jwt:SessionHours"], out var sh) ? sh : 8;
+        var rememberDays = int.TryParse(_configuration["Jwt:RememberMeDays"], out var rd) ? rd : 30;
+        var expires = request.RememberMe
+            ? DateTime.UtcNow.AddDays(rememberDays)
+            : DateTime.UtcNow.AddHours(sessionHours);
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],

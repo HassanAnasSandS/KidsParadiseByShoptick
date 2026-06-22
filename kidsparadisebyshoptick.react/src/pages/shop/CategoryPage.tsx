@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '@/api/client';
 import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { buildBreadcrumbJsonLd } from '@/lib/seo';
 
 export function CategoryPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +35,17 @@ export function CategoryPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead
+        title={`${data.name} Toys`}
+        description={`Shop ${data.name} toys online at Kids Paradise by Shoptick. ${data.toys.length} unique kids toys with delivery in Karachi & across Pakistan.`}
+        path={`/category/${data.id}`}
+        image={data.imageUrl}
+        jsonLd={buildBreadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+          { name: data.name, path: `/category/${data.id}` },
+        ])}
+      />
       <div className="mb-8">
         <p className="text-sm text-brand-500 font-medium"><Link to="/shop">Shop</Link> / {data.name}</p>
         <h1 className="text-3xl font-bold text-slate-800 mt-1">{data.name}</h1>

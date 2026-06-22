@@ -91,7 +91,7 @@ if (app.Environment.IsDevelopment())
 // 1) Trust proxy/IIS forwarded headers (HTTPS/host behind reverse proxy)
 app.UseForwardedHeaders();
 
-// 2) Force canonical domain: http→https, non-www→www (301)
+// 2) Force canonical domain: http→https, wrong host→canonical (301)
 app.UseMiddleware<CanonicalHostMiddleware>();
 
 if (!app.Environment.IsDevelopment())

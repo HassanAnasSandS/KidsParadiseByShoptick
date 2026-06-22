@@ -70,13 +70,36 @@ public class ToyService : IToyService
         entity.Price = request.Price;
         entity.SalePrice = request.SalePrice;
 
-        foreach (var old in entity.Images.ToList())
+        var newPaths = request.ImagePaths?
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p.Trim())
+            .ToList() ?? [];
+
+        if (newPaths.Count > 0)
         {
-            _fileStorage.DeleteImage(old.ImagePath);
-            entity.Images.Remove(old);
+            var keepPaths = newPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var old in entity.Images.ToList())
+            {
+                if (!keepPaths.Contains(old.ImagePath))
+                {
+                    _fileStorage.DeleteImage(old.ImagePath);
+                    entity.Images.Remove(old);
+                }
+            }
+
+            for (var index = 0; index < newPaths.Count; index++)
+            {
+                var path = newPaths[index];
+                var existing = entity.Images.FirstOrDefault(i =>
+                    string.Equals(i.ImagePath, path, StringComparison.OrdinalIgnoreCase));
+
+                if (existing is not null)
+                    existing.SortOrder = index;
+                else
+                    entity.Images.Add(new ToyImage { ToyId = entity.Id, ImagePath = path, SortOrder = index });
+            }
         }
-        foreach (var (path, index) in request.ImagePaths.Select((p, i) => (p, i)))
-            entity.Images.Add(new ToyImage { ToyId = entity.Id, ImagePath = path, SortOrder = index });
 
         await _unitOfWork.Toys.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -104,9 +127,11 @@ public class ToyService : IToyService
         var reviews = toy.Reviews.ToList();
         var avg = reviews.Count > 0 ? reviews.Average(r => r.Rating) : (double?)null;
 
+        var imagePaths = toy.Images.OrderBy(i => i.SortOrder).Select(i => i.ImagePath).ToList();
+
         return new ToyDetailDto(
             toy.Id, toy.Name, toy.Price, toy.SalePrice, toy.IsSold,
-            ToyMapper.ImageUrls(toy, _fileStorage), toy.Category?.Name ?? "", toy.CategoryId,
+            imagePaths, ToyMapper.ImageUrls(toy, _fileStorage), toy.Category?.Name ?? "", toy.CategoryId,
             avg, reviews.Count);
     }
 }

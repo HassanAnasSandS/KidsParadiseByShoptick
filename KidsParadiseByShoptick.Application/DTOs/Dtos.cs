@@ -1,6 +1,6 @@
 namespace KidsParadiseByShoptick.Application.DTOs;
 
-public record CategoryDto(int Id, string Name, string? ImageUrl, int ToyCount);
+public record CategoryDto(int Id, string Name, string? ImageUrl, string? ImagePath, int ToyCount);
 public record CategoryDetailDto(int Id, string Name, string? ImageUrl, IReadOnlyList<ToyListDto> Toys);
 
 public record ToyListDto(
@@ -9,11 +9,11 @@ public record ToyListDto(
 
 public record ToyDetailDto(
     int Id, string Name, decimal Price, decimal? SalePrice, bool IsSold,
-    IReadOnlyList<string> ImageUrls, string CategoryName, int CategoryId,
+    IReadOnlyList<string> ImagePaths, IReadOnlyList<string> ImageUrls, string CategoryName, int CategoryId,
     double? AverageRating, int ReviewCount);
 
 public record ReviewDto(
-    int Id, string ReviewerName, int Rating, string Comment, string? ImageUrl,
+    int Id, string ReviewerName, int Rating, string Comment, string? ImageUrl, string? ImagePath,
     string ToyName, int ToyId, string OrderNumber, DateTime CreatedAt);
 
 public record PendingReviewDto(
@@ -44,7 +44,7 @@ public record OrderPlacedDto(string OrderNumber, decimal Total, decimal Delivery
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);
 
-public record AdminLoginRequest(string Username, string Password);
+public record AdminLoginRequest(string Username, string Password, bool RememberMe = false);
 public record AdminLoginResponse(string Token, string Username);
 
 public record CreateCategoryRequest(string Name, string? ImagePath);
@@ -72,3 +72,13 @@ public record AdminUpdateOrderRequest(
     IReadOnlyList<int> ToyIds);
 
 public record UploadResponse(string Path, string Url);
+
+public record SeoPublicConfigDto(
+    string SiteName,
+    string SiteBaseUrl,
+    string DefaultTitle,
+    string DefaultDescription,
+    string DefaultKeywords,
+    string DefaultOgImageUrl,
+    string Locale,
+    string Region);

@@ -3,6 +3,8 @@ import { Trash2, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { Button } from '@/components/ui/Button';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function CartPage() {
   const { items, removeItem, subTotal, totalItems } = useCartStore();
@@ -10,6 +12,7 @@ export function CartPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <SeoHead title={PAGE_SEO.cart.title} description={PAGE_SEO.cart.description} path={PAGE_SEO.cart.path} noIndex />
         <div className="text-6xl mb-4">🛒</div>
         <h1 className="text-2xl font-bold text-slate-800">Your cart is empty</h1>
         <p className="text-slate-500 mt-2 mb-6">Add some toys to get started!</p>
@@ -20,6 +23,7 @@ export function CartPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead title={PAGE_SEO.cart.title} description={PAGE_SEO.cart.description} path={PAGE_SEO.cart.path} noIndex />
       <h1 className="text-3xl font-bold text-slate-800 mb-6">Shopping Cart ({totalItems()} items)</h1>
 
       <div className="space-y-4">

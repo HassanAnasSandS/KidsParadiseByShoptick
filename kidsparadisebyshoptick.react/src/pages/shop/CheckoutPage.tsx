@@ -5,6 +5,8 @@ import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { formatPrice, getDeliveryCharge, PAYMENT_POLICY } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_SEO } from '@/lib/seo';
 
 export function CheckoutPage() {
   const { items, clearCart } = useCartStore();
@@ -51,6 +53,7 @@ export function CheckoutPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <SeoHead title={PAGE_SEO.checkout.title} description={PAGE_SEO.checkout.description} path={PAGE_SEO.checkout.path} noIndex />
       <h1 className="text-3xl font-bold text-slate-800 mb-2">Checkout</h1>
       {buyNow && (
         <p className="text-sm text-brand-600 bg-brand-50 border border-brand-100 rounded-xl px-4 py-2.5 mb-6">
