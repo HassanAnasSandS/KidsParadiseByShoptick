@@ -10,10 +10,29 @@ import { ImageLightbox } from '@/components/shop/ImageLightbox';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
+import { buildShopPath, mergeShopFilters } from '@/lib/shopFilters';
+import { useShopPath, useShopFiltersStore } from '@/store/shopFilters';
+
+function BackToShopButton({ shopPath }: { shopPath: string }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (window.history.length > 1) navigate(-1);
+        else navigate(shopPath);
+      }}
+      className="text-brand-600 mt-2 inline-block hover:underline"
+    >
+      Back to shop
+    </button>
+  );
+}
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const shopPath = useShopPath();
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
@@ -42,7 +61,7 @@ export function ProductPage() {
     return (
       <div className="text-center py-20">
         <h2 className="text-xl font-semibold">Product not found</h2>
-        <Link to="/shop" className="text-brand-600 mt-2 inline-block">Back to shop</Link>
+        <BackToShopButton shopPath={shopPath} />
       </div>
     );
   }
@@ -51,12 +70,16 @@ export function ProductPage() {
   const price = effectivePrice(toy);
   const onSale = toy.salePrice != null && toy.salePrice < toy.price;
 
+  const categoryShopPath = buildShopPath(
+    mergeShopFilters(useShopFiltersStore.getState().filters, { categoryId: toy.categoryId }),
+  );
+
   const productJsonLd = [
     buildProductJsonLd({ ...toy, price: toy.price, salePrice: toy.salePrice }),
     buildBreadcrumbJsonLd([
       { name: 'Home', path: '/' },
-      { name: 'Shop', path: '/shop' },
-      { name: toy.categoryName, path: `/shop?categoryId=${toy.categoryId}` },
+      { name: 'Shop', path: shopPath },
+      { name: toy.categoryName, path: categoryShopPath },
       { name: toy.name, path: `/product/${toy.id}` },
     ]),
   ];

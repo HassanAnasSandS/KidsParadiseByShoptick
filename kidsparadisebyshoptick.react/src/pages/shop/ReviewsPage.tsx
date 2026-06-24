@@ -4,6 +4,7 @@ import { MessageSquare } from 'lucide-react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PaginationBar } from '@/components/ui/PaginationBar';
 import { ReviewForm, StarRatingDisplay } from '@/components/shop/ReviewForm';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
@@ -12,21 +13,29 @@ export function ReviewsPage() {
   const queryClient = useQueryClient();
   const [whatsapp, setWhatsapp] = useState('');
   const [lookupWhatsapp, setLookupWhatsapp] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data: reviews, isLoading } = useQuery({
-    queryKey: ['reviews'],
-    queryFn: api.getAllReviews,
+  const { data, isLoading } = useQuery({
+    queryKey: ['reviews', page],
+    queryFn: () => api.getAllReviews({ page }),
   });
+  const reviews = data?.items ?? [];
 
-  const { data: pending } = useQuery({
-    queryKey: ['pending-reviews', lookupWhatsapp],
-    queryFn: () => api.getPendingReviews(lookupWhatsapp),
+  const [pendingPage, setPendingPage] = useState(1);
+
+  const { data: pendingData } = useQuery({
+    queryKey: ['pending-reviews', lookupWhatsapp, pendingPage],
+    queryFn: () => api.getPendingReviews(lookupWhatsapp, pendingPage),
     enabled: !!lookupWhatsapp,
   });
+  const pending = pendingData?.items ?? [];
 
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (whatsapp.trim()) setLookupWhatsapp(whatsapp.trim());
+    if (whatsapp.trim()) {
+      setPendingPage(1);
+      setLookupWhatsapp(whatsapp.trim());
+    }
   };
 
   const refreshPending = () => {
@@ -75,6 +84,14 @@ export function ReviewsPage() {
             ))}
           </div>
         )}
+        {data && (
+          <PaginationBar
+            page={data.page}
+            totalCount={data.totalCount}
+            pageSize={data.pageSize}
+            onPageChange={setPage}
+          />
+        )}
       </section>
 
       {/* Write review - delivered orders only */}
@@ -95,16 +112,16 @@ export function ReviewsPage() {
           <Button type="submit" className="sm:self-end">Check Orders</Button>
         </form>
 
-        {lookupWhatsapp && pending && pending.length === 0 && (
+        {lookupWhatsapp && pendingData && pending.length === 0 && (
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
             No items ready to review. Reviews unlock after your order is delivered.
           </p>
         )}
 
-        {pending && pending.length > 0 && (
+        {pending.length > 0 && (
           <div className="space-y-4">
             <p className="text-sm font-medium text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5">
-              {pending.length} item{pending.length > 1 ? 's' : ''} ready for review
+              {pendingData?.totalCount ?? pending.length} item{(pendingData?.totalCount ?? pending.length) > 1 ? 's' : ''} ready for review
             </p>
             {pending.map((item) => (
               <ReviewForm
@@ -114,6 +131,14 @@ export function ReviewsPage() {
                 onSuccess={refreshPending}
               />
             ))}
+            {pendingData && (
+              <PaginationBar
+                page={pendingData.page}
+                totalCount={pendingData.totalCount}
+                pageSize={pendingData.pageSize}
+                onPageChange={setPendingPage}
+              />
+            )}
           </div>
         )}
       </section>

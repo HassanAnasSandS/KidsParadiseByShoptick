@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Category } from '@/api/client';
 import { placeholderImage } from '@/lib/utils';
+import { useShopPath } from '@/store/shopFilters';
 
 const categoryIcons = ['🧸', '🎮', '🎨', '⚽', '🚗', '🧩', '🎪', '🦄'];
 
@@ -12,10 +13,11 @@ interface CategoryCardProps {
 export function CategoryCard({ category, index = 0 }: CategoryCardProps) {
   const img = category.imageUrl || placeholderImage(category.name);
   const icon = categoryIcons[index % categoryIcons.length];
+  const categoryShopPath = useShopPath({ categoryId: category.id });
 
   return (
     <Link
-      to={`/category/${category.id}`}
+      to={categoryShopPath}
       className="group relative bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-brand-200 hover:shadow-xl transition-all duration-300"
     >
       <div className="aspect-[4/3] overflow-hidden relative">

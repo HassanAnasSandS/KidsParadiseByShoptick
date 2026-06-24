@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.ToyEditPage"
+             x:Name="ThisPage"
+             x:DataType="vm:ToyEditViewModel"
+             Title="{Binding Title}">
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="12">
+            <Entry Placeholder="Toy name" Text="{Binding Name}" />
+            <Picker Title="Category" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCategory}" />
+            <Entry Placeholder="Price (Rs.)" Keyboard="Numeric" Text="{Binding PriceText}" />
+            <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" />
+            <Button Text="Add Images" Command="{Binding PickImagesCommand}" />
+            <CollectionView ItemsSource="{Binding Images}" HeightRequest="120">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ToyImageItem">
+                        <Grid WidthRequest="90">
+                            <Image Source="{Binding Url, Converter={StaticResource ImageUrl}}" HeightRequest="80" Aspect="AspectFit" />
+                            <Button Text="×" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#dc2626" TextColor="White" FontSize="10" Padding="4"
+                                    Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveImageCommand}" CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <Button Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

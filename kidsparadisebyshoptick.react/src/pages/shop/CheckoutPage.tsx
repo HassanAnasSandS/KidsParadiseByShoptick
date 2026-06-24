@@ -7,8 +7,10 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { formatPrice, getDeliveryCharge, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { useShopPath } from '@/store/shopFilters';
 
 export function CheckoutPage() {
+  const shopPath = useShopPath();
   const { items, clearCart } = useCartStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,7 +30,7 @@ export function CheckoutPage() {
     return (
       <div className="text-center py-20">
         <h2 className="text-xl font-semibold">Cart is empty</h2>
-        <Link to="/shop" className="text-brand-600 mt-2 inline-block">Go shopping</Link>
+        <Link to={shopPath} className="text-brand-600 mt-2 inline-block">Go shopping</Link>
       </div>
     );
   }

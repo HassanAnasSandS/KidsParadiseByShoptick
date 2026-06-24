@@ -119,18 +119,42 @@ public class OrderService : IOrderService
 
     public async Task<IReadOnlyList<OrderDto>> GetOrdersByWhatsappAsync(string whatsapp, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(whatsapp))
-            return [];
+        var result = await GetOrdersByWhatsappPagedAsync(whatsapp, 1, int.MaxValue, cancellationToken);
+        return result.Items;
+    }
 
-        var orders = await _unitOfWork.Orders.GetByCustomerWhatsappAsync(whatsapp, cancellationToken);
-        return orders.Select(Map).ToList();
+    public async Task<PagedResult<OrderDto>> GetOrdersByWhatsappPagedAsync(
+        string whatsapp, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(whatsapp))
+            return new PagedResult<OrderDto>([], 0, page, pageSize);
+
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        var orders = await _unitOfWork.Orders.GetByCustomerWhatsappPagedAsync(whatsapp, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Orders.CountByCustomerWhatsappAsync(whatsapp, cancellationToken);
+        return new PagedResult<OrderDto>(orders.Select(Map).ToList(), total, page, pageSize);
     }
 
     public async Task<IReadOnlyList<OrderDto>> GetAllAdminAsync(CancellationToken cancellationToken = default)
     {
-        var orders = await _unitOfWork.Orders.GetAllWithDetailsAsync(cancellationToken);
-        return orders.Select(Map).ToList();
+        var result = await GetAdminPagedAsync(null, null, null, null, null, "newest", 1, int.MaxValue, cancellationToken);
+        return result.Items;
     }
+
+    public async Task<PagedResult<OrderDto>> GetAdminPagedAsync(
+        string? status, string? search, string? city, DateTime? dateFrom, DateTime? dateTo, string? sort,
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var orders = await _unitOfWork.Orders.GetAdminPagedAsync(status, search, city, dateFrom, dateTo, sort, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Orders.CountAdminAsync(status, search, city, dateFrom, dateTo, cancellationToken);
+        return new PagedResult<OrderDto>(orders.Select(Map).ToList(), total, page, pageSize);
+    }
+
+    public Task<IReadOnlyList<string>> GetAdminCitiesAsync(CancellationToken cancellationToken = default)
+        => _unitOfWork.Orders.GetDistinctCitiesAsync(cancellationToken);
 
     public async Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default)
     {

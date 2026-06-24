@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             Title="Admin Login"
+             Shell.FlyoutBehavior="Disabled"
+             BackgroundColor="#0f172a">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+            <Label Text="Kids Paradise" TextColor="White" FontSize="28" FontAttributes="Bold" HorizontalOptions="Center" />
+            <Label Text="Admin Portal" TextColor="#94a3b8" FontSize="14" HorizontalOptions="Center" Margin="0,0,0,24" />
+
+            <Frame BackgroundColor="White" CornerRadius="16" Padding="20" HasShadow="True">
+                <VerticalStackLayout Spacing="14">
+                    <Entry Placeholder="Username" Text="{Binding Username}" />
+                    <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" />
+                    <HorizontalStackLayout Spacing="8">
+                        <CheckBox IsChecked="{Binding RememberMe}" Color="#1a6fe8" />
+                        <Label Text="Remember me for 30 days" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+                    <Button Text="Sign In" Command="{Binding LoginCommand}" BackgroundColor="#1a6fe8" TextColor="White" CornerRadius="10" />
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#1a6fe8" />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

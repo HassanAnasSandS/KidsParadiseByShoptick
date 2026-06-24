@@ -20,14 +20,34 @@ public class ReviewService : IReviewService
 
     public async Task<IReadOnlyList<ReviewDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var reviews = await _unitOfWork.Reviews.GetAllWithDetailsAsync(cancellationToken);
-        return reviews.Select(Map).ToList();
+        var result = await GetPagedAsync(null, 1, int.MaxValue, cancellationToken);
+        return result.Items;
+    }
+
+    public async Task<PagedResult<ReviewDto>> GetPagedAsync(
+        string? search, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var reviews = await _unitOfWork.Reviews.GetPagedAsync(search, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Reviews.CountAsync(search, cancellationToken);
+        return new PagedResult<ReviewDto>(reviews.Select(Map).ToList(), total, page, pageSize);
     }
 
     public async Task<IReadOnlyList<ReviewDto>> GetByToyIdAsync(int toyId, CancellationToken cancellationToken = default)
     {
-        var reviews = await _unitOfWork.Reviews.GetByToyIdAsync(toyId, cancellationToken);
-        return reviews.Select(Map).ToList();
+        var result = await GetByToyIdPagedAsync(toyId, 1, int.MaxValue, cancellationToken);
+        return result.Items;
+    }
+
+    public async Task<PagedResult<ReviewDto>> GetByToyIdPagedAsync(
+        int toyId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var reviews = await _unitOfWork.Reviews.GetByToyIdPagedAsync(toyId, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Reviews.CountByToyIdAsync(toyId, cancellationToken);
+        return new PagedResult<ReviewDto>(reviews.Select(Map).ToList(), total, page, pageSize);
     }
 
     public async Task<IReadOnlyList<PendingReviewDto>> GetPendingForCustomerAsync(string whatsapp, CancellationToken cancellationToken = default)
@@ -56,6 +76,16 @@ public class ReviewService : IReviewService
         }
 
         return pending;
+    }
+
+    public async Task<PagedResult<PendingReviewDto>> GetPendingForCustomerPagedAsync(
+        string whatsapp, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var all = await GetPendingForCustomerAsync(whatsapp, cancellationToken);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        var items = all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<PendingReviewDto>(items, all.Count, page, pageSize);
     }
 
     public async Task<ReviewDto> CreateAsync(CreateReviewRequest request, CancellationToken cancellationToken = default)
@@ -100,7 +130,10 @@ public class ReviewService : IReviewService
     }
 
     public async Task<IReadOnlyList<ReviewDto>> GetAllAdminAsync(CancellationToken cancellationToken = default)
-        => await GetAllAsync(cancellationToken);
+    {
+        var result = await GetPagedAsync(null, 1, int.MaxValue, cancellationToken);
+        return result.Items;
+    }
 
     public async Task<ReviewDto?> UpdateAdminAsync(int id, AdminUpdateReviewRequest request, CancellationToken cancellationToken = default)
     {

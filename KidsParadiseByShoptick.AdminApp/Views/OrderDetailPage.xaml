@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.OrderDetailPage"
+             x:DataType="vm:OrderDetailViewModel"
+             Title="Order Detail"
+             BackgroundColor="{StaticResource PageBg}">
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="14" IsVisible="{Binding Order, Converter={StaticResource NullToBool}}">
+
+            <!-- Header -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" Spacing="6">
+                        <Label Text="{Binding Order.OrderNumber}" FontSize="20" FontAttributes="Bold" TextColor="#1a6fe8" />
+                        <Label Text="{Binding Order.Status, StringFormat='Status: {0}'}" FontAttributes="Bold" />
+                        <Label Text="{Binding Order.CreatedAt, StringFormat='Placed: {0:g}'}" FontSize="12" TextColor="#64748b" />
+                        <Label Text="{Binding Order.TrackingNumber, StringFormat='Tracking: {0}'}"
+                               IsVisible="{Binding Order.TrackingNumber, Converter={StaticResource NullToBool}}"
+                               FontSize="13" TextColor="#7c3aed" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1"
+                            Text="WA"
+                            Command="{Binding OpenWhatsAppCommand}"
+                            IsEnabled="{Binding CanOpenWhatsApp}"
+                            BackgroundColor="#25D366"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            CornerRadius="22"
+                            WidthRequest="44"
+                            HeightRequest="44"
+                            Padding="0"
+                            VerticalOptions="Start" />
+                </Grid>
+            </Frame>
+
+            <!-- Customer -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Customer" FontAttributes="Bold" FontSize="15" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="WhatsApp"
+                                Command="{Binding OpenWhatsAppCommand}"
+                                IsEnabled="{Binding CanOpenWhatsApp}"
+                                BackgroundColor="#25D366"
+                                TextColor="White"
+                                FontSize="12"
+                                Padding="12,6"
+                                CornerRadius="10" />
+                    </Grid>
+                    <Label Text="{Binding Order.CustomerName, StringFormat='Name: {0}'}" />
+                    <Label Text="{Binding Order.Whatsapp, StringFormat='WhatsApp: {0}'}" />
+                    <Label Text="{Binding Order.City, StringFormat='City: {0}'}" />
+                    <Label Text="{Binding Order.Address, StringFormat='Address: {0}'}" LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Ordered items -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Ordered Items" FontAttributes="Bold" FontSize="15" />
+                    <CollectionView ItemsSource="{Binding Order.Items}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:OrderItemModel">
+                                <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10" Padding="0,6">
+                                    <Image Grid.Column="0"
+                                           Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}"
+                                           HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding ToyName}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding PriceLine}" FontSize="11" TextColor="#64748b" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="2"
+                                           Text="{Binding LineTotal, StringFormat='Rs. {0:N0}'}"
+                                           FontAttributes="Bold" VerticalOptions="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Bill summary -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="#f8fafc">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Bill Summary" FontAttributes="Bold" FontSize="15" />
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Products Subtotal" TextColor="#64748b" />
+                        <Label Grid.Column="1" Text="{Binding Order.SubTotal, StringFormat='Rs. {0:N0}'}" FontAttributes="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Delivery Charges" TextColor="#64748b" />
+                        <Label Grid.Column="1" Text="{Binding Order.DeliveryCharge, StringFormat='Rs. {0:N0}'}" FontAttributes="Bold" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Color="#e2e8f0" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Order Total" FontAttributes="Bold" />
+                        <Label Grid.Column="1" Text="{Binding Order.Total, StringFormat='Rs. {0:N0}'}" FontAttributes="Bold" FontSize="16" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding Order.DiscountAmount, Converter={StaticResource PositiveAmount}}">
+                        <Label Text="Discount" TextColor="#64748b" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Order.DiscountAmount, StringFormat='-Rs. {0:N0}'}"
+                               TextColor="#c2410c" FontAttributes="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding Order.DiscountAmount, Converter={StaticResource PositiveAmount}}">
+                        <Label Text="Payable Amount" FontAttributes="Bold" />
+                        <Label Grid.Column="1" Text="{Binding PayableAfterDiscount, StringFormat='Rs. {0:N0}'}" FontAttributes="Bold" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding Order.AdvanceAmount, Converter={StaticResource PositiveAmount}}">
+                        <Label Text="Advance Paid" TextColor="#64748b" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Order.AdvanceAmount, StringFormat='Rs. {0:N0}'}"
+                               TextColor="#15803d" FontAttributes="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto"
+                          IsVisible="{Binding ShowPaymentDetails}">
+                        <Label Text="Balance Due" FontAttributes="Bold" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Order.BalanceAmount, StringFormat='Rs. {0:N0}'}"
+                               TextColor="#1a6fe8" FontAttributes="Bold" FontSize="16" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Update status -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Update Status" FontAttributes="Bold" FontSize="15" />
+                    <Picker ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}" Title="Status" />
+                    <Entry Placeholder="Tracking number" Text="{Binding TrackingNumber}" />
+                    <Entry Placeholder="Advance amount" Keyboard="Numeric" Text="{Binding AdvanceText}" />
+                    <Entry Placeholder="Discount amount" Keyboard="Numeric" Text="{Binding DiscountText}" />
+                    <Button Text="Save Status" Command="{Binding SaveStatusCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
+                    <Button Text="Full Edit" Command="{Binding EditCommand}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="#1a6fe8" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

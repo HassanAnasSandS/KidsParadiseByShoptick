@@ -1,7 +1,10 @@
 using System.Text;
 using KidsParadiseByShoptick.Application;
+using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Application.Options;
+using KidsParadiseByShoptick.APIs.Hubs;
 using KidsParadiseByShoptick.APIs.Middleware;
+using KidsParadiseByShoptick.APIs.Services;
 using KidsParadiseByShoptick.Infrastructure;
 using KidsParadiseByShoptick.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,6 +30,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 builder.Services.AddResponseCaching();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IOrderNotificationService, SignalROrderNotificationService>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -44,6 +49,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -111,6 +127,7 @@ app.UseAuthorization();
 app.UseResponseCaching();
 
 app.MapControllers();
+app.MapHub<AdminOrderHub>("/hubs/admin-orders");
 app.MapFallbackToFile("index.html");
 
 await DbSeeder.SeedAsync(app.Services);

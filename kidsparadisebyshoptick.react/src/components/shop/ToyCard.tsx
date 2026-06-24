@@ -1,21 +1,38 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import type { ToyListItem } from '@/api/client';
 import { effectivePrice, toyPrimaryImage } from '@/api/client';
 import { formatPrice, placeholderImage } from '@/lib/utils';
 import { ToyInquiryButton } from '@/components/shop/ToyInquiryButton';
+import { saveProductListAnchor } from '@/lib/scroll';
 
 interface ToyCardProps {
   toy: ToyListItem;
+  listItemCount?: number;
+  page?: number;
 }
 
-export function ToyCard({ toy }: ToyCardProps) {
+export function ToyCard({ toy, listItemCount, page }: ToyCardProps) {
+  const location = useLocation();
   const primary = toyPrimaryImage(toy) || placeholderImage(toy.name);
   const price = effectivePrice(toy);
   const onSale = toy.salePrice != null && toy.salePrice < toy.price;
 
+  const handleOpenProduct = () => {
+    saveProductListAnchor(
+      location.pathname,
+      location.search,
+      toy.id,
+      listItemCount ?? 0,
+      page,
+    );
+  };
+
   return (
-    <div className="group relative bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 animate-fade-in ring-1 ring-slate-100 hover:ring-brand-200">
+    <div
+      id={`product-${toy.id}`}
+      className="group relative bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 animate-fade-in ring-1 ring-slate-100 hover:ring-brand-200 scroll-mt-28"
+    >
       {!toy.isSold && (
         <ToyInquiryButton
           toy={toy}
@@ -23,7 +40,7 @@ export function ToyCard({ toy }: ToyCardProps) {
           onClick={(e) => e.stopPropagation()}
         />
       )}
-      <Link to={`/product/${toy.id}`} className="block">
+      <Link to={`/product/${toy.id}`} className="block" onClick={handleOpenProduct}>
         <div className="aspect-square overflow-hidden bg-slate-50 relative">
           <img
             src={primary}

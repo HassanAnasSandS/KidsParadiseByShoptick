@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.SiteImagesPage"
+             x:Name="ThisPage"
+             x:DataType="vm:SiteImagesViewModel"
+             Title="Site Images"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
+    </ContentPage.ToolbarItems>
+    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}" Padding="12">
+        <CollectionView ItemsSource="{Binding Items}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:SiteImageModel">
+                    <Frame Margin="0,6" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="{Binding Label}" FontAttributes="Bold" />
+                            <Label Text="{Binding Group}" FontSize="11" TextColor="#64748b" />
+                            <Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="120" Aspect="AspectFit" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Upload" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.UploadCommand}" CommandParameter="{Binding .}" />
+                                <Button Text="Reset" BackgroundColor="#64748b" TextColor="White" IsVisible="{Binding IsCustom}"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.ResetCommand}" CommandParameter="{Binding .}" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

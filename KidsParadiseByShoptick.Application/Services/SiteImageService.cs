@@ -1,3 +1,4 @@
+using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Domain.Interfaces;
 
@@ -22,8 +23,18 @@ public class SiteImageService : ISiteImageService
 
     public async Task<IReadOnlyList<SiteImageAdminDto>> GetAdminAsync(CancellationToken cancellationToken = default)
     {
+        var result = await GetAdminPagedAsync(1, 100, cancellationToken);
+        return result.Items;
+    }
+
+    public async Task<PagedResult<SiteImageAdminDto>> GetAdminPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
         var images = await _unitOfWork.SiteImages.GetAllOrderedAsync(cancellationToken);
-        return images.Select(MapAdmin).ToList();
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var all = images.Select(MapAdmin).ToList();
+        var items = all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedResult<SiteImageAdminDto>(items, all.Count, page, pageSize);
     }
 
     public async Task<SiteImageAdminDto> UploadAsync(

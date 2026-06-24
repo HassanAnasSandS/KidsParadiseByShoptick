@@ -20,17 +20,28 @@ public class ReviewsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ReviewDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _reviewService.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<ReviewDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _reviewService.GetPagedAsync(search, page, pageSize, cancellationToken));
 
     [HttpGet("toy/{toyId:int}")]
-    public async Task<ActionResult<IReadOnlyList<ReviewDto>>> GetByToy(int toyId, CancellationToken cancellationToken)
-        => Ok(await _reviewService.GetByToyIdAsync(toyId, cancellationToken));
+    public async Task<ActionResult<PagedResult<ReviewDto>>> GetByToy(
+        int toyId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+        => Ok(await _reviewService.GetByToyIdPagedAsync(toyId, page, pageSize, cancellationToken));
 
     [HttpGet("pending")]
-    public async Task<ActionResult<IReadOnlyList<PendingReviewDto>>> GetPending(
-        [FromQuery] string whatsapp, CancellationToken cancellationToken)
-        => Ok(await _reviewService.GetPendingForCustomerAsync(whatsapp, cancellationToken));
+    public async Task<ActionResult<PagedResult<PendingReviewDto>>> GetPending(
+        [FromQuery] string whatsapp,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+        => Ok(await _reviewService.GetPendingForCustomerPagedAsync(whatsapp, page, pageSize, cancellationToken));
 
     [HttpPost("upload")]
     [RequestSizeLimit(5 * 1024 * 1024)]
@@ -75,8 +86,12 @@ public class AdminReviewsController : ControllerBase
     public AdminReviewsController(IReviewService reviewService) => _reviewService = reviewService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ReviewDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _reviewService.GetAllAdminAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<ReviewDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _reviewService.GetPagedAsync(search, page, pageSize, cancellationToken));
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ReviewDto>> Update(

@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Trash2, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
+import { useShopPath } from '@/store/shopFilters';
 import { Button } from '@/components/ui/Button';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
 
 export function CartPage() {
+  const shopPath = useShopPath();
   const { items, removeItem, subTotal, totalItems } = useCartStore();
 
   if (items.length === 0) {
@@ -16,7 +18,7 @@ export function CartPage() {
         <div className="text-6xl mb-4">🛒</div>
         <h1 className="text-2xl font-bold text-slate-800">Your cart is empty</h1>
         <p className="text-slate-500 mt-2 mb-6">Add some toys to get started!</p>
-        <Link to="/shop"><Button><ShoppingBag className="w-4 h-4" /> Continue Shopping</Button></Link>
+        <Link to={shopPath}><Button><ShoppingBag className="w-4 h-4" /> Continue Shopping</Button></Link>
       </div>
     );
   }

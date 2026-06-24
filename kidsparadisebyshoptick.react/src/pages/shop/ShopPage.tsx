@@ -1,50 +1,132 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Search, Filter, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
+import { Search, Filter, X, Loader2 } from 'lucide-react';
 import { api } from '@/api/client';
 import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
+import { CategoryFilterSlider, CategoryFilterSliderSkeleton } from '@/components/shop/CategoryFilterSlider';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { useSiteImages } from '@/hooks/useSiteImages';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import {
+  hasActiveShopFilters,
+  parseShopSearchParams,
+  filtersToSearchParams,
+} from '@/lib/shopFilters';
+import { clearScrollForPath, getScrollKey, migrateListScrollSnapshot, scrollToTop } from '@/lib/scroll';
+import { useShopFiltersStore } from '@/store/shopFilters';
+import { useScrollRestore } from '@/hooks/useScrollRestore';
 
 export function ShopPage() {
   const { get } = useSiteImages();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = searchParams.get('search') || '';
-  const categoryId = searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : undefined;
+  const syncFromSearchParams = useShopFiltersStore((s) => s.syncFromSearchParams);
+  const resetFiltersStore = useShopFiltersStore((s) => s.resetFilters);
+  const restoredRef = useRef(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const urlFilters = useMemo(() => parseShopSearchParams(searchParams), [searchParams]);
+  const search = urlFilters.search;
+  const categoryId = urlFilters.categoryId;
   const saleFilter = searchParams.get('onSale');
-  const onSale = saleFilter === 'true' ? true : saleFilter === 'false' ? false : undefined;
-  const sort = searchParams.get('sort') || 'newest';
-  const page = Math.max(1, Number(searchParams.get('page') || '1'));
+  const onSale = urlFilters.onSale;
+  const sort = urlFilters.sort;
+
   const [searchInput, setSearchInput] = useState(search);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => hasActiveShopFilters(urlFilters));
 
   useEffect(() => {
     setSearchInput(search);
   }, [search]);
 
-  const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: api.getCategories });
-  const { data, isLoading } = useQuery({
-    queryKey: ['toys', categoryId, search, saleFilter, sort, page],
-    queryFn: () => api.getToys({
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+
+    if (hasActiveShopFilters(urlFilters)) {
+      syncFromSearchParams(searchParams);
+      setShowFilters(true);
+      return;
+    }
+
+    const stored = useShopFiltersStore.getState().filters;
+    if (hasActiveShopFilters(stored)) {
+      const fromKey = getScrollKey(location.pathname, location.search);
+      const nextParams = filtersToSearchParams(stored);
+      const toKey = getScrollKey('/shop', nextParams.toString() ? `?${nextParams.toString()}` : '');
+      migrateListScrollSnapshot(fromKey, toKey);
+      setSearchParams(nextParams, { replace: true });
+      setShowFilters(true);
+    }
+  }, [searchParams, setSearchParams, syncFromSearchParams, urlFilters, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    syncFromSearchParams(searchParams);
+    if (hasActiveShopFilters(parseShopSearchParams(searchParams))) {
+      setShowFilters(true);
+    }
+  }, [searchParams, syncFromSearchParams]);
+
+  const { data: categoriesData, isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories({ page: 1, pageSize: 100 }),
+  });
+  const categories = categoriesData?.items;
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['toys', categoryId, search, saleFilter, sort],
+    queryFn: ({ pageParam }) => api.getToys({
       categoryId,
       search: search || undefined,
       onSale,
       sort: sort !== 'newest' ? sort : undefined,
-      page,
+      page: pageParam,
     }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.totalCount / lastPage.pageSize);
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined;
+    },
+    gcTime: 30 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
 
-  const totalPages = data ? Math.ceil(data.totalCount / data.pageSize) : 1;
+  const toys = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
+  const totalCount = data?.pages[0]?.totalCount ?? 0;
+  const hasActiveFilters = hasActiveShopFilters(urlFilters);
 
-  const hasActiveFilters =
-    search.trim() !== '' ||
-    !!categoryId ||
-    saleFilter !== null ||
-    sort !== 'newest';
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) fetchNextPage();
+      },
+      { rootMargin: '240px' },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useScrollRestore({
+    ready: !isLoading && toys.length > 0,
+    items: toys,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
   const updateParams = (updates: Record<string, string | null>) => {
     const next = new URLSearchParams(searchParams);
@@ -52,20 +134,16 @@ export function ShopPage() {
       if (value) next.set(key, value);
       else next.delete(key);
     });
-    next.delete('page');
-    setSearchParams(next);
-  };
-
-  const setPage = (nextPage: number) => {
-    const next = new URLSearchParams(searchParams);
-    if (nextPage <= 1) next.delete('page');
-    else next.set('page', String(nextPage));
     setSearchParams(next);
   };
 
   const clearFilters = () => {
     setSearchInput('');
+    resetFiltersStore();
     setSearchParams({});
+    setShowFilters(false);
+    clearScrollForPath('/shop');
+    scrollToTop();
   };
 
   const categoryFilterValue = categoryId ? String(categoryId) : 'All';
@@ -99,7 +177,7 @@ export function ShopPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-brand-800/90 to-brand-600/60 flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
             <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">Shop All Toys</h1>
-            <p className="text-white/85 mt-1">{data?.totalCount ?? 0} unique items available</p>
+            <p className="text-white/85 mt-1">{totalCount} unique items available</p>
           </div>
         </div>
         <div
@@ -173,7 +251,12 @@ export function ShopPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
             <p className="text-sm text-slate-500">
-              Showing <span className="font-semibold text-slate-700">{data?.totalCount ?? 0}</span> toys
+              Showing{' '}
+              <span className="font-semibold text-slate-700">{toys.length}</span>
+              {totalCount > toys.length && (
+                <> of <span className="font-semibold text-slate-700">{totalCount}</span></>
+              )}{' '}
+              toys
             </p>
             {hasActiveFilters && (
               <button type="button" onClick={clearFilters} className="text-sm text-brand-600 font-medium flex items-center gap-1 hover:underline">
@@ -183,33 +266,23 @@ export function ShopPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-8">
-          <button
-            type="button"
-            onClick={() => updateParams({ categoryId: null })}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${!categoryId ? 'bg-brand-600 text-white shadow-md shadow-brand-500/30' : 'glass-card text-slate-600 hover:border-brand-300'}`}
-          >
-            All
-          </button>
-          {categories?.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => updateParams({ categoryId: String(cat.id) })}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${categoryId === cat.id ? 'bg-brand-600 text-white shadow-md shadow-brand-500/30' : 'glass-card text-slate-600 hover:border-brand-300'}`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        {loadingCategories ? (
+          <CategoryFilterSliderSkeleton />
+        ) : categories && categories.length > 0 ? (
+          <CategoryFilterSlider
+            categories={categories}
+            selectedCategoryId={categoryId}
+            onSelect={(id) => updateParams({ categoryId: id ? String(id) : null })}
+          />
+        ) : null}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {isLoading
             ? Array.from({ length: 8 }).map((_, i) => <ToyCardSkeleton key={i} />)
-            : data?.items.map((toy) => <ToyCard key={toy.id} toy={toy} />)}
+            : toys.map((toy) => <ToyCard key={toy.id} toy={toy} listItemCount={toys.length} />)}
         </div>
 
-        {!isLoading && data?.items.length === 0 && (
+        {!isLoading && toys.length === 0 && (
           <div className="text-center py-20 glass-card rounded-3xl">
             <div className="text-6xl mb-4">🧸</div>
             <h3 className="text-xl font-bold text-slate-700">
@@ -226,12 +299,17 @@ export function ShopPage() {
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-8">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-            <span className="flex items-center px-4 text-sm text-slate-600">Page {page} of {totalPages}</span>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+        <div ref={loadMoreRef} className="h-1" aria-hidden />
+
+        {isFetchingNextPage && (
+          <div className="flex flex-col items-center gap-3 py-8 text-slate-500">
+            <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+            <p className="text-sm">Loading more toys...</p>
           </div>
+        )}
+
+        {!isLoading && toys.length > 0 && !hasNextPage && (
+          <p className="text-center text-sm text-slate-500 py-8">You&apos;ve seen all toys</p>
         )}
       </div>
     </div>

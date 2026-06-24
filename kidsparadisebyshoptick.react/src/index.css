@@ -68,21 +68,6 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Admin panel — clean mobile layout */
-body.admin-mode {
-  background: #f1f5f9 !important;
-  background-image: none !important;
-  overflow-x: hidden;
-}
-
-.admin-shell {
-  touch-action: manipulation;
-}
-
-.admin-shell * {
-  max-width: 100%;
-}
-
 .glass-card {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
@@ -103,4 +88,13 @@ body.admin-mode {
   height: 4px;
   background: linear-gradient(90deg, var(--color-brand-500), var(--color-accent-500));
   border-radius: 2px;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

@@ -24,8 +24,11 @@ public class ToysController : ControllerBase
         => Ok(await _toyService.GetAvailableAsync(categoryId, search, onSale, sort, page, pageSize, cancellationToken));
 
     [HttpGet("latest")]
-    public async Task<ActionResult<IReadOnlyList<ToyListDto>>> GetLatest(CancellationToken cancellationToken)
-        => Ok(await _toyService.GetLatestAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<ToyListDto>>> GetLatest(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 8,
+        CancellationToken cancellationToken = default)
+        => Ok(await _toyService.GetAvailableAsync(null, null, null, "newest", page, pageSize, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ToyDetailDto>> GetById(int id, CancellationToken cancellationToken)

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
+import { useShopPath } from '@/store/shopFilters';
 import { MessageCircle } from 'lucide-react';
 import { BrandName } from '@/components/ui/BrandName';
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
 
 export function Footer() {
+  const shopPath = useShopPath();
   return (
     <footer className="relative bg-slate-900 text-slate-300 mt-auto overflow-hidden">
       <div
@@ -33,7 +35,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-white mb-3">Quick Links</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link to="/shop" className="hover:text-white transition-colors">Shop All Toys</Link>
+              <Link to={shopPath} className="hover:text-white transition-colors">Shop All Toys</Link>
               <Link to="/about" className="hover:text-white transition-colors">About Us</Link>
               <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
               <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>

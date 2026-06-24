@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.CreateOrderPage"
+             x:Name="ThisPage"
+             x:DataType="vm:CreateOrderViewModel"
+             Title="Create Order"
+             BackgroundColor="{StaticResource PageBg}">
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="12">
+            <Entry Placeholder="Customer name" Text="{Binding CustomerName}" />
+            <Entry Placeholder="WhatsApp" Keyboard="Telephone" Text="{Binding Whatsapp}" />
+            <Entry Placeholder="City" Text="{Binding City}" />
+            <Editor Placeholder="Address" Text="{Binding Address}" AutoSize="TextChanges" MinimumHeightRequest="60" />
+            <SearchBar Placeholder="Search toys to add..." Text="{Binding ToySearch}" />
+
+            <Label Text="Selected Toys" FontAttributes="Bold" FontSize="15" />
+            <CollectionView ItemsSource="{Binding SelectedToys}" HeightRequest="180">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ToyListModel">
+                        <Frame Margin="0,4" Padding="10" CornerRadius="12" BorderColor="#e2e8f0" BackgroundColor="White">
+                            <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10">
+                                <Image Grid.Column="0"
+                                       Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}"
+                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding EffectivePrice, StringFormat='Rs. {0:N0}'}" FontSize="12" TextColor="#1a6fe8" FontAttributes="Bold" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="Remove" FontSize="11" VerticalOptions="Center"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveToyCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Available Toys" FontAttributes="Bold" FontSize="15" />
+            <CollectionView ItemsSource="{Binding AvailableToys}" HeightRequest="280">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ToyListModel">
+                        <Frame Margin="0,4" Padding="10" CornerRadius="12" BorderColor="#e2e8f0" BackgroundColor="White">
+                            <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10">
+                                <Image Grid.Column="0"
+                                       Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}"
+                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding EffectivePrice, StringFormat='Rs. {0:N0}'}" FontSize="12" TextColor="#1a6fe8" FontAttributes="Bold" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="Add" FontSize="11" BackgroundColor="#1a6fe8" TextColor="White" VerticalOptions="Center"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.AddToyCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Button Text="Create Order" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" Margin="0,8,0,16" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

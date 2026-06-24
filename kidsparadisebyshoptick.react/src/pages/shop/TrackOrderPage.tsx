@@ -5,7 +5,9 @@ import { api } from '@/api/client';
 import type { Order, PendingReview } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PaginationBar } from '@/components/ui/PaginationBar';
 import { ReviewForm } from '@/components/shop/ReviewForm';
+import { OrderWhatsAppButton } from '@/components/shop/OrderWhatsAppButton';
 import { formatPrice, placeholderImage } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
@@ -17,6 +19,70 @@ const statusColors: Record<string, string> = {
   Delivered: 'bg-green-100 text-green-700',
   Cancelled: 'bg-red-100 text-red-700',
 };
+
+function OrderBillSummary({ order }: { order: Order }) {
+  const discount = order.discountAmount ?? 0;
+  const advance = order.advanceAmount ?? 0;
+  const payableAfterDiscount = order.total - discount;
+  const showPayment = order.status === 'Confirmed' || order.status === 'Shipped' || order.status === 'Delivered';
+
+  return (
+    <div className="bg-slate-50 rounded-xl p-4 text-sm space-y-3 border border-slate-100">
+      <p className="font-semibold text-slate-800">Bill Summary</p>
+
+      <div className="space-y-2">
+        {order.items.map((item) => (
+          <div key={item.toyId} className="flex justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-slate-700 font-medium truncate">{item.toyName}</p>
+              <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+            </div>
+            <span className="font-semibold text-slate-800 shrink-0">{formatPrice(item.price)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-slate-200 pt-3 space-y-2">
+        <div className="flex justify-between">
+          <span className="text-slate-500">Products Subtotal</span>
+          <span className="font-semibold">{formatPrice(order.subTotal)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-500">Delivery Charges</span>
+          <span className="font-semibold">{formatPrice(order.deliveryCharge)}</span>
+        </div>
+        <div className="flex justify-between border-t border-slate-200 pt-2">
+          <span className="text-slate-700 font-medium">Order Total</span>
+          <span className="font-bold text-slate-900">{formatPrice(order.total)}</span>
+        </div>
+        {discount > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-500">Discount</span>
+            <span className="font-semibold text-orange-700">-{formatPrice(discount)}</span>
+          </div>
+        )}
+        {discount > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-700 font-medium">Payable Amount</span>
+            <span className="font-bold text-slate-900">{formatPrice(payableAfterDiscount)}</span>
+          </div>
+        )}
+        {showPayment && advance > 0 && (
+          <div className="flex justify-between">
+            <span className="text-slate-500">Advance Paid</span>
+            <span className="font-semibold text-green-700">{formatPrice(advance)}</span>
+          </div>
+        )}
+        {showPayment && (
+          <div className="flex justify-between border-t border-slate-200 pt-2">
+            <span className="text-slate-800 font-semibold">Balance Due</span>
+            <span className="font-bold text-brand-600">{formatPrice(order.balanceAmount)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function OrderCard({
   order,
@@ -53,6 +119,10 @@ function OrderCard({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <OrderWhatsAppButton
+              order={order}
+              onClick={(e) => e.stopPropagation()}
+            />
             <p className="font-bold text-slate-800">{formatPrice(order.total)}</p>
             {expanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
           </div>
@@ -99,30 +169,11 @@ function OrderCard({
             </div>
           )}
 
-          {(order.status === 'Confirmed' || order.status === 'Shipped' || order.status === 'Delivered') &&
-            (order.advanceAmount != null || order.discountAmount != null) && (
-            <div className="bg-blue-50 rounded-xl p-4 text-sm space-y-2">
-              <p className="font-semibold text-slate-700">Payment Details</p>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Order Total</span>
-                <span className="font-semibold">{formatPrice(order.total)}</span>
-              </div>
-              {(order.discountAmount ?? 0) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Discount</span>
-                  <span className="font-semibold text-orange-700">-{formatPrice(order.discountAmount!)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-slate-500">Advance Paid</span>
-                <span className="font-semibold text-green-700">{formatPrice(order.advanceAmount ?? 0)}</span>
-              </div>
-              <div className="flex justify-between border-t border-blue-100 pt-2">
-                <span className="text-slate-700 font-medium">Balance Due</span>
-                <span className="font-bold text-brand-600">{formatPrice(order.balanceAmount)}</span>
-              </div>
-            </div>
-          )}
+          <OrderBillSummary order={order} />
+
+          <div className="flex justify-end">
+            <OrderWhatsAppButton order={order} showLabel />
+          </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div><span className="text-slate-500">City:</span> {order.city}</div>
@@ -131,11 +182,13 @@ function OrderCard({
           </div>
 
           <div className="border-t pt-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-700">Ordered Items</p>
             {order.items.map((item) => (
               <div key={item.toyId} className="flex items-center gap-3">
                 <img src={item.imageUrl || placeholderImage(item.toyName)} alt="" className="w-12 h-12 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{item.toyName}</p>
+                  <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
                 </div>
                 <p className="font-semibold text-sm shrink-0">{formatPrice(item.price)}</p>
               </div>
@@ -151,23 +204,35 @@ export function TrackOrderPage() {
   const queryClient = useQueryClient();
   const [whatsapp, setWhatsapp] = useState('');
   const [submittedWhatsapp, setSubmittedWhatsapp] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ['track', submittedWhatsapp],
-    queryFn: () => api.trackOrdersByWhatsapp(submittedWhatsapp!),
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['track', submittedWhatsapp, page],
+    queryFn: () => api.trackOrdersByWhatsapp(submittedWhatsapp!, page),
     enabled: !!submittedWhatsapp,
     retry: false,
   });
+  const orders = data?.items ?? [];
 
-  const { data: pendingReviews } = useQuery({
+  const { data: pendingReviewsData } = useQuery({
     queryKey: ['pending-reviews', submittedWhatsapp],
-    queryFn: () => api.getPendingReviews(submittedWhatsapp!),
-    enabled: !!submittedWhatsapp && !!orders?.some((o) => o.status === 'Delivered'),
+    queryFn: () => api.getPendingReviews(submittedWhatsapp!, 1, 100),
+    enabled: !!submittedWhatsapp && orders.some((o) => o.status === 'Delivered'),
   });
+  const pendingReviews = pendingReviewsData?.items ?? [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmittedWhatsapp(whatsapp.trim());
+    const trimmed = whatsapp.trim();
+    if (!trimmed) return;
+
+    if (trimmed === submittedWhatsapp) {
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['pending-reviews', trimmed] });
+    } else {
+      setPage(1);
+      setSubmittedWhatsapp(trimmed);
+    }
   };
 
   const refreshReviews = () => {
@@ -196,23 +261,26 @@ export function TrackOrderPage() {
           onChange={(e) => setWhatsapp(e.target.value)}
           placeholder="e.g. 03221234567"
         />
-        <Button type="submit" className="w-full"><Search className="w-4 h-4" /> View My Orders</Button>
+        <Button type="submit" className="w-full" disabled={isFetching && !!submittedWhatsapp}>
+          <Search className="w-4 h-4" />
+          {isFetching && submittedWhatsapp ? 'Refreshing...' : 'View My Orders'}
+        </Button>
       </form>
 
-      {isLoading && submittedWhatsapp && (
+      {(isLoading || isFetching) && submittedWhatsapp && (
         <div className="mt-6 bg-white rounded-2xl p-6 border skeleton h-48" />
       )}
 
-      {submittedWhatsapp && !isLoading && orders?.length === 0 && (
+      {submittedWhatsapp && !isLoading && !isFetching && orders.length === 0 && (
         <div className="mt-6 text-center text-slate-500 bg-slate-50 rounded-xl p-6">
           No orders found for <span className="font-medium text-slate-700">{submittedWhatsapp}</span>
         </div>
       )}
 
-      {orders && orders.length > 0 && (
+      {orders.length > 0 && (
         <div className="mt-6 space-y-3 animate-fade-in">
           <p className="text-sm text-slate-500">
-            {orders.length} order{orders.length !== 1 ? 's' : ''} found for <span className="font-medium text-slate-700">{submittedWhatsapp}</span>
+            {data?.totalCount ?? orders.length} order{(data?.totalCount ?? orders.length) !== 1 ? 's' : ''} found for <span className="font-medium text-slate-700">{submittedWhatsapp}</span>
           </p>
           {orders.map((order) => (
             <OrderCard
@@ -223,6 +291,14 @@ export function TrackOrderPage() {
               onReviewSuccess={refreshReviews}
             />
           ))}
+          {data && (
+            <PaginationBar
+              page={data.page}
+              totalCount={data.totalCount}
+              pageSize={data.pageSize}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       )}
     </div>

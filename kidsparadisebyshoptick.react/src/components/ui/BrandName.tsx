@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-type BrandVariant = 'default' | 'light' | 'admin' | 'hero' | 'muted' | 'inline';
+type BrandVariant = 'default' | 'light' | 'hero' | 'muted' | 'inline';
 
 interface BrandNameProps {
   variant?: BrandVariant;
@@ -18,10 +18,6 @@ const variantStyles: Record<BrandVariant, { name: string; byline: string }> = {
   light: {
     name: 'font-bold text-white text-xl leading-tight',
     byline: 'text-[11px] text-slate-400 font-medium tracking-[0.1em]',
-  },
-  admin: {
-    name: 'font-bold text-white leading-tight truncate',
-    byline: 'text-[10px] text-brand-300/90 font-medium tracking-[0.1em]',
   },
   hero: {
     name: 'text-sm font-semibold text-white leading-tight',

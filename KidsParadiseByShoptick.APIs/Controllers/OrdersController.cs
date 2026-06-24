@@ -33,13 +33,16 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet("track")]
-    public async Task<ActionResult<IReadOnlyList<OrderDto>>> Track(
-        [FromQuery] string whatsapp, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<OrderDto>>> Track(
+        [FromQuery] string whatsapp,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(whatsapp))
             return BadRequest(new { message = "WhatsApp number is required." });
 
-        var result = await _orderService.GetOrdersByWhatsappAsync(whatsapp, cancellationToken);
+        var result = await _orderService.GetOrdersByWhatsappPagedAsync(whatsapp, page, pageSize, cancellationToken);
         return Ok(result);
     }
 

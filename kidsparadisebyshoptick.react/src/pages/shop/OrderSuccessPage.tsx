@@ -6,8 +6,10 @@ import { BrandName } from '@/components/ui/BrandName';
 import { formatPrice, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { useShopPath } from '@/store/shopFilters';
 
 export function OrderSuccessPage() {
+  const shopPath = useShopPath();
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const location = useLocation();
   const state = location.state as { total?: number; deliveryCharge?: number } | null;
@@ -64,7 +66,7 @@ export function OrderSuccessPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
         <Link to="/track-order"><Button variant="outline">My Orders</Button></Link>
-        <Link to="/shop"><Button>Continue Shopping</Button></Link>
+        <Link to={shopPath}><Button>Continue Shopping</Button></Link>
       </div>
     </div>
   );

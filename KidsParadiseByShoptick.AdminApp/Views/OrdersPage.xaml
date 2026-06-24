@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.OrdersPage"
+             x:Name="ThisPage"
+             x:DataType="vm:OrdersViewModel"
+             Title="Orders"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Alerts" Command="{Binding OpenAlertsCommand}" />
+        <ToolbarItem Text="Create" Command="{Binding CreateCommand}" />
+        <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
+        <SearchBar Grid.Row="0" Placeholder="Search orders..." Text="{Binding SearchText}" />
+        <Picker Grid.Row="1" Title="Status" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding StatusFilter}" />
+        <RefreshView Grid.Row="2" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
+            <CollectionView ItemsSource="{Binding Items}"
+                            RemainingItemsThreshold="8"
+                            RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:OrderModel">
+                        <Frame Margin="0,4" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.OpenCommand}" CommandParameter="{Binding .}" />
+                                    </VerticalStackLayout.GestureRecognizers>
+                                    <Label Text="{Binding OrderNumber}" FontAttributes="Bold" />
+                                    <Label Text="{Binding CustomerName}" />
+                                    <Label Text="{Binding Status}" TextColor="#1a6fe8" />
+                                    <Label Text="{Binding Total, StringFormat='Total: Rs. {0:N0}'}" />
+                                    <Label Text="{Binding CreatedAt}" FontSize="11" TextColor="#64748b" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="1"
+                                        Text="WA"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.OpenWhatsAppCommand}"
+                                        CommandParameter="{Binding .}"
+                                        IsEnabled="{Binding Whatsapp, Converter={StaticResource NullToBool}}"
+                                        BackgroundColor="#25D366"
+                                        TextColor="White"
+                                        FontAttributes="Bold"
+                                        CornerRadius="22"
+                                        WidthRequest="44"
+                                        HeightRequest="44"
+                                        Padding="0"
+                                        VerticalOptions="Start" />
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        <VerticalStackLayout Grid.Row="3" Spacing="6">
+            <Label Text="{Binding StatusText}" FontSize="12" TextColor="#64748b" />
+            <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" Color="#1a6fe8" />
+            <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

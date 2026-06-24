@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:KidsParadiseByShoptick.AdminApp.Views"
+       x:Class="KidsParadiseByShoptick.AdminApp.AppShell"
+       FlyoutBehavior="Flyout"
+       Title="Kids Paradise Admin">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Color x:Key="Primary">#1a6fe8</Color>
+            <Color x:Key="PageBg">#f1f5f9</Color>
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <ShellContent Title="Login"
+                  Route="login"
+                  ContentTemplate="{DataTemplate views:LoginPage}"
+                  FlyoutItemIsVisible="False" />
+
+    <FlyoutItem Title="Categories" Icon="dotnet_bot.png" Route="categories">
+        <ShellContent ContentTemplate="{DataTemplate views:CategoriesPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Toys" Icon="dotnet_bot.png" Route="toys">
+        <ShellContent ContentTemplate="{DataTemplate views:ToysPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Orders" Icon="dotnet_bot.png" Route="orders">
+        <ShellContent ContentTemplate="{DataTemplate views:OrdersPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Order Alerts" Icon="dotnet_bot.png" Route="notifications">
+        <ShellContent ContentTemplate="{DataTemplate views:NotificationsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Reviews" Icon="dotnet_bot.png" Route="reviews">
+        <ShellContent ContentTemplate="{DataTemplate views:ReviewsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Site Images" Icon="dotnet_bot.png" Route="site-images">
+        <ShellContent ContentTemplate="{DataTemplate views:SiteImagesPage}" />
+    </FlyoutItem>
+
+    <MenuItem Text="Logout" IconImageSource="dotnet_bot.png" Clicked="OnLogoutClicked" />
+
+</Shell>

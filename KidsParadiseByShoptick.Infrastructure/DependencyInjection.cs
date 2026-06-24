@@ -1,6 +1,4 @@
 using KidsParadiseByShoptick.Domain.Interfaces;
-using KidsParadiseByShoptick.Application.Interfaces;
-using KidsParadiseByShoptick.Application.Options;
 using KidsParadiseByShoptick.Infrastructure.Persistence;
 using KidsParadiseByShoptick.Infrastructure.Persistence.Repositories;
 using KidsParadiseByShoptick.Infrastructure.Services;
@@ -27,12 +25,6 @@ public static class DependencyInjection
         services.AddScoped<ISitemapRepository, SitemapRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IFileStorageService, FileStorageService>();
-
-        services.Configure<NtfyOptions>(configuration.GetSection(NtfyOptions.SectionName));
-        services.AddHttpClient<IOrderNotificationService, NtfyOrderNotificationService>(client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(15);
-        });
 
         return services;
     }

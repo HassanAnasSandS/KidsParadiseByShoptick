@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.OrderEditPage"
+             x:Name="ThisPage"
+             x:DataType="vm:OrderEditViewModel"
+             Title="Edit Order">
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="10">
+            <Entry Placeholder="Customer name" Text="{Binding CustomerName}" />
+            <Entry Placeholder="WhatsApp" Text="{Binding Whatsapp}" />
+            <Entry Placeholder="City" Text="{Binding City}" />
+            <Editor Placeholder="Address" Text="{Binding Address}" AutoSize="TextChanges" />
+            <Entry Placeholder="Delivery charge" Keyboard="Numeric" Text="{Binding DeliveryChargeText}" />
+            <Entry Placeholder="Advance" Text="{Binding AdvanceText}" />
+            <Entry Placeholder="Discount" Text="{Binding DiscountText}" />
+            <Entry Placeholder="Tracking" Text="{Binding TrackingNumber}" />
+            <Label Text="Selected Toys" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding SelectedToys}" HeightRequest="120" IsEnabled="{Binding CanEditToys}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ToyListModel">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{Binding Name}" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="Remove" IsVisible="{Binding Source={x:Reference ThisPage}, Path=BindingContext.CanEditToys}"
+                                    Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveToyCommand}" CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <SearchBar Placeholder="Add toys..." Text="{Binding ToySearch}" IsVisible="{Binding CanEditToys}" />
+            <CollectionView ItemsSource="{Binding AvailableToys}" HeightRequest="160" IsVisible="{Binding CanEditToys}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ToyListModel">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{Binding Name}" />
+                            <Button Grid.Column="1" Text="Add" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.AddToyCommand}" CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <Button Text="Save Order" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

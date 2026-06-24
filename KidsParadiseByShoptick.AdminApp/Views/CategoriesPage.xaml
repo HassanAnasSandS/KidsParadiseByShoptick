@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.CategoriesPage"
+             x:Name="ThisPage"
+             x:DataType="vm:CategoriesViewModel"
+             Title="Categories"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Add" Command="{Binding AddCommand}" />
+        <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="Auto,*" Padding="12">
+        <SearchBar Grid.Row="0" Placeholder="Search categories..." Text="{Binding SearchText}" />
+        <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
+            <CollectionView ItemsSource="{Binding Items}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:CategoryModel">
+                            <Frame Margin="0,4" Padding="12" CornerRadius="12" HasShadow="False" BorderColor="#e2e8f0">
+                                <Grid ColumnDefinitions="56,*,Auto,Auto" ColumnSpacing="8">
+                                    <Image Grid.Column="0" Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="48" WidthRequest="48" Aspect="AspectFill" />
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                        <Label Text="{Binding ToyCount, StringFormat='{0} toys'}" FontSize="12" TextColor="#64748b" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="2" Text="Edit" FontSize="12" Padding="8,4"
+                                            Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EditCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Grid.Column="3" Text="Del" FontSize="12" Padding="8,4" BackgroundColor="#dc2626" TextColor="White"
+                                            Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.DeleteCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                            </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

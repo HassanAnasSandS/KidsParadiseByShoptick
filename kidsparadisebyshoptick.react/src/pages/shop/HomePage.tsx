@@ -1,26 +1,67 @@
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, Shield, Star, Sparkles, Gift } from 'lucide-react';
+import { ArrowRight, Truck, Shield, Star, Sparkles, Gift, Loader2 } from 'lucide-react';
 import { api } from '@/api/client';
 import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
-import { CategoryCard } from '@/components/shop/CategoryCard';
+import { CategorySlider, CategorySliderSkeleton } from '@/components/shop/CategorySlider';
 import { HeroSlider } from '@/components/shop/HeroSlider';
 import { Button } from '@/components/ui/Button';
 import { PAYMENT_POLICY } from '@/lib/utils';
 import { useSiteImages } from '@/hooks/useSiteImages';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useScrollRestore } from '@/hooks/useScrollRestore';
+import { useShopPath } from '@/store/shopFilters';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO, buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/seo';
 
 export function HomePage() {
   const { get } = useSiteImages();
-  const { data: latest, isLoading: loadingLatest } = useQuery({
-    queryKey: ['latest-toys'],
-    queryFn: api.getLatestToys,
+  const shopPath = useShopPath();
+
+  const { data: categoriesData, isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories({ page: 1, pageSize: 100 }),
+  });
+  const categories = categoriesData?.items ?? [];
+  const totalCategories = categories.length;
+
+  const {
+    data: productData,
+    isLoading: loadingProducts,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['home-toys'],
+    queryFn: ({ pageParam }) => api.getToys({ page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.totalCount / lastPage.pageSize);
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined;
+    },
+    gcTime: 30 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
 
-  const { data: categories, isLoading: loadingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: api.getCategories,
+  const products = useMemo(
+    () => productData?.pages.flatMap((page) => page.items) ?? [],
+    [productData],
+  );
+  const totalProducts = productData?.pages[0]?.totalCount ?? 0;
+
+  const loadMoreProducts = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const productsScrollRef = useInfiniteScroll(loadMoreProducts, !!hasNextPage && !isFetchingNextPage);
+
+  useScrollRestore({
+    ready: !loadingProducts && products.length > 0,
+    items: products,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
   });
 
   return (
@@ -65,7 +106,7 @@ export function HomePage() {
                 <Sparkles className="w-8 h-8 text-white mb-2" />
                 <h3 className="text-2xl font-bold text-white">New Arrivals</h3>
                 <p className="text-white/90 text-sm mt-1">Fresh toys added regularly</p>
-                <Link to="/shop" className="inline-block mt-3 text-sm font-semibold text-white underline">Shop now →</Link>
+                <Link to={shopPath} className="inline-block mt-3 text-sm font-semibold text-white underline">Shop now →</Link>
               </div>
             </div>
           </div>
@@ -80,7 +121,7 @@ export function HomePage() {
                 <Gift className="w-8 h-8 text-white mb-2" />
                 <h3 className="text-2xl font-bold text-white">Perfect Gifts</h3>
                 <p className="text-white/90 text-sm mt-1">Make every birthday special</p>
-                <Link to="/shop" className="inline-block mt-3 text-sm font-semibold text-white underline">Find gifts →</Link>
+                <Link to={shopPath} className="inline-block mt-3 text-sm font-semibold text-white underline">Find gifts →</Link>
               </div>
             </div>
           </div>
@@ -88,20 +129,22 @@ export function HomePage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800 section-title">Shop by Category</h2>
-          <Link to="/shop" className="text-brand-600 text-sm font-semibold hover:underline flex items-center gap-1">
+          <Link to={shopPath} className="text-brand-600 text-sm font-semibold hover:underline flex items-center gap-1">
             View All <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
+        {totalCategories > 0 && (
+          <p className="text-sm text-slate-500 mb-6">
+            <span className="font-semibold text-slate-700">{totalCategories}</span> categories — swipe to explore
+          </p>
+        )}
+
         {loadingCategories ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-[4/3] skeleton rounded-2xl" />)}
-          </div>
-        ) : categories && categories.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categories.map((cat, i) => <CategoryCard key={cat.id} category={cat} index={i} />)}
-          </div>
+          <CategorySliderSkeleton />
+        ) : categories.length > 0 ? (
+          <CategorySlider categories={categories} />
         ) : (
           <div className="text-center py-16 glass-card rounded-3xl">
             <div className="text-5xl mb-3">📦</div>
@@ -113,20 +156,42 @@ export function HomePage() {
 
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-800 section-title">Latest Toys</h2>
-            <Link to="/shop" className="text-brand-600 text-sm font-semibold hover:underline flex items-center gap-1">
+            <Link to={shopPath} className="text-brand-600 text-sm font-semibold hover:underline flex items-center gap-1">
               See All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          {loadingLatest ? (
+          {totalProducts > 0 && (
+            <p className="text-sm text-slate-500 mb-6">
+              Showing <span className="font-semibold text-slate-700">{products.length}</span>
+              {products.length < totalProducts && (
+                <> of <span className="font-semibold text-slate-700">{totalProducts}</span></>
+              )}{' '}
+              toys
+            </p>
+          )}
+
+          {loadingProducts ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {Array.from({ length: 8 }).map((_, i) => <ToyCardSkeleton key={i} />)}
             </div>
-          ) : latest && latest.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {latest.map((toy) => <ToyCard key={toy.id} toy={toy} />)}
-            </div>
+          ) : products.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {products.map((toy) => <ToyCard key={toy.id} toy={toy} listItemCount={products.length} />)}
+              </div>
+              <div ref={productsScrollRef} className="h-1" aria-hidden />
+              {isFetchingNextPage && (
+                <div className="flex flex-col items-center gap-2 py-8 text-slate-500">
+                  <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+                  <p className="text-sm">Loading more toys...</p>
+                </div>
+              )}
+              {!hasNextPage && products.length > 12 && (
+                <p className="text-center text-sm text-slate-500 py-6">You&apos;ve seen all latest toys</p>
+              )}
+            </>
           ) : (
             <div className="text-center py-16 glass-card rounded-3xl">
               <div className="text-5xl mb-3">🧸</div>
@@ -147,7 +212,7 @@ export function HomePage() {
           <p className="text-brand-100 mt-2 relative z-10 max-w-md mx-auto">
             Browse our unique collection. {PAYMENT_POLICY}.
           </p>
-          <Link to="/shop" className="inline-block mt-6 relative z-10">
+          <Link to={shopPath} className="inline-block mt-6 relative z-10">
             <Button size="lg" className="bg-white text-brand-600 hover:bg-brand-50 shadow-lg">
               Start Shopping <ArrowRight className="w-4 h-4" />
             </Button>

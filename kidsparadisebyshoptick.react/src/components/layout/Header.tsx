@@ -1,19 +1,28 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Search, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useCartStore } from '@/store/cart';
+import { useShopFiltersStore, useShopPath } from '@/store/shopFilters';
+import { buildShopPath, mergeShopFilters } from '@/lib/shopFilters';
 import { BrandName } from '@/components/ui/BrandName';
 
 export function Header() {
   const totalItems = useCartStore((s) => s.totalItems());
+  const shopPath = useShopPath();
+  const patchFilters = useShopFiltersStore((s) => s.patchFilters);
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (search.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(search.trim())}`;
-    }
+    const term = search.trim();
+    if (!term) return;
+
+    const filters = mergeShopFilters(useShopFiltersStore.getState().filters, { search: term });
+    patchFilters({ search: term });
+    navigate(buildShopPath(filters));
+    setMenuOpen(false);
   };
 
   return (
@@ -44,12 +53,12 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-1 text-sm font-semibold">
             {[
               { to: '/', label: 'Home' },
-              { to: '/shop', label: 'Shop' },
+              { to: shopPath, label: 'Shop' },
               { to: '/reviews', label: 'Reviews' },
               { to: '/track-order', label: 'My Orders' },
             ].map(({ to, label }) => (
               <Link
-                key={to}
+                key={label}
                 to={to}
                 className="px-4 py-2 rounded-full text-slate-600 hover:text-brand-600 hover:bg-brand-50 transition-all"
               >
@@ -82,7 +91,7 @@ export function Header() {
         {menuOpen && (
           <nav className="md:hidden pb-4 flex flex-col gap-1 border-t border-slate-100 pt-3">
             <Link to="/" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
-            <Link to="/shop" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Shop</Link>
+            <Link to={shopPath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Shop</Link>
             <Link to="/reviews" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Reviews</Link>
             <Link to="/track-order" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>My Orders</Link>
           </nav>

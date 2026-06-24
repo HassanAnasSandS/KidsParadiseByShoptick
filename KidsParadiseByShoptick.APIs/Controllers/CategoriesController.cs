@@ -13,8 +13,11 @@ public class CategoriesController : ControllerBase
     public CategoriesController(ICategoryService categoryService) => _categoryService = categoryService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CategoryDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _categoryService.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<CategoryDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Ok(await _categoryService.GetPublicPagedAsync(page, pageSize, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CategoryDetailDto>> GetById(int id, CancellationToken cancellationToken)

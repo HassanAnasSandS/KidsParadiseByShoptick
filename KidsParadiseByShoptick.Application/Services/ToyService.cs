@@ -40,6 +40,20 @@ public class ToyService : IToyService
         return toys.Select(t => ToyMapper.MapList(t, t.Category?.Name ?? "", _fileStorage, null)).ToList();
     }
 
+    public async Task<PagedResult<ToyListDto>> GetAdminPagedAsync(
+        int? categoryId, string? search, bool? isSold, bool? onSale, string? sort,
+        int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var toys = await _unitOfWork.Toys.GetAdminPagedAsync(categoryId, search, isSold, onSale, sort, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Toys.CountAdminAsync(categoryId, search, isSold, onSale, cancellationToken);
+        var items = toys
+            .Select(t => ToyMapper.MapListPrimaryImageOnly(t, t.Category?.Name ?? "", _fileStorage, null))
+            .ToList();
+        return new PagedResult<ToyListDto>(items, total, page, pageSize);
+    }
+
     public async Task<ToyDetailDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default)
         => MapDetail(await _unitOfWork.Toys.GetWithDetailsAsync(id, cancellationToken));
 

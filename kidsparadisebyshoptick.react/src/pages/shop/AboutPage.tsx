@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { useShopPath } from '@/store/shopFilters';
 
 export function AboutPage() {
+  const shopPath = useShopPath();
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <SeoHead
@@ -26,7 +28,7 @@ export function AboutPage() {
           Kids Paradise makes ordering simple with WhatsApp support and doorstep delivery.
         </p>
       </div>
-      <Link to="/shop" className="inline-block mt-8 text-brand-600 font-semibold hover:underline">Browse our toy collection →</Link>
+      <Link to={shopPath} className="inline-block mt-8 text-brand-600 font-semibold hover:underline">Browse our toy collection →</Link>
     </div>
   );
 }

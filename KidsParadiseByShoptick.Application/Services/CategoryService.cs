@@ -18,35 +18,54 @@ public class CategoryService : ICategoryService
 
     public async Task<IReadOnlyList<CategoryDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _unitOfWork.Categories.GetAllOrderedAsync(cancellationToken);
-        var allToys = await _unitOfWork.Toys.FindAsync(t => !t.IsSold, cancellationToken);
-        var counts = allToys.GroupBy(t => t.CategoryId).ToDictionary(g => g.Key, g => g.Count());
-        return categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))).ToList();
+        var result = await GetPublicPagedAsync(1, 500, cancellationToken);
+        return result.Items;
+    }
+
+    public async Task<PagedResult<CategoryDto>> GetPublicPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var categories = await _unitOfWork.Categories.GetPublicPagedAsync(page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Categories.CountPublicAsync(cancellationToken);
+        var ids = categories.Select(c => c.Id).ToList();
+        var toys = ids.Count == 0
+            ? []
+            : await _unitOfWork.Toys.FindAsync(t => ids.Contains(t.CategoryId) && !t.IsSold, cancellationToken);
+        var counts = toys.GroupBy(t => t.CategoryId).ToDictionary(g => g.Key, g => g.Count());
+        var items = categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))).ToList();
+        return new PagedResult<CategoryDto>(items, total, page, pageSize);
     }
 
     public async Task<CategoryDetailDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var category = await _unitOfWork.Categories.GetByIdWithToysAsync(id, cancellationToken);
+        var category = await _unitOfWork.Categories.GetByIdAsync(id, cancellationToken);
         if (category is null) return null;
 
-        var toys = category.Toys
-            .Where(t => !t.IsSold)
-            .Select(t => ToyMapper.MapList(t, category.Name, _fileStorage, null))
-            .ToList();
-
-        return new CategoryDetailDto(category.Id, category.Name, ToUrl(category.ImagePath), toys);
+        var availableCount = await _unitOfWork.Toys.CountAvailableAsync(id, null, null, cancellationToken);
+        return new CategoryDetailDto(category.Id, category.Name, ToUrl(category.ImagePath), availableCount);
     }
 
     public async Task<IReadOnlyList<CategoryDto>> GetAllAdminAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _unitOfWork.Categories.GetAllOrderedAsync(cancellationToken);
-        var result = new List<CategoryDto>();
-        foreach (var c in categories)
-        {
-            var toys = await _unitOfWork.Toys.FindAsync(t => t.CategoryId == c.Id, cancellationToken);
-            result.Add(Map(c, toys.Count));
-        }
-        return result;
+        var result = await GetAdminPagedAsync(null, null, "name-asc", 1, int.MaxValue, cancellationToken);
+        return result.Items;
+    }
+
+    public async Task<PagedResult<CategoryDto>> GetAdminPagedAsync(
+        string? search, string? toyFilter, string? sort, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var categories = await _unitOfWork.Categories.GetAdminPagedAsync(search, toyFilter, sort, page, pageSize, cancellationToken);
+        var total = await _unitOfWork.Categories.CountAdminAsync(search, toyFilter, cancellationToken);
+        var ids = categories.Select(c => c.Id).ToList();
+        var toys = ids.Count == 0
+            ? []
+            : await _unitOfWork.Toys.FindAsync(t => ids.Contains(t.CategoryId), cancellationToken);
+        var counts = toys.GroupBy(t => t.CategoryId).ToDictionary(g => g.Key, g => g.Count());
+        var items = categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))).ToList();
+        return new PagedResult<CategoryDto>(items, total, page, pageSize);
     }
 
     public async Task<CategoryDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default)

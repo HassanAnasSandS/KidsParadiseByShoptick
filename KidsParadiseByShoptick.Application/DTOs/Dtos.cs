@@ -1,7 +1,7 @@
 namespace KidsParadiseByShoptick.Application.DTOs;
 
 public record CategoryDto(int Id, string Name, string? ImageUrl, string? ImagePath, int ToyCount);
-public record CategoryDetailDto(int Id, string Name, string? ImageUrl, IReadOnlyList<ToyListDto> Toys);
+public record CategoryDetailDto(int Id, string Name, string? ImageUrl, int AvailableToyCount);
 
 public record ToyListDto(
     int Id, string Name, decimal Price, decimal? SalePrice, bool IsSold,

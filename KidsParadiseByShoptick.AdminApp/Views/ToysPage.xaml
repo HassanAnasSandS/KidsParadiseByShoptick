@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.ToysPage"
+             x:Name="ThisPage"
+             x:DataType="vm:ToysViewModel"
+             Title="Toys"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Add" Command="{Binding AddCommand}" />
+        <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <SearchBar Grid.Column="0" Placeholder="Search by toy name..." Text="{Binding SearchText}" />
+            <Button Grid.Column="1"
+                    Text="Filters"
+                    Command="{Binding ToggleFiltersCommand}"
+                    Padding="12,0"
+                    FontSize="13"
+                    VerticalOptions="Center"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    CornerRadius="10" />
+        </Grid>
+
+        <VerticalStackLayout Grid.Row="1" Spacing="8" IsVisible="{Binding ShowFilters}">
+            <Picker Title="Category" ItemsSource="{Binding CategoryOptions}" SelectedItem="{Binding CategoryFilter}" />
+            <Picker Title="Sale" ItemsSource="{Binding SaleOptions}" SelectedItem="{Binding SaleFilter}" />
+            <Picker Title="Status" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding StatusFilter}" />
+            <Picker Title="Sort By" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortFilter}" />
+        </VerticalStackLayout>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Label Grid.Column="0"
+                   Text="{Binding StatusText}"
+                   FontSize="12"
+                   TextColor="#64748b"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Text="Clear filters"
+                    Command="{Binding ClearFiltersCommand}"
+                    IsVisible="{Binding HasActiveFilters}"
+                    FontSize="12"
+                    BackgroundColor="Transparent"
+                    TextColor="{StaticResource Primary}"
+                    Padding="0"
+                    VerticalOptions="Center" />
+        </Grid>
+
+        <RefreshView Grid.Row="3" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
+            <CollectionView ItemsSource="{Binding Items}"
+                            RemainingItemsThreshold="8"
+                            RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ToyListModel">
+                        <Frame Margin="0,4" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
+                            <Grid ColumnDefinitions="56,*,Auto,Auto" ColumnSpacing="8">
+                                <Image Grid.Column="0" Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}" HeightRequest="48" WidthRequest="48" Aspect="AspectFit" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding CategoryName}" FontSize="12" TextColor="#64748b" />
+                                    <Label Text="{Binding EffectivePrice, StringFormat='Rs. {0:N0}'}" TextColor="#1a6fe8" FontAttributes="Bold" />
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="Sold" FontSize="11" TextColor="#dc2626" IsVisible="{Binding IsSold}" />
+                                        <Label Text="Available" FontSize="11" TextColor="#16a34a" IsVisible="{Binding IsSold, Converter={StaticResource InverseBool}}" />
+                                        <Label Text="On Sale" FontSize="11" TextColor="#d97706" IsVisible="{Binding SalePrice, Converter={StaticResource NullToBool}}" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="Edit" FontSize="12"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EditCommand}" CommandParameter="{Binding .}" />
+                                <Button Grid.Column="3" Text="Del" FontSize="12" BackgroundColor="#dc2626" TextColor="White"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.DeleteCommand}" CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        <VerticalStackLayout Grid.Row="4" Spacing="6">
+            <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" Color="#1a6fe8" />
+            <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

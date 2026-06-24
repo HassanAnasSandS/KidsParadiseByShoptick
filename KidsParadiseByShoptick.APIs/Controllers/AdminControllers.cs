@@ -33,8 +33,14 @@ public class AdminCategoriesController : ControllerBase
     public AdminCategoriesController(ICategoryService categoryService) => _categoryService = categoryService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CategoryDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _categoryService.GetAllAdminAsync(cancellationToken));
+    public async Task<ActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        [FromQuery] string? search = null,
+        [FromQuery] string? toyFilter = null,
+        [FromQuery] string? sort = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _categoryService.GetAdminPagedAsync(search, toyFilter, sort, page, pageSize, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CategoryDto>> GetById(int id, CancellationToken cancellationToken)
@@ -81,8 +87,16 @@ public class AdminToysController : ControllerBase
     public AdminToysController(IToyService toyService) => _toyService = toyService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ToyListDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _toyService.GetAllAdminAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<ToyListDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isSold = null,
+        [FromQuery] bool? onSale = null,
+        [FromQuery] string? sort = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _toyService.GetAdminPagedAsync(categoryId, search, isSold, onSale, sort, page, pageSize, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ToyDetailDto>> GetById(int id, CancellationToken cancellationToken)
@@ -122,8 +136,21 @@ public class AdminOrdersController : ControllerBase
     public AdminOrdersController(IOrderService orderService) => _orderService = orderService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _orderService.GetAllAdminAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<OrderDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        [FromQuery] string? status = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string? city = null,
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo = null,
+        [FromQuery] string? sort = "newest",
+        CancellationToken cancellationToken = default)
+        => Ok(await _orderService.GetAdminPagedAsync(status, search, city, dateFrom, dateTo, sort, page, pageSize, cancellationToken));
+
+    [HttpGet("cities")]
+    public async Task<ActionResult<IReadOnlyList<string>>> GetCities(CancellationToken cancellationToken)
+        => Ok(await _orderService.GetAdminCitiesAsync(cancellationToken));
 
     [HttpPost]
     public async Task<ActionResult<OrderPlacedDto>> Create(
@@ -216,8 +243,11 @@ public class AdminSiteImagesController : ControllerBase
     public AdminSiteImagesController(ISiteImageService siteImageService) => _siteImageService = siteImageService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<SiteImageAdminDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _siteImageService.GetAdminAsync(cancellationToken));
+    public async Task<ActionResult<PagedResult<SiteImageAdminDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Ok(await _siteImageService.GetAdminPagedAsync(page, pageSize, cancellationToken));
 
     [HttpPost("{key}/upload")]
     [RequestSizeLimit(10 * 1024 * 1024)]

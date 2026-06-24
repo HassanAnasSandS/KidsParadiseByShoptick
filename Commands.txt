@@ -1,0 +1,6 @@
+android app bnanay k lie
+dotnet build KidsParadiseByShoptick.AdminApp -f net9.0-android -c Release
+
+
+Apis run krnay k lie
+start dotnet "run --project KidsParadiseByShoptick.APIs\KidsParadiseByShoptick.APIs.csproj"

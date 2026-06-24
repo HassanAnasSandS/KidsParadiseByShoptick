@@ -1,0 +1,22 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
+             x:Class="KidsParadiseByShoptick.AdminApp.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <helpers:ImageUrlConverter x:Key="ImageUrl" />
+            <helpers:InverseBoolConverter x:Key="InverseBool" />
+            <helpers:NullToBoolConverter x:Key="NullToBool" />
+            <helpers:PositiveAmountConverter x:Key="PositiveAmount" />
+            <helpers:ListeningColorConverter x:Key="ListeningColor" />
+            <helpers:IntToBoolConverter x:Key="IntToBool" />
+            <Color x:Key="PageBg">#f1f5f9</Color>
+            <Color x:Key="Primary">#1a6fe8</Color>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
