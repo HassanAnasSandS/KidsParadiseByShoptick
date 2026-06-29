@@ -65,6 +65,7 @@ export interface ToyDetail extends ToyListItem {
   imagePaths: string[];
   averageRating: number | null;
   reviewCount: number;
+  videoLink: string | null;
 }
 
 export interface PagedResult<T> {

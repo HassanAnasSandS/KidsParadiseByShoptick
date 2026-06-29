@@ -49,6 +49,33 @@ public class PositiveAmountConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+public class StatusChipBackgroundConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? Color.FromArgb("#1a6fe8") : Colors.White;
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+public class StatusChipStrokeConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? Color.FromArgb("#1a6fe8") : Color.FromArgb("#e2e8f0");
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+public class StatusChipTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true ? Colors.White : Color.FromArgb("#334155");
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 public static class FormatHelpers
 {
     public static string Price(decimal amount) => $"Rs. {amount:N0}";

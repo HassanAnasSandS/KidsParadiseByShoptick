@@ -15,6 +15,9 @@
             <helpers:PositiveAmountConverter x:Key="PositiveAmount" />
             <helpers:ListeningColorConverter x:Key="ListeningColor" />
             <helpers:IntToBoolConverter x:Key="IntToBool" />
+            <helpers:StatusChipBackgroundConverter x:Key="StatusChipBackground" />
+            <helpers:StatusChipStrokeConverter x:Key="StatusChipStroke" />
+            <helpers:StatusChipTextConverter x:Key="StatusChipText" />
             <Color x:Key="PageBg">#f1f5f9</Color>
             <Color x:Key="Primary">#1a6fe8</Color>
         </ResourceDictionary>

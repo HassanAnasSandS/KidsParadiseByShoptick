@@ -1,9 +1,81 @@
+import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useShopPath } from '@/store/shopFilters';
 import { MessageCircle } from 'lucide-react';
 import { BrandName } from '@/components/ui/BrandName';
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
+
+function SocialIcon({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={`inline-flex shrink-0 ${className ?? ''}`} aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
+function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <SocialIcon className={className}>
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.7 15.5V8.5L15.8 12l-6.1 3.5Z" />
+      </svg>
+    </SocialIcon>
+  );
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <SocialIcon className={className}>
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
+      </svg>
+    </SocialIcon>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <SocialIcon className={className}>
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5A5.5 5.5 0 1 1 6.5 13 5.5 5.5 0 0 1 12 7.5Zm0 2A3.5 3.5 0 1 0 15.5 13 3.5 3.5 0 0 0 12 9.5ZM17.8 6.2a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1Z" />
+      </svg>
+    </SocialIcon>
+  );
+}
+
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <SocialIcon className={className}>
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M13.5 3h3.6l-.2 3.9h-3.4c-1.7 0-2 .8-2 2v2.6h4l-.5 3.9h-3.5V21H9.5v-5.6H6.5V12h3V9.8c0-3 1.8-4.7 4.5-4.7Z" />
+      </svg>
+    </SocialIcon>
+  );
+}
+
+const SOCIAL_LINKS = [
+  {
+    label: 'YouTube',
+    href: 'https://www.youtube.com/@KidsParadiseByShoptick',
+    icon: YouTubeIcon,
+  },
+  {
+    label: 'TikTok',
+    href: 'https://www.tiktok.com/@kiranhassanhk?_r=1&_t=ZS-92ITfkXq7AG',
+    icon: TikTokIcon,
+  },
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/miniclosetpk?igsh=cnVuazFjZjE3d3Vo',
+    icon: InstagramIcon,
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/share/1DesofLX6U/',
+    icon: FacebookIcon,
+  },
+] as const;
 
 export function Footer() {
   const shopPath = useShopPath();
@@ -31,6 +103,25 @@ export function Footer() {
             >
               <MessageCircle className="w-4 h-4" /> WhatsApp: {WHATSAPP_DISPLAY}
             </a>
+            <div className="mt-5">
+              <h4 className="font-semibold text-white mb-3 text-sm">Follow Us</h4>
+              <div className="flex flex-wrap gap-2">
+                {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    title={label}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
           <div>
             <h4 className="font-semibold text-white mb-3">Quick Links</h4>

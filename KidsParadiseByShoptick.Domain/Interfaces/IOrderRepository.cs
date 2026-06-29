@@ -17,6 +17,8 @@ public interface IOrderRepository : IRepository<Order>
     Task<int> CountAdminAsync(
         string? status, string? search, string? city, DateTime? dateFrom, DateTime? dateTo,
         CancellationToken cancellationToken = default);
+    Task<(int Total, int Pending, int Confirmed, int Shipped, int Delivered, int Cancelled)> GetStatusCountsAsync(
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetDistinctCitiesAsync(CancellationToken cancellationToken = default);
     Task<bool> HasDeliveredOrderForToyAsync(int customerId, int toyId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetDeliveredOrdersForCustomerAsync(int customerId, CancellationToken cancellationToken = default);

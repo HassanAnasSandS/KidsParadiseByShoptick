@@ -4,3 +4,7 @@ dotnet build KidsParadiseByShoptick.AdminApp -f net9.0-android -c Release
 
 Apis run krnay k lie
 start dotnet "run --project KidsParadiseByShoptick.APIs\KidsParadiseByShoptick.APIs.csproj"
+
+
+
+dotnet ef database update --project KidsParadiseByShoptick.Infrastructure --startup-project KidsParadiseByShoptick.APIs

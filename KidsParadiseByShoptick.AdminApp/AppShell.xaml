@@ -18,6 +18,10 @@
                   ContentTemplate="{DataTemplate views:LoginPage}"
                   FlyoutItemIsVisible="False" />
 
+    <FlyoutItem Title="Dashboard" Icon="dotnet_bot.png" Route="dashboard">
+        <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Categories" Icon="dotnet_bot.png" Route="categories">
         <ShellContent ContentTemplate="{DataTemplate views:CategoriesPage}" />
     </FlyoutItem>

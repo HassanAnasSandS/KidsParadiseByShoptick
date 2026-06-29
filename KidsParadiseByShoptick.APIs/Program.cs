@@ -14,6 +14,8 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -21,6 +23,13 @@ builder.Services.AddControllers()
     });
 builder.Services.AddMemoryCache();
 builder.Services.Configure<SeoOptions>(builder.Configuration.GetSection(SeoOptions.SectionName));
+builder.Services.Configure<GoogleOAuthOptions>(options =>
+{
+    builder.Configuration.GetSection(GoogleOAuthOptions.SectionName).Bind(options);
+    var siteBase = builder.Configuration["Seo:SiteBaseUrl"]?.TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(siteBase))
+        options.RedirectUri = $"{siteBase}/api/admin/youtube/oauth/callback";
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     // Only forward client IP and HTTPS scheme — NOT host (prevents www↔apex rewrite bugs).

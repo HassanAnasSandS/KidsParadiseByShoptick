@@ -24,6 +24,23 @@ public class AdminAuthController : ControllerBase
 }
 
 [ApiController]
+[Route("api/admin/dashboard")]
+[Authorize(Roles = "Admin")]
+public class AdminDashboardController : ControllerBase
+{
+    private readonly IDashboardService _dashboardService;
+
+    public AdminDashboardController(IDashboardService dashboardService) => _dashboardService = dashboardService;
+
+    [HttpGet]
+    public async Task<ActionResult<AdminDashboardDto>> GetStats(
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _dashboardService.GetAdminStatsAsync(dateFrom, dateTo, cancellationToken));
+}
+
+[ApiController]
 [Route("api/admin/categories")]
 [Authorize(Roles = "Admin")]
 public class AdminCategoriesController : ControllerBase
@@ -110,6 +127,19 @@ public class AdminToysController : ControllerBase
         [FromBody] CreateToyRequest request, CancellationToken cancellationToken)
         => Ok(await _toyService.CreateAsync(request, cancellationToken));
 
+    [HttpPost("{id:int}/clone")]
+    public async Task<ActionResult<ToyListDto>> Clone(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _toyService.CloneAsync(id, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ToyListDto>> Update(
         int id, [FromBody] UpdateToyRequest request, CancellationToken cancellationToken)
@@ -151,6 +181,10 @@ public class AdminOrdersController : ControllerBase
     [HttpGet("cities")]
     public async Task<ActionResult<IReadOnlyList<string>>> GetCities(CancellationToken cancellationToken)
         => Ok(await _orderService.GetAdminCitiesAsync(cancellationToken));
+
+    [HttpGet("status-counts")]
+    public async Task<ActionResult<OrderStatusCountsDto>> GetStatusCounts(CancellationToken cancellationToken)
+        => Ok(await _orderService.GetAdminStatusCountsAsync(cancellationToken));
 
     [HttpPost]
     public async Task<ActionResult<OrderPlacedDto>> Create(

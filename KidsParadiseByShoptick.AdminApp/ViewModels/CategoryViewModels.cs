@@ -42,7 +42,7 @@ public partial class LoginViewModel : ObservableObject
             await OrderNotificationService.RequestPermissionAsync();
             await _api.LoginAsync(Username.Trim(), Password, RememberMe);
             _notifications.Start();
-            await Shell.Current.GoToAsync("//categories");
+            await Shell.Current.GoToAsync("//dashboard");
         }
         catch (Exception ex)
         {

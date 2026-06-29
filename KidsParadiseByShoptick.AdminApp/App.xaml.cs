@@ -1,5 +1,4 @@
-﻿using KidsParadiseByShoptick.AdminApp.Platforms.Android;
-using KidsParadiseByShoptick.AdminApp.Services;
+﻿using KidsParadiseByShoptick.AdminApp.Services;
 
 namespace KidsParadiseByShoptick.AdminApp;
 
@@ -37,7 +36,7 @@ public partial class App : Application
         {
             if (OrderAlertListener.NotificationsEnabled)
                 _notifications.Start();
-            await Shell.Current.GoToAsync("//categories");
+            await Shell.Current.GoToAsync("//dashboard");
         }
         else
         {

@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
         services.AddScoped<ISiteImageRepository, SiteImageRepository>();
         services.AddScoped<ISitemapRepository, SitemapRepository>();
+        services.AddScoped<IDashboardRepository, DashboardRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IFileStorageService, FileStorageService>();
 

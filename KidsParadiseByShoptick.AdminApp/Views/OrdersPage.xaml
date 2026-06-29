@@ -15,7 +15,24 @@
     </ContentPage.ToolbarItems>
     <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
         <SearchBar Grid.Row="0" Placeholder="Search orders..." Text="{Binding SearchText}" />
-        <Picker Grid.Row="1" Title="Status" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding StatusFilter}" />
+        <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding StatusOptions}" Spacing="8" Padding="0,4">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:StatusFilterOption">
+                        <Border Padding="12,8" StrokeShape="RoundRectangle 18"
+                                Stroke="{Binding IsSelected, Converter={StaticResource StatusChipStroke}}"
+                                BackgroundColor="{Binding IsSelected, Converter={StaticResource StatusChipBackground}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.SelectStatusCommand}"
+                                                      CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding Label}" FontSize="13" FontAttributes="Bold"
+                                   TextColor="{Binding IsSelected, Converter={StaticResource StatusChipText}}" />
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </ScrollView>
         <RefreshView Grid.Row="2" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
             <CollectionView ItemsSource="{Binding Items}"
                             RemainingItemsThreshold="8"

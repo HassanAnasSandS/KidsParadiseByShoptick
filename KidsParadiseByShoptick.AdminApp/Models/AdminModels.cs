@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace KidsParadiseByShoptick.AdminApp.Models;
@@ -6,6 +7,40 @@ public class AdminLoginResponse
 {
     [JsonPropertyName("token")] public string Token { get; set; } = string.Empty;
     [JsonPropertyName("username")] public string Username { get; set; } = string.Empty;
+}
+
+public class OrderStatusCountsModel
+{
+    [JsonPropertyName("total")] public int Total { get; set; }
+    [JsonPropertyName("pending")] public int Pending { get; set; }
+    [JsonPropertyName("confirmed")] public int Confirmed { get; set; }
+    [JsonPropertyName("shipped")] public int Shipped { get; set; }
+    [JsonPropertyName("delivered")] public int Delivered { get; set; }
+    [JsonPropertyName("cancelled")] public int Cancelled { get; set; }
+}
+
+public partial class StatusFilterOption : ObservableObject
+{
+    public string Value { get; init; } = "All";
+    public string Label { get; init; } = "All";
+    [ObservableProperty] private bool isSelected;
+}
+
+public class DashboardModel
+{
+    [JsonPropertyName("totalToys")] public int TotalToys { get; set; }
+    [JsonPropertyName("totalAvailableToys")] public int TotalAvailableToys { get; set; }
+    [JsonPropertyName("totalSoldToys")] public int TotalSoldToys { get; set; }
+    [JsonPropertyName("totalToysOnSale")] public int TotalToysOnSale { get; set; }
+    [JsonPropertyName("totalToysOnRegular")] public int TotalToysOnRegular { get; set; }
+    [JsonPropertyName("regularToysTotalAmount")] public decimal RegularToysTotalAmount { get; set; }
+    [JsonPropertyName("onSaleToysTotalAmount")] public decimal OnSaleToysTotalAmount { get; set; }
+    [JsonPropertyName("allToysTotalAmount")] public decimal AllToysTotalAmount { get; set; }
+    [JsonPropertyName("availableToysTotalAmount")] public decimal AvailableToysTotalAmount { get; set; }
+    [JsonPropertyName("allSoldToysTotalAmount")] public decimal AllSoldToysTotalAmount { get; set; }
+    [JsonPropertyName("totalCustomers")] public int TotalCustomers { get; set; }
+    [JsonPropertyName("totalDeliveredOrders")] public int TotalDeliveredOrders { get; set; }
+    [JsonPropertyName("allDeliveredOrdersTotalAmount")] public decimal AllDeliveredOrdersTotalAmount { get; set; }
 }
 
 public class CategoryModel
@@ -37,6 +72,7 @@ public class ToyDetailModel : ToyListModel
     [JsonPropertyName("categoryId")] public int CategoryId { get; set; }
     [JsonPropertyName("imagePaths")] public List<string> ImagePaths { get; set; } = [];
     [JsonPropertyName("reviewCount")] public int ReviewCount { get; set; }
+    [JsonPropertyName("videoLink")] public string? VideoLink { get; set; }
 }
 
 public class ReviewModel

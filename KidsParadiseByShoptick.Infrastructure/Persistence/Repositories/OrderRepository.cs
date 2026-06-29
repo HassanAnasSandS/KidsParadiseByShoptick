@@ -54,6 +54,27 @@ public class OrderRepository : Repository<Order>, IOrderRepository
         CancellationToken cancellationToken = default)
         => ApplyAdminFilters(AdminDetailsQuery(), status, search, city, dateFrom, dateTo).CountAsync(cancellationToken);
 
+    public async Task<(int Total, int Pending, int Confirmed, int Shipped, int Delivered, int Cancelled)> GetStatusCountsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var grouped = await DbSet
+            .AsNoTracking()
+            .GroupBy(x => x.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        int Count(OrderStatus status) =>
+            grouped.FirstOrDefault(x => x.Status == status)?.Count ?? 0;
+
+        var pending = Count(OrderStatus.Pending);
+        var confirmed = Count(OrderStatus.Confirmed);
+        var shipped = Count(OrderStatus.Shipped);
+        var delivered = Count(OrderStatus.Delivered);
+        var cancelled = Count(OrderStatus.Cancelled);
+
+        return (pending + confirmed + shipped + delivered + cancelled, pending, confirmed, shipped, delivered, cancelled);
+    }
+
     public async Task<IReadOnlyList<string>> GetDistinctCitiesAsync(CancellationToken cancellationToken = default)
         => await DbSet
             .AsNoTracking()

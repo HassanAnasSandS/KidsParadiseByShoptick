@@ -51,10 +51,54 @@
                                 Padding="12,6"
                                 CornerRadius="10" />
                     </Grid>
-                    <Label Text="{Binding Order.CustomerName, StringFormat='Name: {0}'}" />
-                    <Label Text="{Binding Order.Whatsapp, StringFormat='WhatsApp: {0}'}" />
-                    <Label Text="{Binding Order.City, StringFormat='City: {0}'}" />
-                    <Label Text="{Binding Order.Address, StringFormat='Address: {0}'}" LineBreakMode="WordWrap" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Order.CustomerName, StringFormat='Name: {0}'}" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                        <Button Grid.Column="1"
+                                Text="Copy"
+                                FontSize="11"
+                                Padding="10,4"
+                                CornerRadius="8"
+                                BackgroundColor="#e2e8f0"
+                                TextColor="#334155"
+                                VerticalOptions="Start"
+                                Command="{Binding CopyNameCommand}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Order.Whatsapp, StringFormat='WhatsApp: {0}'}" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                        <Button Grid.Column="1"
+                                Text="Copy"
+                                FontSize="11"
+                                Padding="10,4"
+                                CornerRadius="8"
+                                BackgroundColor="#e2e8f0"
+                                TextColor="#334155"
+                                VerticalOptions="Start"
+                                Command="{Binding CopyWhatsappCommand}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Order.City, StringFormat='City: {0}'}" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                        <Button Grid.Column="1"
+                                Text="Copy"
+                                FontSize="11"
+                                Padding="10,4"
+                                CornerRadius="8"
+                                BackgroundColor="#e2e8f0"
+                                TextColor="#334155"
+                                VerticalOptions="Start"
+                                Command="{Binding CopyCityCommand}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Order.Address, StringFormat='Address: {0}'}" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                        <Button Grid.Column="1"
+                                Text="Copy"
+                                FontSize="11"
+                                Padding="10,4"
+                                CornerRadius="8"
+                                BackgroundColor="#e2e8f0"
+                                TextColor="#334155"
+                                VerticalOptions="Start"
+                                Command="{Binding CopyAddressCommand}" />
+                    </Grid>
                 </VerticalStackLayout>
             </Frame>
 

@@ -10,7 +10,7 @@ public record ToyListDto(
 public record ToyDetailDto(
     int Id, string Name, decimal Price, decimal? SalePrice, bool IsSold,
     IReadOnlyList<string> ImagePaths, IReadOnlyList<string> ImageUrls, string CategoryName, int CategoryId,
-    double? AverageRating, int ReviewCount);
+    double? AverageRating, int ReviewCount, string? VideoLink);
 
 public record ReviewDto(
     int Id, string ReviewerName, int Rating, string Comment, string? ImageUrl, string? ImagePath,
@@ -52,13 +52,21 @@ public record UpdateCategoryRequest(string Name, string? ImagePath);
 
 public record CreateToyRequest(
     int CategoryId, string Name, decimal Price, decimal? SalePrice,
-    IReadOnlyList<string> ImagePaths);
+    IReadOnlyList<string> ImagePaths, string? VideoLink = null);
 
 public record UpdateToyRequest(
     int CategoryId, string Name, decimal Price, decimal? SalePrice,
-    IReadOnlyList<string> ImagePaths);
+    IReadOnlyList<string> ImagePaths, string? VideoLink = null);
 
 public record UpdateOrderStatusRequest(string Status, string? TrackingNumber, decimal? AdvanceAmount, decimal? DiscountAmount);
+
+public record OrderStatusCountsDto(
+    int Total,
+    int Pending,
+    int Confirmed,
+    int Shipped,
+    int Delivered,
+    int Cancelled);
 
 public record AdminUpdateOrderRequest(
     string CustomerName,
@@ -72,6 +80,21 @@ public record AdminUpdateOrderRequest(
     IReadOnlyList<int> ToyIds);
 
 public record UploadResponse(string Path, string Url);
+
+public record AdminDashboardDto(
+    int TotalToys,
+    int TotalAvailableToys,
+    int TotalSoldToys,
+    int TotalToysOnSale,
+    int TotalToysOnRegular,
+    decimal RegularToysTotalAmount,
+    decimal OnSaleToysTotalAmount,
+    decimal AllToysTotalAmount,
+    decimal AvailableToysTotalAmount,
+    decimal AllSoldToysTotalAmount,
+    int TotalCustomers,
+    int TotalDeliveredOrders,
+    decimal AllDeliveredOrdersTotalAmount);
 
 public record SeoPublicConfigDto(
     string SiteName,

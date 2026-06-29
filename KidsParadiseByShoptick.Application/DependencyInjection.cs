@@ -15,6 +15,9 @@ public static class DependencyInjection
         services.AddScoped<IAdminAuthService, AdminAuthService>();
         services.AddScoped<ISiteImageService, SiteImageService>();
         services.AddScoped<ISitemapService, SitemapService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddHttpClient<YouTubeAuthService>();
+        services.AddScoped<IYouTubeAuthService>(sp => sp.GetRequiredService<YouTubeAuthService>());
         services.AddSingleton<IDeliveryChargeService, DeliveryChargeService>();
         return services;
     }

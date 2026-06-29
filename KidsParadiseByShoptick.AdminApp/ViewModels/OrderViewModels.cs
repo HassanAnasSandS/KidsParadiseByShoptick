@@ -1,3 +1,4 @@
+using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KidsParadiseByShoptick.AdminApp.Helpers;
@@ -35,8 +36,7 @@ public partial class OrdersViewModel : ObservableObject
     private bool hasMoreItems;
 
     public ObservableCollection<OrderModel> Items { get; } = [];
-    public ObservableCollection<string> StatusOptions { get; } =
-        ["All", "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
+    public ObservableCollection<StatusFilterOption> StatusOptions { get; } = [];
 
     public OrdersViewModel(AdminApiService api) => _api = api;
 
@@ -79,6 +79,7 @@ public partial class OrdersViewModel : ObservableObject
             StatusText = string.Empty;
             Items.Clear();
             LoadMoreCommand.NotifyCanExecuteChanged();
+            await LoadStatusCountsAsync();
             await LoadNextPageCoreAsync(isRefresh: true);
         });
     }
@@ -142,6 +143,7 @@ public partial class OrdersViewModel : ObservableObject
 
     partial void OnStatusFilterChanged(string value)
     {
+        UpdateStatusSelection();
         if (_load.SuppressFilterReload)
             return;
 
@@ -153,6 +155,50 @@ public partial class OrdersViewModel : ObservableObject
         }
 
         _ = ReloadAsync();
+    }
+
+    async Task LoadStatusCountsAsync()
+    {
+        try
+        {
+            var counts = await _api.GetOrderStatusCountsAsync();
+            var current = StatusFilter;
+
+            _load.SuppressFilters(true);
+            StatusOptions.Clear();
+            StatusOptions.Add(CreateStatusOption("All", counts.Total));
+            StatusOptions.Add(CreateStatusOption("Pending", counts.Pending));
+            StatusOptions.Add(CreateStatusOption("Confirmed", counts.Confirmed));
+            StatusOptions.Add(CreateStatusOption("Shipped", counts.Shipped));
+            StatusOptions.Add(CreateStatusOption("Delivered", counts.Delivered));
+            StatusOptions.Add(CreateStatusOption("Cancelled", counts.Cancelled));
+            StatusFilter = current;
+            UpdateStatusSelection();
+            _load.SuppressFilters(false);
+        }
+        catch
+        {
+            _load.SuppressFilters(false);
+        }
+    }
+
+    static StatusFilterOption CreateStatusOption(string value, int count) =>
+        new() { Value = value, Label = $"{value} ({count})" };
+
+    void UpdateStatusSelection()
+    {
+        foreach (var option in StatusOptions)
+            option.IsSelected = string.Equals(option.Value, StatusFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RelayCommand]
+    Task SelectStatusAsync(StatusFilterOption option)
+    {
+        if (option is null || string.Equals(StatusFilter, option.Value, StringComparison.OrdinalIgnoreCase))
+            return Task.CompletedTask;
+
+        StatusFilter = option.Value;
+        return Task.CompletedTask;
     }
 
     void ScheduleFilterReload()
@@ -274,6 +320,30 @@ public partial class OrderDetailViewModel : ObservableObject, IQueryAttributable
         {
             await Shell.Current.DisplayAlert("WhatsApp", ex.Message, "OK");
         }
+    }
+
+    [RelayCommand]
+    async Task CopyNameAsync() => await CopyToClipboardAsync(Order?.CustomerName, "Name");
+
+    [RelayCommand]
+    async Task CopyWhatsappAsync() => await CopyToClipboardAsync(Order?.Whatsapp, "WhatsApp");
+
+    [RelayCommand]
+    async Task CopyCityAsync() => await CopyToClipboardAsync(Order?.City, "City");
+
+    [RelayCommand]
+    async Task CopyAddressAsync() => await CopyToClipboardAsync(Order?.Address, "Address");
+
+    static async Task CopyToClipboardAsync(string? value, string label)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await Shell.Current.DisplayAlert("Copy", $"{label} is empty.", "OK");
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(value.Trim());
+        await Toast.Make($"{label} copied").Show();
     }
 
     [RelayCommand]

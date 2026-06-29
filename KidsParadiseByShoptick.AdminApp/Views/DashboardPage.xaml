@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.DashboardPage"
+             x:DataType="vm:DashboardViewModel"
+             Title="Dashboard"
+             BackgroundColor="{StaticResource PageBg}">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                 Command="{Binding RefreshCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="16">
+
+                <!-- Hero header -->
+                <Frame Padding="20" CornerRadius="20" HasShadow="True" BorderColor="Transparent"
+                       BackgroundColor="#1a6fe8">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Dashboard" FontSize="26" FontAttributes="Bold" TextColor="White" />
+                        <Label Text="Store overview at a glance"
+                               FontSize="14" TextColor="#dbeafe" />
+                        <Label Text="{Binding LastUpdatedText}" FontSize="12" TextColor="#bfdbfe" Margin="0,4,0,0" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Date filter -->
+                <Frame Padding="16" CornerRadius="16" BorderColor="#e2e8f0" BackgroundColor="White">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="Date range" FontSize="16" FontAttributes="Bold" TextColor="#0f172a" />
+                                <Label Text="{Binding FilterSummary}" FontSize="12" TextColor="#64748b" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="📅" FontSize="22" VerticalOptions="Center" />
+                        </Grid>
+
+                        <Label Text="Applies to customers &amp; delivered orders. Toy stats are live inventory."
+                               FontSize="11" TextColor="#94a3b8" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+                            <Label Grid.Row="0" Grid.Column="0" Text="From" FontSize="12" TextColor="#64748b" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="To" FontSize="12" TextColor="#64748b" />
+                            <DatePicker Grid.Row="1" Grid.Column="0"
+                                        Date="{Binding FromDate}"
+                                        TextColor="#0f172a"
+                                        FontSize="14" />
+                            <DatePicker Grid.Row="1" Grid.Column="1"
+                                        Date="{Binding ToDate}"
+                                        TextColor="#0f172a"
+                                        FontSize="14" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button Grid.Column="0" Text="Apply filter" Command="{Binding ApplyFilterCommand}"
+                                    BackgroundColor="#1a6fe8" TextColor="White" CornerRadius="10" FontAttributes="Bold" />
+                            <Button Grid.Column="1" Text="Clear" Command="{Binding ClearFilterCommand}"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" CornerRadius="10" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" FontSize="13"
+                       IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+
+                <ActivityIndicator IsRunning="{Binding IsBusy}" Color="#1a6fe8" HorizontalOptions="Center" />
+
+                <!-- Stats cards -->
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="📊  Overview" FontSize="17" FontAttributes="Bold" TextColor="#0f172a" />
+                        <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                            <Button Text="Toys" FontSize="12" Padding="10,4"
+                                    Command="{Binding OpenToysCommand}" BackgroundColor="Transparent"
+                                    TextColor="#1a6fe8" BorderColor="#1a6fe8" BorderWidth="1" CornerRadius="8" />
+                            <Button Text="Orders" FontSize="12" Padding="10,4"
+                                    Command="{Binding OpenOrdersCommand}" BackgroundColor="Transparent"
+                                    TextColor="#1a6fe8" BorderColor="#1a6fe8" BorderWidth="1" CornerRadius="8" />
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+
+                        <!-- Total Toys -->
+                        <Frame Grid.Row="0" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#dbeafe" BackgroundColor="#eff6ff">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Total Toys" FontSize="12" TextColor="#1e40af" />
+                                <Label Text="{Binding TotalToys}" FontSize="28" FontAttributes="Bold" TextColor="#1a6fe8" />
+                                <Label Text="Amount" FontSize="11" TextColor="#64748b" Margin="0,2,0,0" />
+                                <Label Text="{Binding TotalToysAmountText}" FontSize="15" FontAttributes="Bold" TextColor="#1d4ed8" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Available Toys -->
+                        <Frame Grid.Row="0" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="#dcfce7" BackgroundColor="#f0fdf4">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Available Toys" FontSize="12" TextColor="#166534" />
+                                <Label Text="{Binding TotalAvailableToys}" FontSize="28" FontAttributes="Bold" TextColor="#15803d" />
+                                <Label Text="Amount" FontSize="11" TextColor="#64748b" Margin="0,2,0,0" />
+                                <Label Text="{Binding AvailableToysAmountText}" FontSize="15" FontAttributes="Bold" TextColor="#15803d" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Sold Toys -->
+                        <Frame Grid.Row="1" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#fef3c7" BackgroundColor="#fffbeb">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Sold Toys" FontSize="12" TextColor="#92400e" />
+                                <Label Text="{Binding TotalSoldToys}" FontSize="28" FontAttributes="Bold" TextColor="#b45309" />
+                                <Label Text="Amount" FontSize="11" TextColor="#64748b" Margin="0,2,0,0" />
+                                <Label Text="{Binding SoldToysAmountText}" FontSize="15" FontAttributes="Bold" TextColor="#b45309" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Total Regular Toys -->
+                        <Frame Grid.Row="1" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="#e2e8f0" BackgroundColor="#f8fafc">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Total Regular Toys" FontSize="12" TextColor="#475569" />
+                                <Label Text="{Binding TotalToysOnRegular}" FontSize="28" FontAttributes="Bold" TextColor="#334155" />
+                                <Label Text="Amount" FontSize="11" TextColor="#64748b" Margin="0,2,0,0" />
+                                <Label Text="{Binding RegularToysAmountText}" FontSize="15" FontAttributes="Bold" TextColor="#334155" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Total Onsale Toys -->
+                        <Frame Grid.Row="2" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#ede9fe" BackgroundColor="#f5f3ff">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Total Onsale Toys" FontSize="12" TextColor="#5b21b6" />
+                                <Label Text="{Binding TotalToysOnSale}" FontSize="28" FontAttributes="Bold" TextColor="#7c3aed" />
+                                <Label Text="Amount" FontSize="11" TextColor="#64748b" Margin="0,2,0,0" />
+                                <Label Text="{Binding OnSaleToysAmountText}" FontSize="15" FontAttributes="Bold" TextColor="#7c3aed" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Total Customers -->
+                        <Frame Grid.Row="2" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="#e2e8f0" BackgroundColor="White">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Total Customers" FontSize="12" TextColor="#64748b" />
+                                <Label Text="{Binding TotalCustomers}" FontSize="28" FontAttributes="Bold" TextColor="#0f172a" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Total Delivered Orders -->
+                        <Frame Grid.Row="3" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#dcfce7" BackgroundColor="#f0fdf4">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Total Delivered Orders" FontSize="12" TextColor="#166534" />
+                                <Label Text="{Binding TotalDeliveredOrders}" FontSize="28" FontAttributes="Bold" TextColor="#15803d" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Revenue -->
+                        <Frame Grid.Row="3" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="Transparent" BackgroundColor="#0f172a">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Revenue" FontSize="12" TextColor="#94a3b8" />
+                                <Label Text="{Binding AllDeliveredOrdersTotalAmountText}" FontSize="20" FontAttributes="Bold" TextColor="White" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                    </Grid>
+                </VerticalStackLayout>
+
+                <BoxView HeightRequest="24" Color="Transparent" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

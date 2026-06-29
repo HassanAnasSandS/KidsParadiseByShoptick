@@ -13,6 +13,27 @@
             <Picker Title="Category" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCategory}" />
             <Entry Placeholder="Price (Rs.)" Keyboard="Numeric" Text="{Binding PriceText}" />
             <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" />
+
+            <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
+            <Label Text="Optional: upload to YouTube and the link is saved with the toy when you tap Save."
+                   FontSize="12" TextColor="#64748b" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Select video" Command="{Binding PickVideoCommand}"
+                        BackgroundColor="#e2e8f0" TextColor="#334155" />
+                <Button Grid.Column="1" Text="Clear" Command="{Binding ClearVideoCommand}"
+                        BackgroundColor="Transparent" TextColor="#64748b" BorderColor="#cbd5e1" BorderWidth="1" />
+            </Grid>
+            <Label Text="{Binding SelectedVideoFileName}" FontSize="12" TextColor="#334155"
+                   IsVisible="{Binding SelectedVideoFileName, Converter={StaticResource NullToBool}}" />
+            <Button Text="Upload to YouTube" Command="{Binding UploadVideoCommand}"
+                    IsEnabled="{Binding CanUploadVideo}"
+                    BackgroundColor="#dc2626" TextColor="White" />
+            <ActivityIndicator IsRunning="{Binding IsUploadingVideo}" IsVisible="{Binding IsUploadingVideo}" Color="#dc2626" />
+            <Label Text="{Binding VideoUploadStatus}" FontSize="12" TextColor="#64748b"
+                   IsVisible="{Binding VideoUploadStatus, Converter={StaticResource NullToBool}}" />
+            <Entry Placeholder="YouTube link (optional, filled after upload)" Text="{Binding VideoLinkText}" IsReadOnly="True"
+                   IsVisible="{Binding VideoLinkText, Converter={StaticResource NullToBool}}" />
+
             <Button Text="Add Images" Command="{Binding PickImagesCommand}" />
             <CollectionView ItemsSource="{Binding Images}" HeightRequest="120">
                 <CollectionView.ItemsLayout>

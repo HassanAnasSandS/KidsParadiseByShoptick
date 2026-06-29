@@ -57,7 +57,7 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:ToyListModel">
                         <Frame Margin="0,4" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
-                            <Grid ColumnDefinitions="56,*,Auto,Auto" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="56,*,Auto,Auto,Auto" ColumnSpacing="6">
                                 <Image Grid.Column="0" Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}" HeightRequest="48" WidthRequest="48" Aspect="AspectFit" />
                                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                     <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
@@ -69,9 +69,12 @@
                                         <Label Text="On Sale" FontSize="11" TextColor="#d97706" IsVisible="{Binding SalePrice, Converter={StaticResource NullToBool}}" />
                                     </HorizontalStackLayout>
                                 </VerticalStackLayout>
-                                <Button Grid.Column="2" Text="Edit" FontSize="12"
+                                <Button Grid.Column="2" Text="Clone" FontSize="11"
+                                        BackgroundColor="#0ea5e9" TextColor="White" Padding="8,4" CornerRadius="8"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.CloneCommand}" CommandParameter="{Binding .}" />
+                                <Button Grid.Column="3" Text="Edit" FontSize="12"
                                         Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EditCommand}" CommandParameter="{Binding .}" />
-                                <Button Grid.Column="3" Text="Del" FontSize="12" BackgroundColor="#dc2626" TextColor="White"
+                                <Button Grid.Column="4" Text="Del" FontSize="12" BackgroundColor="#dc2626" TextColor="White"
                                         Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.DeleteCommand}" CommandParameter="{Binding .}" />
                             </Grid>
                         </Frame>

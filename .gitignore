@@ -25,6 +25,11 @@ dist-ssr/
 
 ## Publish / deploy output
 KidsParadiseByShoptick.Published/Live/
+KidsParadiseByShoptick.Published/.app-data/
+
+## Local secrets (never commit)
+appsettings.Secrets.json
+**/appsettings.Secrets.json
 
 ## User uploads (runtime content)
 **/uploads/

@@ -65,10 +65,41 @@ public class ToyService : IToyService
             Name = request.Name.Trim(),
             Price = request.Price,
             SalePrice = request.SalePrice,
+            VideoLink = NormalizeVideoLink(request.VideoLink),
             Images = ToyMapper.BuildImages(0, request.ImagePaths)
         };
         await _unitOfWork.Toys.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var category = await _unitOfWork.Categories.GetByIdAsync(entity.CategoryId, cancellationToken);
+        var withImages = await _unitOfWork.Toys.GetWithImagesAsync(entity.Id, cancellationToken) ?? entity;
+        return ToyMapper.MapList(withImages, category?.Name ?? "", _fileStorage, null);
+    }
+
+    public async Task<ToyListDto> CloneAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var source = await _unitOfWork.Toys.GetWithImagesAsync(id, cancellationToken)
+            ?? throw new InvalidOperationException("Toy not found.");
+
+        var imagePaths = source.Images
+            .OrderBy(i => i.SortOrder)
+            .Select(i => i.ImagePath)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+
+        var entity = new Toy
+        {
+            CategoryId = source.CategoryId,
+            Name = source.Name.Trim(),
+            Price = source.Price,
+            SalePrice = source.SalePrice,
+            VideoLink = source.VideoLink,
+            IsSold = false,
+            Images = ToyMapper.BuildImages(0, imagePaths),
+        };
+
+        await _unitOfWork.Toys.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         var category = await _unitOfWork.Categories.GetByIdAsync(entity.CategoryId, cancellationToken);
         var withImages = await _unitOfWork.Toys.GetWithImagesAsync(entity.Id, cancellationToken) ?? entity;
         return ToyMapper.MapList(withImages, category?.Name ?? "", _fileStorage, null);
@@ -83,6 +114,7 @@ public class ToyService : IToyService
         entity.Name = request.Name.Trim();
         entity.Price = request.Price;
         entity.SalePrice = request.SalePrice;
+        entity.VideoLink = NormalizeVideoLink(request.VideoLink);
 
         var newPaths = request.ImagePaths?
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -146,6 +178,14 @@ public class ToyService : IToyService
         return new ToyDetailDto(
             toy.Id, toy.Name, toy.Price, toy.SalePrice, toy.IsSold,
             imagePaths, ToyMapper.ImageUrls(toy, _fileStorage), toy.Category?.Name ?? "", toy.CategoryId,
-            avg, reviews.Count);
+            avg, reviews.Count, toy.VideoLink);
+    }
+
+    private static string? NormalizeVideoLink(string? videoLink)
+    {
+        if (string.IsNullOrWhiteSpace(videoLink))
+            return null;
+
+        return videoLink.Trim();
     }
 }

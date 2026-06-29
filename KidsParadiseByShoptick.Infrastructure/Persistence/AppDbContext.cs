@@ -41,6 +41,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Name).HasMaxLength(300);
             e.Property(x => x.Price).HasPrecision(18, 2);
             e.Property(x => x.SalePrice).HasPrecision(18, 2);
+            e.Property(x => x.VideoLink).HasMaxLength(500);
             e.HasOne(x => x.Category).WithMany(x => x.Toys).HasForeignKey(x => x.CategoryId);
         });
 

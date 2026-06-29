@@ -28,6 +28,7 @@ public interface IToyService
         int page, int pageSize, CancellationToken cancellationToken = default);
     Task<ToyDetailDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default);
     Task<ToyListDto> CreateAsync(CreateToyRequest request, CancellationToken cancellationToken = default);
+    Task<ToyListDto> CloneAsync(int id, CancellationToken cancellationToken = default);
     Task<ToyListDto?> UpdateAsync(int id, UpdateToyRequest request, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
@@ -43,6 +44,7 @@ public interface IOrderService
         string? status, string? search, string? city, DateTime? dateFrom, DateTime? dateTo, string? sort,
         int page, int pageSize, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetAdminCitiesAsync(CancellationToken cancellationToken = default);
+    Task<OrderStatusCountsDto> GetAdminStatusCountsAsync(CancellationToken cancellationToken = default);
     Task<OrderDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default);
     Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default);
     Task<OrderDto?> UpdateAdminAsync(int id, AdminUpdateOrderRequest request, CancellationToken cancellationToken = default);

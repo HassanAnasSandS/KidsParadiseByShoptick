@@ -156,6 +156,13 @@ public class OrderService : IOrderService
     public Task<IReadOnlyList<string>> GetAdminCitiesAsync(CancellationToken cancellationToken = default)
         => _unitOfWork.Orders.GetDistinctCitiesAsync(cancellationToken);
 
+    public async Task<OrderStatusCountsDto> GetAdminStatusCountsAsync(CancellationToken cancellationToken = default)
+    {
+        var counts = await _unitOfWork.Orders.GetStatusCountsAsync(cancellationToken);
+        return new OrderStatusCountsDto(
+            counts.Total, counts.Pending, counts.Confirmed, counts.Shipped, counts.Delivered, counts.Cancelled);
+    }
+
     public async Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<OrderStatus>(request.Status, true, out var orderStatus))

@@ -52,6 +52,17 @@ public class AdminApiService
 
     public async Task LogoutAsync() => await _session.ClearAsync();
 
+    public Task<DashboardModel> GetDashboardAsync(DateTime? dateFrom = null, DateTime? dateTo = null)
+    {
+        var query = new List<string>();
+        if (dateFrom.HasValue)
+            query.Add($"dateFrom={dateFrom.Value:yyyy-MM-dd}");
+        if (dateTo.HasValue)
+            query.Add($"dateTo={dateTo.Value:yyyy-MM-dd}");
+        var qs = query.Count > 0 ? "?" + string.Join('&', query) : string.Empty;
+        return GetAsync<DashboardModel>($"admin/dashboard{qs}");
+    }
+
     public Task<PagedResult<CategoryModel>> GetCategoriesPagedAsync(
         int page, int pageSize, string? search = null, string? toyFilter = null, string? sort = null)
     {
@@ -108,10 +119,36 @@ public class AdminApiService
     public Task<ToyListModel> CreateToyAsync(object payload) =>
         PostAsync<ToyListModel>("admin/toys", payload);
 
+    public Task<ToyListModel> CloneToyAsync(int id) =>
+        PostAsync<ToyListModel>($"admin/toys/{id}/clone", new { });
+
     public Task<ToyListModel> UpdateToyAsync(int id, object payload) =>
         PutAsync<ToyListModel>($"admin/toys/{id}", payload);
 
     public Task DeleteToyAsync(int id) => DeleteAsync($"admin/toys/{id}");
+
+    public Task<OrderStatusCountsModel> GetOrderStatusCountsAsync() =>
+        GetAsync<OrderStatusCountsModel>("admin/orders/status-counts");
+
+    public async Task<(string? AccessToken, string? AuthUrl)> GetYouTubeAccessTokenAsync()
+    {
+        using var res = await _http.GetAsync("admin/youtube/access-token");
+        if (res.IsSuccessStatusCode)
+        {
+            var data = await res.Content.ReadFromJsonAsync<YouTubeAccessTokenResponse>(JsonOptions);
+            return (data?.AccessToken, null);
+        }
+
+        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var data = await res.Content.ReadFromJsonAsync<YouTubeAuthRequiredResponse>(JsonOptions);
+            if (data?.NeedsAuth == true && !string.IsNullOrWhiteSpace(data.AuthUrl))
+                return (null, data.AuthUrl);
+        }
+
+        await EnsureSuccessAsync(res);
+        return (null, null);
+    }
 
     public Task<PagedResult<OrderModel>> GetOrdersPagedAsync(
         int page, int pageSize, string? status = null, string? search = null, string? sort = null)

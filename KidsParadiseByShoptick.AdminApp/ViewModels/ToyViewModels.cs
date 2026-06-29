@@ -330,6 +330,36 @@ public partial class ToysViewModel : ObservableObject
     async Task EditAsync(ToyListModel item) => await Shell.Current.GoToAsync($"toy-edit?id={item.Id}");
 
     [RelayCommand]
+    async Task CloneAsync(ToyListModel item)
+    {
+        var soldNote = item.IsSold ? " It will be created as available." : string.Empty;
+        if (!await Shell.Current.DisplayAlert(
+                "Clone toy",
+                $"Create a copy of \"{item.Name}\"?{soldNote}",
+                "Clone",
+                "Cancel"))
+            return;
+
+        try
+        {
+            IsBusy = true;
+            await _api.CloneToyAsync(item.Id);
+            await ReloadAsync();
+            await Shell.Current.DisplayAlert("Cloned", $"\"{item.Name}\" was copied as a new available toy.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+            if (ex is UnauthorizedAccessException)
+                await Shell.Current.GoToAsync("//login");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     async Task DeleteAsync(ToyListModel item)
     {
         if (!await Shell.Current.DisplayAlert("Delete", $"Delete toy \"{item.Name}\"?", "Delete", "Cancel"))
@@ -349,19 +379,31 @@ public partial class ToysViewModel : ObservableObject
 public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 {
     private readonly AdminApiService _api;
+    private readonly IYouTubeUploadService _youTubeUpload;
     private int? _id;
+    private FileResult? _selectedVideo;
 
     [ObservableProperty] private string name = string.Empty;
     [ObservableProperty] private string priceText = "0";
     [ObservableProperty] private string salePriceText = string.Empty;
+    [ObservableProperty] private string videoLinkText = string.Empty;
+    [ObservableProperty] private string selectedVideoFileName = string.Empty;
+    [ObservableProperty] private string videoUploadStatus = string.Empty;
+    [ObservableProperty] private bool isUploadingVideo;
     [ObservableProperty] private CategoryModel? selectedCategory;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string title = "New Toy";
 
+    public bool CanUploadVideo => _youTubeUpload.IsSupported && _selectedVideo is not null && !IsUploadingVideo && !IsBusy;
+
     public ObservableCollection<CategoryModel> Categories { get; } = [];
     public ObservableCollection<ToyImageItem> Images { get; } = [];
 
-    public ToyEditViewModel(AdminApiService api) => _api = api;
+    public ToyEditViewModel(AdminApiService api, IYouTubeUploadService youTubeUpload)
+    {
+        _api = api;
+        _youTubeUpload = youTubeUpload;
+    }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -388,6 +430,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         Name = toy.Name;
         PriceText = toy.Price.ToString("0");
         SalePriceText = toy.SalePrice?.ToString("0") ?? string.Empty;
+        VideoLinkText = toy.VideoLink ?? string.Empty;
         SelectedCategory = Categories.FirstOrDefault(c => c.Id == toy.CategoryId) ?? Categories.FirstOrDefault();
         Images.Clear();
         for (var i = 0; i < toy.ImageUrls.Count; i++)
@@ -418,6 +461,92 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
     [RelayCommand]
     void RemoveImage(ToyImageItem item) => Images.Remove(item);
+
+    [RelayCommand]
+    async Task PickVideoAsync()
+    {
+        if (!_youTubeUpload.IsSupported)
+        {
+            await Shell.Current.DisplayAlert("Video", "YouTube upload is not available.", "OK");
+            return;
+        }
+
+        var file = await FilePicker.Default.PickAsync(new PickOptions
+        {
+            PickerTitle = "Select toy video",
+            FileTypes = FilePickerFileType.Videos,
+        });
+
+        if (file is null)
+            return;
+
+        _selectedVideo = file;
+        SelectedVideoFileName = file.FileName;
+        VideoUploadStatus = "Video selected. Tap upload to send it to YouTube.";
+        OnPropertyChanged(nameof(CanUploadVideo));
+    }
+
+    [RelayCommand]
+    async Task UploadVideoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            await Shell.Current.DisplayAlert("Validation", "Enter toy name before uploading video.", "OK");
+            return;
+        }
+
+        if (_selectedVideo is null)
+        {
+            await Shell.Current.DisplayAlert("Video", "Please select a video first.", "OK");
+            return;
+        }
+
+        if (!_youTubeUpload.IsSupported)
+        {
+            await Shell.Current.DisplayAlert("Video", "YouTube upload is not available.", "OK");
+            return;
+        }
+
+        try
+        {
+            IsUploadingVideo = true;
+            VideoUploadStatus = "Preparing upload…";
+            OnPropertyChanged(nameof(CanUploadVideo));
+
+            await using var stream = await _selectedVideo.OpenReadAsync();
+            var progress = new Progress<string>(status => VideoUploadStatus = status);
+
+            VideoLinkText = await _youTubeUpload.UploadAsync(
+                stream,
+                _selectedVideo.FileName,
+                Name.Trim(),
+                progress);
+
+            VideoUploadStatus = "Uploaded to YouTube.";
+        }
+        catch (Exception ex)
+        {
+            VideoUploadStatus = string.Empty;
+            await Shell.Current.DisplayAlert("YouTube upload failed", ex.Message, "OK");
+        }
+        finally
+        {
+            IsUploadingVideo = false;
+            OnPropertyChanged(nameof(CanUploadVideo));
+        }
+    }
+
+    [RelayCommand]
+    void ClearVideo()
+    {
+        _selectedVideo = null;
+        SelectedVideoFileName = string.Empty;
+        VideoUploadStatus = string.Empty;
+        OnPropertyChanged(nameof(CanUploadVideo));
+    }
+
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanUploadVideo));
+    partial void OnIsUploadingVideoChanged(bool value) => OnPropertyChanged(nameof(CanUploadVideo));
 
     [RelayCommand]
     async Task SaveAsync()
@@ -451,6 +580,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
             name = Name.Trim(),
             price,
             salePrice,
+            videoLink = string.IsNullOrWhiteSpace(VideoLinkText) ? null : VideoLinkText.Trim(),
             imagePaths = Images.Select(i => i.Path).ToList(),
         };
 

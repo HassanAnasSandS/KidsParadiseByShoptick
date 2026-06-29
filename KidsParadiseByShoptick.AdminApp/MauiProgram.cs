@@ -31,9 +31,11 @@ public static class MauiProgram
 #else
         builder.Services.AddSingleton<IOrderAlertsBackgroundService, DefaultOrderAlertsBackgroundService>();
 #endif
+        builder.Services.AddSingleton<IYouTubeUploadService, YouTubeUploadService>();
         builder.Services.AddSingleton<OrderNotificationService>();
 
         builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<CategoriesViewModel>();
         builder.Services.AddTransient<CategoryEditViewModel>();
         builder.Services.AddTransient<ToysViewModel>();
@@ -49,6 +51,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ShellViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<CategoriesPage>();
         builder.Services.AddTransient<CategoryEditPage>();
         builder.Services.AddTransient<ToysPage>();
@@ -77,19 +80,18 @@ public static class MauiProgram
 
     public static void OnAppBuilt()
     {
-        if (DeviceInfo.Platform == DevicePlatform.Android)
-        {
-            LocalNotificationCenter.CreateNotificationChannels(
-            [
-                new NotificationChannelRequest
-                {
-                    Id = "kids_paradise_orders",
-                    Name = "New Orders",
-                    Description = "Kids Paradise admin order alerts",
-                    Importance = AndroidImportance.High,
-                },
-            ]);
-        }
+#if ANDROID
+        LocalNotificationCenter.CreateNotificationChannels(
+        [
+            new NotificationChannelRequest
+            {
+                Id = "kids_paradise_orders",
+                Name = "New Orders",
+                Description = "Kids Paradise admin order alerts",
+                Importance = AndroidImportance.High,
+            },
+        ]);
+#endif
 
         OrderNotificationService.RegisterTapHandler();
     }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ShoppingCart, Truck, Zap, ZoomIn, Trash2 } from 'lucide-react';
+import { Star, ShoppingCart, Truck, Zap, ZoomIn, Trash2, Play } from 'lucide-react';
 import { api, effectivePrice, toyPrimaryImage } from '@/api/client';
 import { useCartStore } from '@/store/cart';
 import { Button } from '@/components/ui/Button';
@@ -112,6 +112,12 @@ export function ProductPage() {
     });
   };
 
+  const handleWatchVideo = () => {
+    if (!toy.videoLink?.trim()) return;
+    const href = /^https?:\/\//i.test(toy.videoLink) ? toy.videoLink.trim() : `https://${toy.videoLink.trim()}`;
+    window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <SeoHead
@@ -179,6 +185,12 @@ export function ProductPage() {
           <p className={`mt-2 text-sm font-medium ${toy.isSold ? 'text-red-500' : 'text-green-600'}`}>
             {toy.isSold ? 'Sold — no longer available' : 'Available — unique item'}
           </p>
+
+          {toy.videoLink?.trim() && (
+            <Button variant="outline" onClick={handleWatchVideo} className="mt-4 w-full sm:w-auto">
+              <Play className="w-4 h-4" /> Watch Video
+            </Button>
+          )}
 
           {!toy.isSold && (
             <div className="flex flex-col sm:flex-row gap-3 mt-6">

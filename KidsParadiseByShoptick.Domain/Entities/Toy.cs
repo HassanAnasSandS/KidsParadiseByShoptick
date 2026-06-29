@@ -7,6 +7,7 @@ public class Toy : BaseEntity
     public decimal Price { get; set; }
     public decimal? SalePrice { get; set; }
     public bool IsSold { get; set; }
+    public string? VideoLink { get; set; }
 
     public ToyCategory Category { get; set; } = null!;
     public ICollection<ToyImage> Images { get; set; } = [];
