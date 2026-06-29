@@ -144,6 +144,21 @@ public class UploadResult
     [JsonPropertyName("url")] public string Url { get; set; } = string.Empty;
 }
 
+public class SocialPostResultModel
+{
+    [JsonPropertyName("facebookPosted")] public bool FacebookPosted { get; set; }
+    [JsonPropertyName("facebookPostId")] public string? FacebookPostId { get; set; }
+    [JsonPropertyName("instagramPosted")] public bool InstagramPosted { get; set; }
+    [JsonPropertyName("instagramPostId")] public string? InstagramPostId { get; set; }
+    [JsonPropertyName("message")] public string? Message { get; set; }
+}
+
+public class AdminToySaveResponseModel
+{
+    [JsonPropertyName("toy")] public ToyListModel Toy { get; set; } = new();
+    [JsonPropertyName("socialPost")] public SocialPostResultModel SocialPost { get; set; } = new();
+}
+
 public class PagedResult<T>
 {
     [JsonPropertyName("items")] public List<T> Items { get; set; } = [];

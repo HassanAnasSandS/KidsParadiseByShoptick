@@ -157,7 +157,7 @@ public partial class CategoriesViewModel : ObservableObject
                 PageSize,
                 string.IsNullOrWhiteSpace(SearchText) ? null : SearchText);
 
-            foreach (var item in result.Items)
+            foreach (var item in result.Items.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 Items.Add(item);
 
             HasMoreItems = _load.CompletePage(Items.Count, result.TotalCount);

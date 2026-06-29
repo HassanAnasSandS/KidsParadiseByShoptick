@@ -30,7 +30,7 @@ public partial class ToysViewModel : ObservableObject
     [ObservableProperty] private string categoryFilter = "All";
     [ObservableProperty] private string statusFilter = "All";
     [ObservableProperty] private string saleFilter = "All";
-    [ObservableProperty] private string sortFilter = "Name (A-Z)";
+    [ObservableProperty] private string sortFilter = "Newest First";
     [ObservableProperty] private bool showFilters;
     [ObservableProperty] private string? errorMessage;
     [ObservableProperty] private string statusText = string.Empty;
@@ -44,14 +44,14 @@ public partial class ToysViewModel : ObservableObject
     public ObservableCollection<string> StatusOptions { get; } = ["All", "Available", "Sold"];
     public ObservableCollection<string> SaleOptions { get; } = ["All", "On Sale", "Regular"];
     public ObservableCollection<string> SortOptions { get; } =
-        ["Name (A-Z)", "Price: Low to High", "Price: High to Low"];
+        ["Newest First", "Name (A-Z)", "Price: Low to High", "Price: High to Low"];
 
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(SearchText)
         || (!string.IsNullOrWhiteSpace(CategoryFilter) && CategoryFilter != "All")
         || StatusFilter != "All"
         || SaleFilter != "All"
-        || SortFilter != "Name (A-Z)";
+        || SortFilter != "Newest First";
 
     public ToysViewModel(AdminApiService api) => _api = api;
 
@@ -89,7 +89,7 @@ public partial class ToysViewModel : ObservableObject
             _categoryIds.Clear();
             CategoryOptions.Clear();
             CategoryOptions.Add("All");
-            foreach (var c in categories.OrderBy(x => x.Name))
+            foreach (var c in CategoryNameSort.OrderByDisplayName(categories, x => x.Name))
             {
                 if (string.IsNullOrWhiteSpace(c.Name)) continue;
                 _categoryIds[c.Name] = c.Id;
@@ -244,8 +244,8 @@ public partial class ToysViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(value))
         {
-            if (SortFilter != "Name (A-Z)")
-                SortFilter = "Name (A-Z)";
+            if (SortFilter != "Newest First")
+                SortFilter = "Newest First";
             return;
         }
 
@@ -276,11 +276,12 @@ public partial class ToysViewModel : ObservableObject
         _ => null,
     };
 
-    string ResolveSort() => SortFilter switch
+    string? ResolveSort() => SortFilter switch
     {
+        "Name (A-Z)" => "name",
         "Price: Low to High" => "price-low",
         "Price: High to Low" => "price-high",
-        _ => "name",
+        _ => null,
     };
 
     [RelayCommand]
@@ -295,7 +296,7 @@ public partial class ToysViewModel : ObservableObject
         CategoryFilter = "All";
         StatusFilter = "All";
         SaleFilter = "All";
-        SortFilter = "Name (A-Z)";
+        SortFilter = "Newest First";
         NotifyHasActiveFiltersChanged();
         await ReloadAsync();
     }
@@ -392,9 +393,11 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private bool isUploadingVideo;
     [ObservableProperty] private CategoryModel? selectedCategory;
     [ObservableProperty] private bool isBusy;
+    [ObservableProperty] private string savingStatus = string.Empty;
     [ObservableProperty] private string title = "New Toy";
 
     public bool CanUploadVideo => _youTubeUpload.IsSupported && _selectedVideo is not null && !IsUploadingVideo && !IsBusy;
+    public bool CanSave => !IsBusy && !IsUploadingVideo;
 
     public ObservableCollection<CategoryModel> Categories { get; } = [];
     public ObservableCollection<ToyImageItem> Images { get; } = [];
@@ -417,7 +420,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     {
         var categories = await _api.GetCategoriesAsync();
         Categories.Clear();
-        foreach (var c in categories.OrderBy(x => x.Name))
+        foreach (var c in CategoryNameSort.OrderByDisplayName(categories, x => x.Name))
             Categories.Add(c);
 
         if (!_id.HasValue)
@@ -545,10 +548,20 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(CanUploadVideo));
     }
 
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanUploadVideo));
-    partial void OnIsUploadingVideoChanged(bool value) => OnPropertyChanged(nameof(CanUploadVideo));
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanUploadVideo));
+        OnPropertyChanged(nameof(CanSave));
+        SaveCommand.NotifyCanExecuteChanged();
+    }
+    partial void OnIsUploadingVideoChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanUploadVideo));
+        OnPropertyChanged(nameof(CanSave));
+        SaveCommand.NotifyCanExecuteChanged();
+    }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     async Task SaveAsync()
     {
         if (string.IsNullOrWhiteSpace(Name) || SelectedCategory is null)
@@ -586,11 +599,30 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
         try
         {
+            SavingStatus = "Saving toy and posting to social media…";
             IsBusy = true;
+            AdminToySaveResponseModel result;
             if (_id.HasValue)
-                await _api.UpdateToyAsync(_id.Value, payload);
+                result = await _api.UpdateToyAsync(_id.Value, payload);
             else
-                await _api.CreateToyAsync(payload);
+                result = await _api.CreateToyAsync(payload);
+
+            var social = result.SocialPost;
+            if (social.FacebookPosted || social.InstagramPosted)
+            {
+                await Shell.Current.DisplayAlert(
+                    "Toy saved",
+                    social.Message ?? "Posted to social media.",
+                    "OK");
+            }
+            else if (!string.IsNullOrWhiteSpace(social.Message))
+            {
+                await Shell.Current.DisplayAlert(
+                    "Toy saved",
+                    $"Toy saved, but social posting did not complete.\n\n{social.Message}",
+                    "OK");
+            }
+
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
@@ -600,6 +632,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         finally
         {
             IsBusy = false;
+            SavingStatus = string.Empty;
         }
     }
 }

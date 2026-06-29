@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using KidsParadiseByShoptick.AdminApp.Config;
+using KidsParadiseByShoptick.AdminApp.Helpers;
 using KidsParadiseByShoptick.AdminApp.Models;
 
 namespace KidsParadiseByShoptick.AdminApp.Services;
@@ -79,7 +80,7 @@ public class AdminApiService
     public async Task<List<CategoryModel>> GetCategoriesAsync()
     {
         var result = await GetCategoriesPagedAsync(1, 500);
-        return result.Items;
+        return CategoryNameSort.OrderByDisplayName(result.Items, c => c.Name).ToList();
     }
 
     public Task<CategoryModel> CreateCategoryAsync(string name, string? imagePath) =>
@@ -116,14 +117,14 @@ public class AdminApiService
 
     public Task<ToyDetailModel> GetToyAsync(int id) => GetAsync<ToyDetailModel>($"admin/toys/{id}");
 
-    public Task<ToyListModel> CreateToyAsync(object payload) =>
-        PostAsync<ToyListModel>("admin/toys", payload);
+    public Task<AdminToySaveResponseModel> CreateToyAsync(object payload) =>
+        PostAsync<AdminToySaveResponseModel>("admin/toys", payload);
 
     public Task<ToyListModel> CloneToyAsync(int id) =>
         PostAsync<ToyListModel>($"admin/toys/{id}/clone", new { });
 
-    public Task<ToyListModel> UpdateToyAsync(int id, object payload) =>
-        PutAsync<ToyListModel>($"admin/toys/{id}", payload);
+    public Task<AdminToySaveResponseModel> UpdateToyAsync(int id, object payload) =>
+        PutAsync<AdminToySaveResponseModel>($"admin/toys/{id}", payload);
 
     public Task DeleteToyAsync(int id) => DeleteAsync($"admin/toys/{id}");
 
@@ -133,20 +134,61 @@ public class AdminApiService
     public async Task<(string? AccessToken, string? AuthUrl)> GetYouTubeAccessTokenAsync()
     {
         using var res = await _http.GetAsync("admin/youtube/access-token");
+        var body = await res.Content.ReadAsStringAsync();
+
         if (res.IsSuccessStatusCode)
         {
-            var data = await res.Content.ReadFromJsonAsync<YouTubeAccessTokenResponse>(JsonOptions);
-            return (data?.AccessToken, null);
+            if (string.IsNullOrWhiteSpace(body))
+                throw new InvalidOperationException("Server returned an empty YouTube token response.");
+
+            YouTubeAccessTokenResponse? data;
+            try
+            {
+                data = JsonSerializer.Deserialize<YouTubeAccessTokenResponse>(body, JsonOptions);
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"Invalid YouTube token response from server: {ex.Message}");
+            }
+
+            if (string.IsNullOrWhiteSpace(data?.AccessToken))
+                throw new InvalidOperationException("Server did not return a YouTube access token.");
+
+            return (data.AccessToken, null);
         }
 
-        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(body))
         {
-            var data = await res.Content.ReadFromJsonAsync<YouTubeAuthRequiredResponse>(JsonOptions);
-            if (data?.NeedsAuth == true && !string.IsNullOrWhiteSpace(data.AuthUrl))
-                return (null, data.AuthUrl);
+            try
+            {
+                var data = JsonSerializer.Deserialize<YouTubeAuthRequiredResponse>(body, JsonOptions);
+                if (data?.NeedsAuth == true && !string.IsNullOrWhiteSpace(data.AuthUrl))
+                    return (null, data.AuthUrl);
+
+                if (!string.IsNullOrWhiteSpace(data?.Message))
+                    throw new InvalidOperationException(data.Message);
+            }
+            catch (JsonException)
+            {
+                // Fall through to generic handler below.
+            }
         }
 
-        await EnsureSuccessAsync(res);
+        if (res.StatusCode == System.Net.HttpStatusCode.BadRequest && !string.IsNullOrWhiteSpace(body))
+        {
+            try
+            {
+                var data = JsonSerializer.Deserialize<YouTubeAuthRequiredResponse>(body, JsonOptions);
+                if (!string.IsNullOrWhiteSpace(data?.Message))
+                    throw new InvalidOperationException(data.Message);
+            }
+            catch (JsonException)
+            {
+                // Fall through to generic handler below.
+            }
+        }
+
+        await EnsureSuccessAsync(res, body);
         return (null, null);
     }
 
@@ -275,7 +317,7 @@ public class AdminApiService
             ?? throw new InvalidOperationException("Empty response.");
     }
 
-    private async Task EnsureSuccessAsync(HttpResponseMessage res)
+    private async Task EnsureSuccessAsync(HttpResponseMessage res, string? body = null)
     {
         if (res.IsSuccessStatusCode) return;
 
@@ -287,7 +329,21 @@ public class AdminApiService
             throw new UnauthorizedAccessException("Session expired. Please sign in again.");
         }
 
-        var err = await res.Content.ReadFromJsonAsync<ApiError>(JsonOptions);
-        throw new InvalidOperationException(err?.Message ?? $"Request failed ({(int)res.StatusCode}).");
+        body ??= await res.Content.ReadAsStringAsync();
+        string? message = null;
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            try
+            {
+                var err = JsonSerializer.Deserialize<ApiError>(body, JsonOptions);
+                message = err?.Message;
+            }
+            catch (JsonException)
+            {
+                message = body.Length > 300 ? body[..300] : body;
+            }
+        }
+
+        throw new InvalidOperationException(message ?? $"Request failed ({(int)res.StatusCode}).");
     }
 }

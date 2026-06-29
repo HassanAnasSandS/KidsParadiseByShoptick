@@ -20,6 +20,23 @@ const statusColors: Record<string, string> = {
   Cancelled: 'bg-red-100 text-red-700',
 };
 
+function OrderItemLine({ item }: { item: Order['items'][number] }) {
+  return (
+    <div className="flex items-center gap-3">
+      <img
+        src={item.imageUrl || placeholderImage(item.toyName)}
+        alt=""
+        className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate-100"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-slate-700 font-medium truncate">{item.toyName}</p>
+        <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+      </div>
+      <span className="font-semibold text-slate-800 shrink-0">{formatPrice(item.price)}</span>
+    </div>
+  );
+}
+
 function OrderBillSummary({ order }: { order: Order }) {
   const discount = order.discountAmount ?? 0;
   const advance = order.advanceAmount ?? 0;
@@ -32,13 +49,7 @@ function OrderBillSummary({ order }: { order: Order }) {
 
       <div className="space-y-2">
         {order.items.map((item) => (
-          <div key={item.toyId} className="flex justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-slate-700 font-medium truncate">{item.toyName}</p>
-              <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
-            </div>
-            <span className="font-semibold text-slate-800 shrink-0">{formatPrice(item.price)}</span>
-          </div>
+          <OrderItemLine key={item.toyId} item={item} />
         ))}
       </div>
 
@@ -184,14 +195,7 @@ function OrderCard({
           <div className="border-t pt-4 space-y-3">
             <p className="text-sm font-semibold text-slate-700">Ordered Items</p>
             {order.items.map((item) => (
-              <div key={item.toyId} className="flex items-center gap-3">
-                <img src={item.imageUrl || placeholderImage(item.toyName)} alt="" className="w-12 h-12 rounded-lg object-cover" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{item.toyName}</p>
-                  <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
-                </div>
-                <p className="font-semibold text-sm shrink-0">{formatPrice(item.price)}</p>
-              </div>
+              <OrderItemLine key={item.toyId} item={item} />
             ))}
           </div>
         </div>

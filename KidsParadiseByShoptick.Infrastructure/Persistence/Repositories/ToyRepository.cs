@@ -101,10 +101,11 @@ public class ToyRepository : Repository<Toy>, IToyRepository
 
     private static IQueryable<Toy> ApplyAdminSort(IQueryable<Toy> query, string? sort) => sort switch
     {
+        "newest" => query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
         "name" => query.OrderBy(x => x.Name),
         "price-low" => query.OrderBy(x => x.SalePrice ?? x.Price),
         "price-high" => query.OrderByDescending(x => x.SalePrice ?? x.Price),
-        _ => query.OrderByDescending(x => x.CreatedAt),
+        _ => query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
     };
 
     private IQueryable<Toy> BuildAvailableQuery(int? categoryId, string? search, bool? onSale)
@@ -130,9 +131,10 @@ public class ToyRepository : Repository<Toy>, IToyRepository
 
     private static IQueryable<Toy> ApplySort(IQueryable<Toy> query, string? sort) => sort switch
     {
+        "newest" => query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
         "name" => query.OrderBy(x => x.Name),
         "price-low" => query.OrderBy(x => x.SalePrice ?? x.Price),
         "price-high" => query.OrderByDescending(x => x.SalePrice ?? x.Price),
-        _ => query.OrderByDescending(x => x.CreatedAt),
+        _ => query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
     };
 }

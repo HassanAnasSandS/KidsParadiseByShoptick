@@ -80,11 +80,16 @@ public class ToyService : IToyService
         var source = await _unitOfWork.Toys.GetWithImagesAsync(id, cancellationToken)
             ?? throw new InvalidOperationException("Toy not found.");
 
-        var imagePaths = source.Images
-            .OrderBy(i => i.SortOrder)
-            .Select(i => i.ImagePath)
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        var imagePaths = new List<string>();
+        foreach (var path in source.Images
+                     .OrderBy(i => i.SortOrder)
+                     .Select(i => i.ImagePath)
+                     .Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            var copiedPath = await _fileStorage.CopyImageAsync(path, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(copiedPath))
+                imagePaths.Add(copiedPath);
+        }
 
         var entity = new Toy
         {

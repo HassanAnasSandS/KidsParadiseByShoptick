@@ -45,10 +45,10 @@ public class ToyCategoryRepository : Repository<ToyCategory>, IToyCategoryReposi
 
         query = sort switch
         {
-            "name-desc" => query.OrderByDescending(x => x.Name),
-            "toys-high" => query.OrderByDescending(x => x.Toys.Count),
-            "toys-low" => query.OrderBy(x => x.Toys.Count),
-            _ => query.OrderBy(x => x.Name),
+            "name-desc" => query.OrderByDescending(x => x.Name.ToLower()),
+            "toys-high" => query.OrderByDescending(x => x.Toys.Count).ThenBy(x => x.Name.ToLower()),
+            "toys-low" => query.OrderBy(x => x.Toys.Count).ThenBy(x => x.Name.ToLower()),
+            _ => query.OrderBy(x => x.Name.ToLower()),
         };
 
         return query;
@@ -57,7 +57,7 @@ public class ToyCategoryRepository : Repository<ToyCategory>, IToyCategoryReposi
     public async Task<IReadOnlyList<ToyCategory>> GetPublicPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         => await DbSet
             .AsNoTracking()
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.Name.ToLower())
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -68,6 +68,6 @@ public class ToyCategoryRepository : Repository<ToyCategory>, IToyCategoryReposi
     public async Task<IReadOnlyList<ToyCategory>> GetAllOrderedAsync(CancellationToken cancellationToken = default)
         => await DbSet
             .AsNoTracking()
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.Name.ToLower())
             .ToListAsync(cancellationToken);
 }

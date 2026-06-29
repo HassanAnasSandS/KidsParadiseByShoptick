@@ -12,6 +12,15 @@ public record ToyDetailDto(
     IReadOnlyList<string> ImagePaths, IReadOnlyList<string> ImageUrls, string CategoryName, int CategoryId,
     double? AverageRating, int ReviewCount, string? VideoLink);
 
+public record SocialPostResultDto(
+    bool FacebookPosted,
+    string? FacebookPostId,
+    bool InstagramPosted,
+    string? InstagramPostId,
+    string? Message);
+
+public record AdminToySaveResponse(ToyListDto Toy, SocialPostResultDto SocialPost);
+
 public record ReviewDto(
     int Id, string ReviewerName, int Rating, string Comment, string? ImageUrl, string? ImagePath,
     string ToyName, int ToyId, string OrderNumber, DateTime CreatedAt);

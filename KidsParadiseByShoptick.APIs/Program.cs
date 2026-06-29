@@ -30,6 +30,13 @@ builder.Services.Configure<GoogleOAuthOptions>(options =>
     if (!string.IsNullOrWhiteSpace(siteBase))
         options.RedirectUri = $"{siteBase}/api/admin/youtube/oauth/callback";
 });
+builder.Services.Configure<MetaSocialOptions>(options =>
+{
+    builder.Configuration.GetSection(MetaSocialOptions.SectionName).Bind(options);
+    var siteBase = builder.Configuration["Seo:SiteBaseUrl"]?.TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(siteBase))
+        options.SiteBaseUrl = siteBase;
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     // Only forward client IP and HTTPS scheme — NOT host (prevents www↔apex rewrite bugs).

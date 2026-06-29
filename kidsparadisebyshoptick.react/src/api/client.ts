@@ -1,3 +1,5 @@
+import { sortCategoriesByName } from '@/lib/utils';
+
 const API_BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -125,10 +127,12 @@ export interface Order {
 }
 
 export const api = {
-  getCategories: (params?: PagedParams) =>
-    request<PagedResult<Category>>(
+  getCategories: async (params?: PagedParams) => {
+    const result = await request<PagedResult<Category>>(
       `/categories${buildQuery({ page: params?.page ?? 1, pageSize: params?.pageSize ?? 50 })}`
-    ),
+    );
+    return { ...result, items: sortCategoriesByName(result.items) };
+  },
   getCategory: (id: number) => request<CategoryDetail>(`/categories/${id}`),
   getToys: (params?: { categoryId?: number; search?: string; onSale?: boolean; sort?: string; page?: number; pageSize?: number }) => {
     const q = new URLSearchParams();

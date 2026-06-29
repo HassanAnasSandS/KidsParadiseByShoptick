@@ -38,12 +38,14 @@ public class YouTubeAuthService : IYouTubeAuthService
         _tokenFilePath = Path.Combine(basePath, ".app-data", "youtube-oauth.json");
     }
 
+    public bool IsOAuthConfigured =>
+        !string.IsNullOrWhiteSpace(_options.ClientId);
+
     public bool IsConnected => File.Exists(_tokenFilePath) && !string.IsNullOrWhiteSpace(LoadRefreshToken());
 
     public string BuildAuthorizationUrl(out string state)
     {
-        if (string.IsNullOrWhiteSpace(_options.ClientId))
-            throw new InvalidOperationException("Google OAuth ClientId is not configured.");
+        EnsureOAuthConfigured();
         if (string.IsNullOrWhiteSpace(_options.RedirectUri))
             throw new InvalidOperationException("Google OAuth RedirectUri is not configured.");
 
@@ -102,6 +104,8 @@ public class YouTubeAuthService : IYouTubeAuthService
 
     public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
+        EnsureOAuthConfigured();
+
         var refreshToken = LoadRefreshToken();
         if (string.IsNullOrWhiteSpace(refreshToken))
             throw new InvalidOperationException("YouTube is not connected. Authorize from the admin app first.");
@@ -165,10 +169,20 @@ public class YouTubeAuthService : IYouTubeAuthService
 
     Dictionary<string, string> BuildTokenForm(Dictionary<string, string> fields)
     {
+        EnsureOAuthConfigured();
         fields["client_id"] = _options.ClientId;
         if (!string.IsNullOrWhiteSpace(_options.ClientSecret))
             fields["client_secret"] = _options.ClientSecret;
         return fields;
+    }
+
+    void EnsureOAuthConfigured()
+    {
+        if (string.IsNullOrWhiteSpace(_options.ClientId))
+        {
+            throw new InvalidOperationException(
+                "Google OAuth is not configured on the server. Add GoogleOAuth:ClientId and ClientSecret to appsettings.Secrets.json, then restart the API.");
+        }
     }
 
     static string GenerateCodeVerifier()

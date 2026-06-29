@@ -1,4 +1,5 @@
 using KidsParadiseByShoptick.Application.DTOs;
+using KidsParadiseByShoptick.Application.Helpers;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Domain.Entities;
 using KidsParadiseByShoptick.Domain.Interfaces;
@@ -33,7 +34,9 @@ public class CategoryService : ICategoryService
             ? []
             : await _unitOfWork.Toys.FindAsync(t => ids.Contains(t.CategoryId) && !t.IsSold, cancellationToken);
         var counts = toys.GroupBy(t => t.CategoryId).ToDictionary(g => g.Key, g => g.Count());
-        var items = categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))).ToList();
+        var items = CategorySort.ByName(
+            categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))),
+            c => c.Name);
         return new PagedResult<CategoryDto>(items, total, page, pageSize);
     }
 
@@ -64,7 +67,9 @@ public class CategoryService : ICategoryService
             ? []
             : await _unitOfWork.Toys.FindAsync(t => ids.Contains(t.CategoryId), cancellationToken);
         var counts = toys.GroupBy(t => t.CategoryId).ToDictionary(g => g.Key, g => g.Count());
-        var items = categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))).ToList();
+        var items = CategorySort.ByName(
+            categories.Select(c => Map(c, counts.GetValueOrDefault(c.Id, 0))),
+            c => c.Name);
         return new PagedResult<CategoryDto>(items, total, page, pageSize);
     }
 

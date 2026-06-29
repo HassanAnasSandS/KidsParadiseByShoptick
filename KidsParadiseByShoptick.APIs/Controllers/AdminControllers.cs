@@ -100,8 +100,13 @@ public class AdminCategoriesController : ControllerBase
 public class AdminToysController : ControllerBase
 {
     private readonly IToyService _toyService;
+    private readonly ISocialMediaService _socialMedia;
 
-    public AdminToysController(IToyService toyService) => _toyService = toyService;
+    public AdminToysController(IToyService toyService, ISocialMediaService socialMedia)
+    {
+        _toyService = toyService;
+        _socialMedia = socialMedia;
+    }
 
     [HttpGet]
     public async Task<ActionResult<PagedResult<ToyListDto>>> GetAll(
@@ -123,9 +128,13 @@ public class AdminToysController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ToyListDto>> Create(
+    public async Task<ActionResult<AdminToySaveResponse>> Create(
         [FromBody] CreateToyRequest request, CancellationToken cancellationToken)
-        => Ok(await _toyService.CreateAsync(request, cancellationToken));
+    {
+        var toy = await _toyService.CreateAsync(request, cancellationToken);
+        var social = await _socialMedia.PostToyAsync(toy.Id, cancellationToken);
+        return Ok(new AdminToySaveResponse(toy, social));
+    }
 
     [HttpPost("{id:int}/clone")]
     public async Task<ActionResult<ToyListDto>> Clone(int id, CancellationToken cancellationToken)
@@ -141,11 +150,14 @@ public class AdminToysController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<ToyListDto>> Update(
+    public async Task<ActionResult<AdminToySaveResponse>> Update(
         int id, [FromBody] UpdateToyRequest request, CancellationToken cancellationToken)
     {
-        var result = await _toyService.UpdateAsync(id, request, cancellationToken);
-        return result is null ? NotFound() : Ok(result);
+        var toy = await _toyService.UpdateAsync(id, request, cancellationToken);
+        if (toy is null) return NotFound();
+
+        var social = await _socialMedia.PostToyAsync(toy.Id, cancellationToken);
+        return Ok(new AdminToySaveResponse(toy, social));
     }
 
     [HttpDelete("{id:int}")]

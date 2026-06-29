@@ -11,17 +11,24 @@ namespace KidsParadiseByShoptick.APIs.Controllers;
 public class AdminYouTubeController : ControllerBase
 {
     private readonly IYouTubeAuthService _youTubeAuth;
+    private readonly GoogleOAuthOptions _googleOptions;
 
-    public AdminYouTubeController(IYouTubeAuthService youTubeAuth) => _youTubeAuth = youTubeAuth;
+    public AdminYouTubeController(IYouTubeAuthService youTubeAuth, IOptions<GoogleOAuthOptions> googleOptions)
+    {
+        _youTubeAuth = youTubeAuth;
+        _googleOptions = googleOptions.Value;
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("setup-info")]
-    public ActionResult<object> GetSetupInfo([FromServices] IOptions<GoogleOAuthOptions> options)
+    public ActionResult<object> GetSetupInfo()
     {
-        var redirectUri = options.Value.RedirectUri;
+        var redirectUri = _googleOptions.RedirectUri;
         return Ok(new
         {
-            clientId = options.Value.ClientId,
+            configured = _youTubeAuth.IsOAuthConfigured,
+            connected = _youTubeAuth.IsConnected,
+            clientId = _googleOptions.ClientId,
             redirectUri,
             googleConsoleNote =
                 "Create a Web application OAuth client (not Installed/Android). " +
@@ -32,14 +39,25 @@ public class AdminYouTubeController : ControllerBase
     [Authorize(Roles = "Admin")]
     [HttpGet("status")]
     public ActionResult<object> GetStatus()
-        => Ok(new { connected = _youTubeAuth.IsConnected });
+        => Ok(new
+        {
+            configured = _youTubeAuth.IsOAuthConfigured,
+            connected = _youTubeAuth.IsConnected,
+        });
 
     [Authorize(Roles = "Admin")]
     [HttpGet("auth-url")]
     public ActionResult<object> GetAuthUrl()
     {
-        var url = _youTubeAuth.BuildAuthorizationUrl(out _);
-        return Ok(new { url });
+        try
+        {
+            var url = _youTubeAuth.BuildAuthorizationUrl(out _);
+            return Ok(new { url });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message, configured = false });
+        }
     }
 
     [Authorize(Roles = "Admin")]
@@ -51,15 +69,45 @@ public class AdminYouTubeController : ControllerBase
             var token = await _youTubeAuth.GetAccessTokenAsync(cancellationToken);
             return Ok(new { accessToken = token });
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("not connected", StringComparison.OrdinalIgnoreCase))
+        catch (InvalidOperationException ex)
         {
-            var authUrl = _youTubeAuth.BuildAuthorizationUrl(out _);
-            return Unauthorized(new
+            if (!_youTubeAuth.IsOAuthConfigured)
             {
-                message = ex.Message,
-                needsAuth = true,
-                authUrl,
-            });
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    needsAuth = false,
+                    configured = false,
+                });
+            }
+
+            var needsReconnect = ex.Message.Contains("not connected", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("refresh failed", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("refresh token", StringComparison.OrdinalIgnoreCase);
+
+            if (!needsReconnect)
+                return BadRequest(new { message = ex.Message, configured = true });
+
+            try
+            {
+                var authUrl = _youTubeAuth.BuildAuthorizationUrl(out _);
+                return Unauthorized(new
+                {
+                    message = ex.Message,
+                    needsAuth = true,
+                    configured = true,
+                    authUrl,
+                });
+            }
+            catch (InvalidOperationException configEx)
+            {
+                return BadRequest(new
+                {
+                    message = $"{ex.Message} {configEx.Message}",
+                    needsAuth = true,
+                    configured = false,
+                });
+            }
         }
     }
 

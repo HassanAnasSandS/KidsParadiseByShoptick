@@ -15,6 +15,7 @@ public static class YouTubeApiClient
         Stream videoStream,
         string fileName,
         string title,
+        long contentLength,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -43,42 +44,68 @@ public static class YouTubeApiClient
         initRequest.Content = new StringContent(JsonSerializer.Serialize(metadata), Encoding.UTF8, "application/json");
 
         using var initResponse = await http.SendAsync(initRequest, cancellationToken);
+        var initBody = await initResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!initResponse.IsSuccessStatusCode)
         {
-            var error = await initResponse.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"YouTube upload init failed: {error}");
+            throw new InvalidOperationException(
+                $"YouTube upload init failed ({(int)initResponse.StatusCode}): {DescribeApiError(initBody)}");
         }
 
-        var uploadUrl = initResponse.Headers.Location?.ToString()
-            ?? throw new InvalidOperationException("YouTube did not return an upload URL.");
+        var uploadUrl = initResponse.Headers.Location?.ToString();
+        if (string.IsNullOrWhiteSpace(uploadUrl))
+            throw new InvalidOperationException("YouTube did not return an upload URL.");
 
         progress?.Report("Uploading video file…");
 
         using var uploadRequest = new HttpRequestMessage(HttpMethod.Put, uploadUrl);
-        uploadRequest.Content = new StreamContent(videoStream);
-        uploadRequest.Content.Headers.ContentType = new MediaTypeHeaderValue(ResolveVideoContentType(fileName));
+        var streamContent = new StreamContent(videoStream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue(ResolveVideoContentType(fileName));
+        streamContent.Headers.ContentLength = contentLength;
+        uploadRequest.Content = streamContent;
 
         using var uploadResponse = await http.SendAsync(
             uploadRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
 
+        var responseBody = await uploadResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!uploadResponse.IsSuccessStatusCode)
         {
-            var error = await uploadResponse.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"YouTube upload failed: {error}");
+            throw new InvalidOperationException(
+                $"YouTube upload failed ({(int)uploadResponse.StatusCode}): {DescribeApiError(responseBody)}");
         }
 
-        await using var responseStream = await uploadResponse.Content.ReadAsStreamAsync(cancellationToken);
-        using var doc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
-        var videoId = doc.RootElement.GetProperty("id").GetString()
-            ?? throw new InvalidOperationException("YouTube did not return a video id.");
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            throw new InvalidOperationException(
+                "YouTube upload finished but returned no video details. Check your Google account connection and try again.");
+        }
+
+        string? videoId;
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            videoId = doc.RootElement.TryGetProperty("id", out var idEl)
+                ? idEl.GetString()
+                : null;
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"YouTube returned an unexpected response after upload: {ex.Message}");
+        }
+
+        if (string.IsNullOrWhiteSpace(videoId))
+            throw new InvalidOperationException("YouTube did not return a video id.");
 
         progress?.Report("Upload complete.");
         return $"https://www.youtube.com/watch?v={videoId}";
     }
 
     public static string UploadScopeValue => UploadScope;
+
+    private static string DescribeApiError(string? body) =>
+        string.IsNullOrWhiteSpace(body) ? "No error details returned." : body;
 
     private static string ResolveVideoContentType(string fileName)
     {

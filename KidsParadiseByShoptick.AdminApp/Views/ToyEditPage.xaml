@@ -7,49 +7,83 @@
              x:Name="ThisPage"
              x:DataType="vm:ToyEditViewModel"
              Title="{Binding Title}">
-    <ScrollView Padding="16">
-        <VerticalStackLayout Spacing="12">
-            <Entry Placeholder="Toy name" Text="{Binding Name}" />
-            <Picker Title="Category" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCategory}" />
-            <Entry Placeholder="Price (Rs.)" Keyboard="Numeric" Text="{Binding PriceText}" />
-            <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" />
+    <Grid>
+        <ScrollView Padding="16">
+            <VerticalStackLayout Spacing="12">
+                <Entry Placeholder="Toy name" Text="{Binding Name}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                <Picker Title="Category" ItemsSource="{Binding Categories}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCategory}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                <Entry Placeholder="Price (Rs.)" Keyboard="Numeric" Text="{Binding PriceText}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
 
-            <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
-            <Label Text="Optional: upload to YouTube and the link is saved with the toy when you tap Save."
-                   FontSize="12" TextColor="#64748b" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Button Grid.Column="0" Text="Select video" Command="{Binding PickVideoCommand}"
-                        BackgroundColor="#e2e8f0" TextColor="#334155" />
-                <Button Grid.Column="1" Text="Clear" Command="{Binding ClearVideoCommand}"
-                        BackgroundColor="Transparent" TextColor="#64748b" BorderColor="#cbd5e1" BorderWidth="1" />
-            </Grid>
-            <Label Text="{Binding SelectedVideoFileName}" FontSize="12" TextColor="#334155"
-                   IsVisible="{Binding SelectedVideoFileName, Converter={StaticResource NullToBool}}" />
-            <Button Text="Upload to YouTube" Command="{Binding UploadVideoCommand}"
-                    IsEnabled="{Binding CanUploadVideo}"
-                    BackgroundColor="#dc2626" TextColor="White" />
-            <ActivityIndicator IsRunning="{Binding IsUploadingVideo}" IsVisible="{Binding IsUploadingVideo}" Color="#dc2626" />
-            <Label Text="{Binding VideoUploadStatus}" FontSize="12" TextColor="#64748b"
-                   IsVisible="{Binding VideoUploadStatus, Converter={StaticResource NullToBool}}" />
-            <Entry Placeholder="YouTube link (optional, filled after upload)" Text="{Binding VideoLinkText}" IsReadOnly="True"
-                   IsVisible="{Binding VideoLinkText, Converter={StaticResource NullToBool}}" />
+                <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
+                <Label Text="Optional: upload to YouTube and the link is saved with the toy when you tap Save."
+                       FontSize="12" TextColor="#64748b" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Button Grid.Column="0" Text="Select video" Command="{Binding PickVideoCommand}"
+                            BackgroundColor="#e2e8f0" TextColor="#334155"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                    <Button Grid.Column="1" Text="Clear" Command="{Binding ClearVideoCommand}"
+                            BackgroundColor="Transparent" TextColor="#64748b" BorderColor="#cbd5e1" BorderWidth="1"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                </Grid>
+                <Label Text="{Binding SelectedVideoFileName}" FontSize="12" TextColor="#334155"
+                       IsVisible="{Binding SelectedVideoFileName, Converter={StaticResource NullToBool}}" />
+                <Button Text="Upload to YouTube" Command="{Binding UploadVideoCommand}"
+                        IsEnabled="{Binding CanUploadVideo}"
+                        BackgroundColor="#dc2626" TextColor="White" />
+                <ActivityIndicator IsRunning="{Binding IsUploadingVideo}" IsVisible="{Binding IsUploadingVideo}" Color="#dc2626" />
+                <Label Text="{Binding VideoUploadStatus}" FontSize="12" TextColor="#64748b"
+                       IsVisible="{Binding VideoUploadStatus, Converter={StaticResource NullToBool}}" />
+                <Entry Placeholder="YouTube link (optional, filled after upload)" Text="{Binding VideoLinkText}" IsReadOnly="True"
+                       IsVisible="{Binding VideoLinkText, Converter={StaticResource NullToBool}}" />
 
-            <Button Text="Add Images" Command="{Binding PickImagesCommand}" />
-            <CollectionView ItemsSource="{Binding Images}" HeightRequest="120">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ToyImageItem">
-                        <Grid WidthRequest="90">
-                            <Image Source="{Binding Url, Converter={StaticResource ImageUrl}}" HeightRequest="80" Aspect="AspectFit" />
-                            <Button Text="×" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#dc2626" TextColor="White" FontSize="10" Padding="4"
-                                    Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveImageCommand}" CommandParameter="{Binding .}" />
-                        </Grid>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-            <Button Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
-        </VerticalStackLayout>
-    </ScrollView>
+                <Button Text="Add Images" Command="{Binding PickImagesCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                <CollectionView ItemsSource="{Binding Images}" HeightRequest="120">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ToyImageItem">
+                            <Grid WidthRequest="90">
+                                <Image Source="{Binding Url, Converter={StaticResource ImageUrl}}" HeightRequest="80" Aspect="AspectFit" />
+                                <Button Text="×" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#dc2626" TextColor="White" FontSize="10" Padding="4"
+                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveImageCommand}" CommandParameter="{Binding .}" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Button Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid IsVisible="{Binding IsBusy}"
+              BackgroundColor="#99000000"
+              InputTransparent="False"
+              ZIndex="99">
+            <Border BackgroundColor="White"
+                    Stroke="#e2e8f0"
+                    StrokeThickness="1"
+                    Padding="28,24"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    WidthRequest="280">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="16" HorizontalOptions="Center">
+                    <ActivityIndicator IsRunning="True" Color="#1a6fe8" HeightRequest="48" WidthRequest="48" />
+                    <Label Text="{Binding SavingStatus}"
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           TextColor="#0f172a"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="Please wait…"
+                           FontSize="12"
+                           TextColor="#64748b"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
 </ContentPage>
