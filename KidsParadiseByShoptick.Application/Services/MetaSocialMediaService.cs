@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using KidsParadiseByShoptick.Application.Helpers;
 using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Application.Options;
@@ -15,6 +17,7 @@ public class MetaSocialMediaService : ISocialMediaService
 
     private readonly MetaSocialOptions _options;
     private readonly IMetaTokenService _metaToken;
+    private readonly ISocialMediaSettingsService _socialSettings;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorage;
     private readonly HttpClient _http;
@@ -23,6 +26,7 @@ public class MetaSocialMediaService : ISocialMediaService
     public MetaSocialMediaService(
         IOptions<MetaSocialOptions> options,
         IMetaTokenService metaToken,
+        ISocialMediaSettingsService socialSettings,
         IUnitOfWork unitOfWork,
         IFileStorageService fileStorage,
         HttpClient http,
@@ -30,6 +34,7 @@ public class MetaSocialMediaService : ISocialMediaService
     {
         _options = options.Value;
         _metaToken = metaToken;
+        _socialSettings = socialSettings;
         _unitOfWork = unitOfWork;
         _fileStorage = fileStorage;
         _http = http;
@@ -41,7 +46,7 @@ public class MetaSocialMediaService : ISocialMediaService
         if (!_metaToken.IsConfigured)
         {
             return new SocialPostResultDto(false, null, false, null,
-                "Facebook/Instagram posting is not configured on the server.");
+                "Facebook/Instagram/WhatsApp posting is not configured on the server.");
         }
 
         MetaPageCredentials credentials;
@@ -59,12 +64,14 @@ public class MetaSocialMediaService : ISocialMediaService
         if (toy is null)
             return new SocialPostResultDto(false, null, false, null, "Toy not found for social posting.");
 
-        var caption = ToySocialCaptionBuilder.Build(toy, _options.SiteBaseUrl, _options.WhatsAppNumber);
+        var settings = await _socialSettings.GetAsync(cancellationToken);
+        var caption = ToySocialCaptionBuilder.Build(toy, _options.SiteBaseUrl, _options.WhatsAppNumber, settings.Tags);
         var imageUrls = ToySocialCaptionBuilder.BuildAbsoluteImageUrls(
             toy, _options.SiteBaseUrl, _fileStorage.GetPublicUrl);
 
         string? facebookPostId = null;
         string? instagramPostId = null;
+        string? whatsAppCatalogProductId = null;
         var messages = new List<string>();
 
         try
@@ -98,8 +105,35 @@ public class MetaSocialMediaService : ISocialMediaService
             }
         }
 
+        var catalogId = FirstNonEmpty(_options.WhatsAppCatalogId, credentials.WhatsAppCatalogId);
+        if (!_options.WhatsAppCatalogEnabled)
+        {
+            // Temporarily disabled — re-enable via MetaSocial:WhatsAppCatalogEnabled.
+        }
+        else if (string.IsNullOrWhiteSpace(catalogId))
+        {
+            messages.Add("Meta catalog: skipped (WhatsAppCatalogId not configured).");
+        }
+        else if (imageUrls.Count == 0)
+        {
+            messages.Add("Meta catalog: skipped (at least one photo is required).");
+        }
+        else
+        {
+            try
+            {
+                whatsAppCatalogProductId = await UpsertWhatsAppCatalogProductAsync(
+                    catalogId, credentials.PageAccessToken, toy, caption, imageUrls, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Meta catalog upsert failed for toy {ToyId}", toyId);
+                messages.Add($"Meta catalog: {ex.Message}");
+            }
+        }
+
         var summary = messages.Count == 0
-            ? BuildSuccessMessage(facebookPostId, instagramPostId)
+            ? BuildSuccessMessage(facebookPostId, instagramPostId, whatsAppCatalogProductId)
             : string.Join(" ", messages);
 
         return new SocialPostResultDto(
@@ -107,7 +141,121 @@ public class MetaSocialMediaService : ISocialMediaService
             facebookPostId,
             instagramPostId is not null,
             instagramPostId,
-            summary);
+            summary,
+            Queued: false,
+            whatsAppCatalogProductId is not null,
+            whatsAppCatalogProductId);
+    }
+
+    async Task<string> UpsertWhatsAppCatalogProductAsync(
+        string catalogId,
+        string accessToken,
+        Domain.Entities.Toy toy,
+        string description,
+        IReadOnlyList<string> imageUrls,
+        CancellationToken cancellationToken)
+    {
+        var data = new Dictionary<string, object>
+        {
+            ["id"] = toy.Id.ToString(CultureInfo.InvariantCulture),
+            ["title"] = Truncate(toy.Name.Trim(), 100),
+            ["description"] = Truncate(StripHtml(description), 5000),
+            ["availability"] = toy.IsSold ? "out of stock" : "in stock",
+            ["condition"] = "used",
+            ["link"] = $"{_options.SiteBaseUrl.TrimEnd('/')}/product/{toy.Id}",
+            ["image_link"] = imageUrls[0],
+            ["brand"] = "Kids Paradise",
+            ["price"] = FormatCatalogPrice(toy),
+        };
+
+        if (toy.SalePrice is not null && toy.SalePrice < toy.Price)
+            data["sale_price"] = FormatCatalogSalePrice(toy);
+
+        if (imageUrls.Count > 1)
+            data["additional_image_link"] = imageUrls.Skip(1).Take(9).ToArray();
+
+        var requestsJson = JsonSerializer.Serialize(new[]
+        {
+            new { method = "UPDATE", data },
+        });
+
+        var url = $"{GraphBase}/{catalogId}/items_batch";
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["item_type"] = "PRODUCT_ITEM",
+            ["item_sub_type"] = "TOYS",
+            ["allow_upsert"] = "true",
+            ["requests"] = requestsJson,
+            ["access_token"] = accessToken,
+        });
+
+        using var response = await _http.PostAsync(url, content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException(ParseGraphError(body));
+
+        EnsureCatalogBatchSuccess(body);
+        return toy.Id.ToString(CultureInfo.InvariantCulture);
+    }
+
+    static void EnsureCatalogBatchSuccess(string body)
+    {
+        using var doc = JsonDocument.Parse(body);
+        if (!doc.RootElement.TryGetProperty("validation_status", out var statuses))
+            return;
+
+        var errors = new List<string>();
+        foreach (var status in statuses.EnumerateArray())
+        {
+            if (!status.TryGetProperty("errors", out var errorItems))
+                continue;
+
+            foreach (var error in errorItems.EnumerateArray())
+            {
+                if (error.TryGetProperty("message", out var messageEl))
+                {
+                    var message = messageEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(message))
+                        errors.Add(message);
+                }
+            }
+        }
+
+        if (errors.Count > 0)
+            throw new InvalidOperationException(string.Join("; ", errors.Distinct()));
+    }
+
+    static string FormatCatalogPrice(Domain.Entities.Toy toy)
+    {
+        var amount = toy.Price.ToString("0", CultureInfo.InvariantCulture);
+        return $"{amount} PKR";
+    }
+
+    static string FormatCatalogSalePrice(Domain.Entities.Toy toy)
+    {
+        var amount = toy.SalePrice!.Value.ToString("0", CultureInfo.InvariantCulture);
+        return $"{amount} PKR";
+    }
+
+    static string Truncate(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[..maxLength];
+
+    static string StripHtml(string value) =>
+        value
+            .Replace("<del>", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("</del>", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("<strong>", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("</strong>", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+    static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value;
+        }
+
+        return null;
     }
 
     async Task<string?> PostToFacebookAsync(
@@ -324,11 +472,12 @@ public class MetaSocialMediaService : ISocialMediaService
         return null;
     }
 
-    static string BuildSuccessMessage(string? facebookPostId, string? instagramPostId)
+    static string BuildSuccessMessage(string? facebookPostId, string? instagramPostId, string? whatsAppCatalogProductId)
     {
         var parts = new List<string>();
         if (facebookPostId is not null) parts.Add("Facebook posted.");
         if (instagramPostId is not null) parts.Add("Instagram posted.");
+        if (whatsAppCatalogProductId is not null) parts.Add("Meta catalog updated.");
         return parts.Count == 0 ? "Nothing posted." : string.Join(" ", parts);
     }
 }

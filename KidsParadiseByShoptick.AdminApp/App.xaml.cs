@@ -6,14 +6,16 @@ public partial class App : Application
 {
     private readonly AuthSession _session;
     private readonly OrderNotificationService _notifications;
+    private readonly SocialPostAlertService _socialPostAlerts;
     private readonly AppShell _shell;
     private bool _startupHandled;
 
-    public App(AuthSession session, OrderNotificationService notifications, AppShell shell)
+    public App(AuthSession session, OrderNotificationService notifications, SocialPostAlertService socialPostAlerts, AppShell shell)
     {
         InitializeComponent();
         _session = session;
         _notifications = notifications;
+        _socialPostAlerts = socialPostAlerts;
         _shell = shell;
     }
 
@@ -36,11 +38,13 @@ public partial class App : Application
         {
             if (OrderAlertListener.NotificationsEnabled)
                 _notifications.Start();
+            _socialPostAlerts.Start();
             await Shell.Current.GoToAsync("//dashboard");
         }
         else
         {
             _notifications.Stop();
+            await _socialPostAlerts.StopAsync();
             await Shell.Current.GoToAsync("//login");
         }
     }

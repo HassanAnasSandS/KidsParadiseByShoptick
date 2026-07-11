@@ -30,6 +30,9 @@ public class YouTubeUploadService : IYouTubeUploadService
             throw new InvalidOperationException("Could not get YouTube access token from the server.");
         }
 
+        progress?.Report("Loading social media settings…");
+        var settings = await _api.GetSocialMediaSettingsAsync();
+
         await using var prepared = await PrepareUploadStreamAsync(videoStream, fileName, cancellationToken);
         return await YouTubeApiClient.UploadVideoAsync(
             accessToken,
@@ -37,8 +40,24 @@ public class YouTubeUploadService : IYouTubeUploadService
             fileName,
             title,
             prepared.Length,
+            settings.Description,
+            ParseYouTubeTags(settings.Tags),
             progress,
             cancellationToken);
+    }
+
+    static List<string> ParseYouTubeTags(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return [];
+
+        return tags
+            .Split([',', '\n', '\r', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .SelectMany(t => t.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(t => t.Trim().TrimStart('#'))
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     static async Task<PreparedUploadStream> PrepareUploadStreamAsync(

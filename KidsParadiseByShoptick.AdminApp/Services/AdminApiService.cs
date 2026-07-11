@@ -243,6 +243,54 @@ public class AdminApiService
     public Task<SiteImageModel> ResetSiteImageAsync(string key) =>
         DeleteWithBodyAsync<SiteImageModel>($"admin/site-images/{key}/custom");
 
+    public Task<SocialMediaSettingsModel> GetSocialMediaSettingsAsync() =>
+        GetAsync<SocialMediaSettingsModel>("admin/social-media-settings");
+
+    public Task<SocialMediaSettingsModel> UpdateSocialMediaSettingsAsync(string description, string tags) =>
+        PutAsync<SocialMediaSettingsModel>("admin/social-media-settings", new { description, tags });
+
+    public Task<MetaRequirementsStatusModel> GetMetaRequirementsAsync() =>
+        GetAsync<MetaRequirementsStatusModel>("admin/meta/requirements");
+
+    public Task<MetaRequirementsStatusModel> LinkWhatsAppCatalogAsync(string catalogId) =>
+        PostAsync<MetaRequirementsStatusModel>("admin/meta/link-catalog", new { catalogId });
+
+    public async Task<MetaUploadCredentialsModel> GetMetaUploadCredentialsAsync()
+    {
+        using var res = await _http.GetAsync("admin/meta/upload-credentials");
+        var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("message", out var message))
+                    throw new InvalidOperationException(message.GetString() ?? body);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch
+            {
+                // fall through
+            }
+
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body)
+                    ? $"Meta credentials request failed ({(int)res.StatusCode})."
+                    : body);
+        }
+
+        var data = JsonSerializer.Deserialize<MetaUploadCredentialsModel>(body, JsonOptions)
+            ?? throw new InvalidOperationException("Server returned empty Meta upload credentials.");
+
+        if (string.IsNullOrWhiteSpace(data.FacebookPageId) || string.IsNullOrWhiteSpace(data.PageAccessToken))
+            throw new InvalidOperationException("Server did not return a Facebook page access token.");
+
+        return data;
+    }
+
     public async Task<UploadResult> UploadAsync(Stream stream, string fileName, string folder)
     {
         using var content = new MultipartFormDataContent();

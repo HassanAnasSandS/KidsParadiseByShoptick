@@ -100,12 +100,12 @@ public class AdminCategoriesController : ControllerBase
 public class AdminToysController : ControllerBase
 {
     private readonly IToyService _toyService;
-    private readonly ISocialMediaService _socialMedia;
+    private readonly ISocialPostQueue _socialPostQueue;
 
-    public AdminToysController(IToyService toyService, ISocialMediaService socialMedia)
+    public AdminToysController(IToyService toyService, ISocialPostQueue socialPostQueue)
     {
         _toyService = toyService;
-        _socialMedia = socialMedia;
+        _socialPostQueue = socialPostQueue;
     }
 
     [HttpGet]
@@ -132,7 +132,11 @@ public class AdminToysController : ControllerBase
         [FromBody] CreateToyRequest request, CancellationToken cancellationToken)
     {
         var toy = await _toyService.CreateAsync(request, cancellationToken);
-        var social = await _socialMedia.PostToyAsync(toy.Id, cancellationToken);
+        await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
+        var social = new SocialPostResultDto(
+            false, null, false, null,
+            "Posting to Facebook and Instagram in background.",
+            Queued: true);
         return Ok(new AdminToySaveResponse(toy, social));
     }
 
@@ -156,7 +160,20 @@ public class AdminToysController : ControllerBase
         var toy = await _toyService.UpdateAsync(id, request, cancellationToken);
         if (toy is null) return NotFound();
 
-        var social = await _socialMedia.PostToyAsync(toy.Id, cancellationToken);
+        SocialPostResultDto social;
+        if (request.PostToSocialMedia)
+        {
+            await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
+            social = new SocialPostResultDto(
+                false, null, false, null,
+                "Posting to Facebook and Instagram in background.",
+                Queued: true);
+        }
+        else
+        {
+            social = new SocialPostResultDto(false, null, false, null, null);
+        }
+
         return Ok(new AdminToySaveResponse(toy, social));
     }
 

@@ -32,7 +32,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IOrderAlertsBackgroundService, DefaultOrderAlertsBackgroundService>();
 #endif
         builder.Services.AddSingleton<IYouTubeUploadService, YouTubeUploadService>();
+        builder.Services.AddSingleton<IMetaVideoUploadService, MetaVideoUploadService>();
         builder.Services.AddSingleton<OrderNotificationService>();
+        builder.Services.AddSingleton<SocialPostAlertService>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
@@ -47,6 +49,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReviewsViewModel>();
         builder.Services.AddTransient<ReviewEditViewModel>();
         builder.Services.AddTransient<SiteImagesViewModel>();
+        builder.Services.AddTransient<SocialMediaSettingsViewModel>();
         builder.Services.AddTransient<NotificationsViewModel>();
         builder.Services.AddTransient<ShellViewModel>();
 
@@ -63,6 +66,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReviewsPage>();
         builder.Services.AddTransient<ReviewEditPage>();
         builder.Services.AddTransient<SiteImagesPage>();
+        builder.Services.AddTransient<SocialMediaSettingsPage>();
         builder.Services.AddTransient<NotificationsPage>();
         builder.Services.AddSingleton<AppShell>();
 

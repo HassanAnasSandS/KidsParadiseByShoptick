@@ -7,8 +7,6 @@ namespace KidsParadiseByShoptick.AdminApp.Services;
 public static class YouTubeApiClient
 {
     private const string UploadScope = "https://www.googleapis.com/auth/youtube.upload";
-    public const string DefaultDescription =
-        "For Order Whatsapp 0321-7175-896 Or Visit https://kidsparadise.shoptick.shop/";
 
     public static async Task<string> UploadVideoAsync(
         string accessToken,
@@ -16,6 +14,8 @@ public static class YouTubeApiClient
         string fileName,
         string title,
         long contentLength,
+        string? description = null,
+        IReadOnlyList<string>? tags = null,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -23,14 +23,19 @@ public static class YouTubeApiClient
 
         progress?.Report("Starting YouTube upload…");
 
+        var snippet = new Dictionary<string, object?>
+        {
+            ["title"] = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(fileName) : title.Trim(),
+            ["description"] = string.IsNullOrWhiteSpace(description) ? string.Empty : description.Trim(),
+            ["categoryId"] = "22",
+        };
+
+        if (tags is { Count: > 0 })
+            snippet["tags"] = tags;
+
         var metadata = new
         {
-            snippet = new
-            {
-                title = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(fileName) : title.Trim(),
-                description = DefaultDescription,
-                categoryId = "22",
-            },
+            snippet,
             status = new
             {
                 privacyStatus = "public",

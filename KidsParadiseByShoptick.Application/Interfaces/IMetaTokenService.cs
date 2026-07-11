@@ -3,7 +3,9 @@ namespace KidsParadiseByShoptick.Application.Interfaces;
 public record MetaPageCredentials(
     string FacebookPageId,
     string PageAccessToken,
-    string? InstagramBusinessAccountId);
+    string? InstagramBusinessAccountId,
+    string? WhatsAppBusinessAccountId = null,
+    string? WhatsAppCatalogId = null);
 
 public interface IMetaTokenService
 {
@@ -11,5 +13,7 @@ public interface IMetaTokenService
 
     Task<MetaPageCredentials> EnsureCredentialsAsync(CancellationToken cancellationToken = default);
 
-    Task<MetaPageCredentials> ConnectAsync(string userAccessToken, CancellationToken cancellationToken = default);
+    Task<MetaPageCredentials> ConnectAsync(MetaConnectRequest request, CancellationToken cancellationToken = default);
+
+    Task<bool> TryMaintainAsync(CancellationToken cancellationToken = default);
 }

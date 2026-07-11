@@ -46,6 +46,10 @@
         <ShellContent ContentTemplate="{DataTemplate views:SiteImagesPage}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Social Media Settings" Icon="dotnet_bot.png" Route="social-media-settings">
+        <ShellContent ContentTemplate="{DataTemplate views:SocialMediaSettingsPage}" />
+    </FlyoutItem>
+
     <MenuItem Text="Logout" IconImageSource="dotnet_bot.png" Clicked="OnLogoutClicked" />
 
 </Shell>

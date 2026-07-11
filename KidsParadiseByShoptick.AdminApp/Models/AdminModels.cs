@@ -150,7 +150,10 @@ public class SocialPostResultModel
     [JsonPropertyName("facebookPostId")] public string? FacebookPostId { get; set; }
     [JsonPropertyName("instagramPosted")] public bool InstagramPosted { get; set; }
     [JsonPropertyName("instagramPostId")] public string? InstagramPostId { get; set; }
+    [JsonPropertyName("whatsAppCatalogPosted")] public bool WhatsAppCatalogPosted { get; set; }
+    [JsonPropertyName("whatsAppCatalogProductId")] public string? WhatsAppCatalogProductId { get; set; }
     [JsonPropertyName("message")] public string? Message { get; set; }
+    [JsonPropertyName("queued")] public bool Queued { get; set; }
 }
 
 public class AdminToySaveResponseModel
@@ -165,6 +168,38 @@ public class PagedResult<T>
     [JsonPropertyName("totalCount")] public int TotalCount { get; set; }
     [JsonPropertyName("page")] public int Page { get; set; }
     [JsonPropertyName("pageSize")] public int PageSize { get; set; }
+}
+
+public class SocialMediaSettingsModel
+{
+    [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
+    [JsonPropertyName("tags")] public string Tags { get; set; } = string.Empty;
+}
+
+public class MetaRequirementCheckModel
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("step")] public int Step { get; set; }
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("isMet")] public bool IsMet { get; set; }
+    [JsonPropertyName("status")] public string Status { get; set; } = string.Empty;
+    [JsonPropertyName("fixInstructions")] public string FixInstructions { get; set; } = string.Empty;
+}
+
+public class MetaRequirementsStatusModel
+{
+    [JsonPropertyName("allMet")] public bool AllMet { get; set; }
+    [JsonPropertyName("facebookPageId")] public string? FacebookPageId { get; set; }
+    [JsonPropertyName("whatsAppBusinessAccountId")] public string? WhatsAppBusinessAccountId { get; set; }
+    [JsonPropertyName("whatsAppCatalogId")] public string? WhatsAppCatalogId { get; set; }
+    [JsonPropertyName("requirements")] public List<MetaRequirementCheckModel> Requirements { get; set; } = [];
+}
+
+public class MetaUploadCredentialsModel
+{
+    [JsonPropertyName("facebookPageId")] public string FacebookPageId { get; set; } = string.Empty;
+    [JsonPropertyName("pageAccessToken")] public string PageAccessToken { get; set; } = string.Empty;
+    [JsonPropertyName("instagramBusinessAccountId")] public string? InstagramBusinessAccountId { get; set; }
 }
 
 public class ApiError

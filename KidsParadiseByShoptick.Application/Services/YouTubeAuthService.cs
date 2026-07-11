@@ -125,12 +125,34 @@ public class YouTubeAuthService : IYouTubeAuthService
                 throw new InvalidOperationException($"Google refresh failed: {body}");
 
             using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("refresh_token", out var rotatedRefresh)
+                && !string.IsNullOrWhiteSpace(rotatedRefresh.GetString()))
+            {
+                await SaveRefreshTokenAsync(rotatedRefresh.GetString()!, cancellationToken);
+            }
+
             return doc.RootElement.GetProperty("access_token").GetString()
                 ?? throw new InvalidOperationException("Google did not return an access token.");
         }
         finally
         {
             _tokenLock.Release();
+        }
+    }
+
+    public async Task<bool> TryRefreshAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+            return false;
+
+        try
+        {
+            await GetAccessTokenAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 

@@ -16,8 +16,12 @@
                 <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
 
                 <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
-                <Label Text="Optional: upload to YouTube and the link is saved with the toy when you tap Save."
+                <Label Text="Paste a YouTube link, or select a video. YouTube upload is optional. On Save (with social posting), the same video also posts to Facebook &amp; Instagram from this app."
                        FontSize="12" TextColor="#64748b" />
+                <Entry Placeholder="YouTube link (optional)"
+                       Text="{Binding VideoLinkText}"
+                       Keyboard="Url"
+                       IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <Button Grid.Column="0" Text="Select video" Command="{Binding PickVideoCommand}"
                             BackgroundColor="#e2e8f0" TextColor="#334155"
@@ -34,8 +38,6 @@
                 <ActivityIndicator IsRunning="{Binding IsUploadingVideo}" IsVisible="{Binding IsUploadingVideo}" Color="#dc2626" />
                 <Label Text="{Binding VideoUploadStatus}" FontSize="12" TextColor="#64748b"
                        IsVisible="{Binding VideoUploadStatus, Converter={StaticResource NullToBool}}" />
-                <Entry Placeholder="YouTube link (optional, filled after upload)" Text="{Binding VideoLinkText}" IsReadOnly="True"
-                       IsVisible="{Binding VideoLinkText, Converter={StaticResource NullToBool}}" />
 
                 <Button Text="Add Images" Command="{Binding PickImagesCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
@@ -53,6 +55,14 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
+                <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                    <CheckBox IsChecked="{Binding PostToSocialMedia}"
+                              IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                    <Label Text="Post to Facebook and Instagram"
+                           VerticalOptions="Center"
+                           FontSize="14"
+                           TextColor="#334155" />
+                </HorizontalStackLayout>
                 <Button Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
             </VerticalStackLayout>
         </ScrollView>

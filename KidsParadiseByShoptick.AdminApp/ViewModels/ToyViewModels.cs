@@ -381,6 +381,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 {
     private readonly AdminApiService _api;
     private readonly IYouTubeUploadService _youTubeUpload;
+    private readonly IMetaVideoUploadService _metaVideoUpload;
     private int? _id;
     private FileResult? _selectedVideo;
 
@@ -393,19 +394,24 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private bool isUploadingVideo;
     [ObservableProperty] private CategoryModel? selectedCategory;
     [ObservableProperty] private bool isBusy;
+    [ObservableProperty] private bool postToSocialMedia;
     [ObservableProperty] private string savingStatus = string.Empty;
     [ObservableProperty] private string title = "New Toy";
 
+    public bool IsEditMode => _id.HasValue;
+
     public bool CanUploadVideo => _youTubeUpload.IsSupported && _selectedVideo is not null && !IsUploadingVideo && !IsBusy;
     public bool CanSave => !IsBusy && !IsUploadingVideo;
+    public bool CanPickVideo => !IsUploadingVideo && !IsBusy;
 
     public ObservableCollection<CategoryModel> Categories { get; } = [];
     public ObservableCollection<ToyImageItem> Images { get; } = [];
 
-    public ToyEditViewModel(AdminApiService api, IYouTubeUploadService youTubeUpload)
+    public ToyEditViewModel(AdminApiService api, IYouTubeUploadService youTubeUpload, IMetaVideoUploadService metaVideoUpload)
     {
         _api = api;
         _youTubeUpload = youTubeUpload;
+        _metaVideoUpload = metaVideoUpload;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -413,6 +419,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         if (query.TryGetValue("id", out var idObj) && int.TryParse(idObj?.ToString(), out var id))
             _id = id;
         Title = _id.HasValue ? "Edit Toy" : "New Toy";
+        OnPropertyChanged(nameof(IsEditMode));
     }
 
     [RelayCommand]
@@ -468,12 +475,6 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     async Task PickVideoAsync()
     {
-        if (!_youTubeUpload.IsSupported)
-        {
-            await Shell.Current.DisplayAlert("Video", "YouTube upload is not available.", "OK");
-            return;
-        }
-
         var file = await FilePicker.Default.PickAsync(new PickOptions
         {
             PickerTitle = "Select toy video",
@@ -485,7 +486,9 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
         _selectedVideo = file;
         SelectedVideoFileName = file.FileName;
-        VideoUploadStatus = "Video selected. Tap upload to send it to YouTube.";
+        VideoUploadStatus = _youTubeUpload.IsSupported
+            ? "Video selected. Upload to YouTube (optional). On Save, video also posts to Facebook & Instagram when social posting is on."
+            : "Video selected. On Save, video posts to Facebook & Instagram when social posting is on.";
         OnPropertyChanged(nameof(CanUploadVideo));
     }
 
@@ -587,6 +590,16 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
             salePrice = sp;
         }
 
+        var willPostToSocial = !_id.HasValue || PostToSocialMedia;
+        if (willPostToSocial && Images.Count == 0)
+        {
+            await Shell.Current.DisplayAlert(
+                "Validation",
+                "At least one image is required for Facebook and Instagram posting.",
+                "OK");
+            return;
+        }
+
         var payload = new
         {
             categoryId = SelectedCategory.Id,
@@ -599,28 +612,61 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
         try
         {
-            SavingStatus = "Saving toy and posting to social media…";
+            SavingStatus = "Saving toy…";
             IsBusy = true;
-            AdminToySaveResponseModel result;
             if (_id.HasValue)
-                result = await _api.UpdateToyAsync(_id.Value, payload);
-            else
-                result = await _api.CreateToyAsync(payload);
-
-            var social = result.SocialPost;
-            if (social.FacebookPosted || social.InstagramPosted)
             {
-                await Shell.Current.DisplayAlert(
-                    "Toy saved",
-                    social.Message ?? "Posted to social media.",
-                    "OK");
+                var updatePayload = new
+                {
+                    categoryId = SelectedCategory.Id,
+                    name = Name.Trim(),
+                    price,
+                    salePrice,
+                    videoLink = string.IsNullOrWhiteSpace(VideoLinkText) ? null : VideoLinkText.Trim(),
+                    imagePaths = Images.Select(i => i.Path).ToList(),
+                    postToSocialMedia = PostToSocialMedia,
+                };
+                await _api.UpdateToyAsync(_id.Value, updatePayload);
             }
-            else if (!string.IsNullOrWhiteSpace(social.Message))
+            else
+                await _api.CreateToyAsync(payload);
+
+            if (willPostToSocial && _selectedVideo is not null)
             {
-                await Shell.Current.DisplayAlert(
-                    "Toy saved",
-                    $"Toy saved, but social posting did not complete.\n\n{social.Message}",
-                    "OK");
+                try
+                {
+                    IsUploadingVideo = true;
+                    SavingStatus = "Posting video to Facebook & Instagram…";
+                    VideoUploadStatus = "Preparing Facebook/Instagram video upload…";
+
+                    await using var stream = await _selectedVideo.OpenReadAsync();
+                    var progress = new Progress<string>(status =>
+                    {
+                        VideoUploadStatus = status;
+                        SavingStatus = status;
+                    });
+
+                    await _metaVideoUpload.UploadAsync(
+                        stream,
+                        _selectedVideo.FileName,
+                        Name.Trim(),
+                        caption: null,
+                        progress);
+
+                    VideoUploadStatus = "Video posted to Facebook & Instagram.";
+                }
+                catch (Exception videoEx)
+                {
+                    VideoUploadStatus = string.Empty;
+                    await Shell.Current.DisplayAlert(
+                        "Video post failed",
+                        $"Toy was saved (photos may still post in background), but Facebook/Instagram video failed:\n\n{videoEx.Message}",
+                        "OK");
+                }
+                finally
+                {
+                    IsUploadingVideo = false;
+                }
             }
 
             await Shell.Current.GoToAsync("..");

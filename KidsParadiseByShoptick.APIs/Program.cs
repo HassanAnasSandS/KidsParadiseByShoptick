@@ -48,6 +48,11 @@ builder.Services.AddResponseCaching();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOrderNotificationService, SignalROrderNotificationService>();
+builder.Services.AddSingleton<SocialPostQueue>();
+builder.Services.AddSingleton<ISocialPostQueue>(sp => sp.GetRequiredService<SocialPostQueue>());
+builder.Services.AddScoped<ISocialPostNotificationService, SignalRSocialPostNotificationService>();
+builder.Services.AddHostedService<SocialTokenMaintenanceHostedService>();
+builder.Services.AddHostedService<SocialPostBackgroundService>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 

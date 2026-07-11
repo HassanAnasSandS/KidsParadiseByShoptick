@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddScoped<IYouTubeAuthService>(sp => sp.GetRequiredService<YouTubeAuthService>());
         services.AddHttpClient<IMetaTokenService, MetaTokenService>();
         services.AddHttpClient<ISocialMediaService, MetaSocialMediaService>();
+        services.AddHttpClient<IMetaRequirementsService, MetaRequirementsService>();
+        services.AddSingleton<ISocialMediaSettingsService, SocialMediaSettingsService>();
         services.AddSingleton<IDeliveryChargeService, DeliveryChargeService>();
         return services;
     }

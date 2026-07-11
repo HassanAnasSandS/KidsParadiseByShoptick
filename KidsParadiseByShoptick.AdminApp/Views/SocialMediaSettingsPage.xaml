@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.SocialMediaSettingsPage"
+             x:DataType="vm:SocialMediaSettingsViewModel"
+             Title="Social Media Settings"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
+    </ContentPage.ToolbarItems>
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="16">
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#dc2626"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Meta Setup Checklist" FontAttributes="Bold" FontSize="16" />
+                    <Label Text="Verify Facebook, Instagram and WhatsApp catalog requirements one by one."
+                           FontSize="12" TextColor="#64748b" />
+                    <Label Text="{Binding MetaSummary}" FontSize="13" TextColor="#334155" />
+
+                    <Button Text="Check Requirements"
+                            Command="{Binding CheckMetaRequirementsCommand}"
+                            BackgroundColor="#0f766e"
+                            TextColor="White"
+                            IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                    <ActivityIndicator IsRunning="{Binding IsCheckingMeta}" IsVisible="{Binding IsCheckingMeta}" Color="#0f766e" />
+
+                    <CollectionView ItemsSource="{Binding MetaRequirements}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:MetaRequirementCheckModel">
+                                <Frame Padding="12" Margin="0,4" CornerRadius="10"
+                                       BorderColor="#e2e8f0"
+                                       BackgroundColor="#f8fafc">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <Label Grid.Column="0"
+                                               Text="{Binding Step, StringFormat='Step {0}'}"
+                                               FontAttributes="Bold"
+                                               TextColor="#1a6fe8"
+                                               VerticalOptions="Start" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="14" />
+                                            <Label Text="{Binding Status}" FontSize="12" TextColor="#64748b" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="2" Spacing="0" VerticalOptions="Start">
+                                            <Label Text="✓" FontSize="18" TextColor="#16a34a"
+                                                   IsVisible="{Binding IsMet}" />
+                                            <Label Text="✗" FontSize="18" TextColor="#dc2626"
+                                                   IsVisible="{Binding IsMet, Converter={StaticResource InverseBool}}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SocialMediaSettingsViewModel}}, Path=ShowFixCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Frame.GestureRecognizers>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="Tap any step for fix instructions." FontSize="11" TextColor="#94a3b8" />
+
+                    <Label Text="Link Catalog (Step 2)" FontAttributes="Bold" FontSize="13" Margin="0,8,0,0" />
+                    <Label Text="If catalog exists in Commerce Manager but Step 2 fails, paste Catalog ID and link."
+                           FontSize="11" TextColor="#64748b" />
+                    <Entry Placeholder="Commerce Manager Catalog ID"
+                           Text="{Binding CatalogIdToLink}"
+                           Keyboard="Numeric" />
+                    <Button Text="Link Catalog to WhatsApp"
+                            Command="{Binding LinkCatalogCommand}"
+                            BackgroundColor="#7c3aed"
+                            TextColor="White"
+                            IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="YouTube Description" FontAttributes="Bold" />
+                    <Label Text="Used as the video description when uploading to YouTube from toy edit."
+                           FontSize="12" TextColor="#64748b" />
+                    <Editor Text="{Binding Description}"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="120"
+                            Placeholder="Enter YouTube video description…" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Tags" FontAttributes="Bold" />
+                    <Label Text="Used on Facebook, Instagram, and YouTube uploads. Separate with spaces or commas (e.g. #KidsParadise #Toys)."
+                           FontSize="12" TextColor="#64748b" />
+                    <Editor Text="{Binding Tags}"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="80"
+                            Placeholder="#KidsParadise #Toys #Karachi" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Save Settings"
+                    Command="{Binding SaveCommand}"
+                    BackgroundColor="#1a6fe8"
+                    TextColor="White"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -17,7 +17,14 @@ public record SocialPostResultDto(
     string? FacebookPostId,
     bool InstagramPosted,
     string? InstagramPostId,
-    string? Message);
+    string? Message,
+    bool Queued = false,
+    bool WhatsAppCatalogPosted = false,
+    string? WhatsAppCatalogProductId = null);
+
+public record SocialMediaSettingsDto(string Description, string Tags);
+
+public record UpdateSocialMediaSettingsRequest(string Description, string Tags);
 
 public record AdminToySaveResponse(ToyListDto Toy, SocialPostResultDto SocialPost);
 
@@ -65,7 +72,8 @@ public record CreateToyRequest(
 
 public record UpdateToyRequest(
     int CategoryId, string Name, decimal Price, decimal? SalePrice,
-    IReadOnlyList<string> ImagePaths, string? VideoLink = null);
+    IReadOnlyList<string> ImagePaths, string? VideoLink = null,
+    bool PostToSocialMedia = false);
 
 public record UpdateOrderStatusRequest(string Status, string? TrackingNumber, decimal? AdvanceAmount, decimal? DiscountAmount);
 
