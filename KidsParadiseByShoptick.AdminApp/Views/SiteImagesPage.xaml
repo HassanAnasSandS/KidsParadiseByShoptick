@@ -6,29 +6,65 @@
              x:Class="KidsParadiseByShoptick.AdminApp.Views.SiteImagesPage"
              x:Name="ThisPage"
              x:DataType="vm:SiteImagesViewModel"
-             Title="Site Images"
+             Title="Site Settings"
              BackgroundColor="{StaticResource PageBg}">
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
     </ContentPage.ToolbarItems>
-    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}" Padding="12">
-        <CollectionView ItemsSource="{Binding Items}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:SiteImageModel">
-                    <Frame Margin="0,6" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="{Binding Label}" FontAttributes="Bold" />
-                            <Label Text="{Binding Group}" FontSize="11" TextColor="#64748b" />
-                            <Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="120" Aspect="AspectFit" />
-                            <HorizontalStackLayout Spacing="8">
-                                <Button Text="Upload" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.UploadCommand}" CommandParameter="{Binding .}" />
-                                <Button Text="Reset" BackgroundColor="#64748b" TextColor="White" IsVisible="{Binding IsCustom}"
-                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.ResetCommand}" CommandParameter="{Binding .}" />
-                            </HorizontalStackLayout>
-                        </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
+        <ScrollView Padding="12">
+            <VerticalStackLayout Spacing="14">
+                <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Delivery Charges" FontAttributes="Bold" FontSize="16" />
+                        <Label Text="Used on website checkout, order totals, footer, and product pages."
+                               FontSize="12" TextColor="#64748b" />
+
+                        <Label Text="Karachi (Rs.)" FontAttributes="Bold" />
+                        <Entry Text="{Binding KarachiChargeText}"
+                               Keyboard="Numeric"
+                               Placeholder="e.g. 300" />
+
+                        <Label Text="Other cities (Rs.)" FontAttributes="Bold" />
+                        <Entry Text="{Binding OtherCitiesChargeText}"
+                               Keyboard="Numeric"
+                               Placeholder="e.g. 400" />
+
+                        <Button Text="Save Delivery Charges"
+                                Command="{Binding SaveDeliveryChargesCommand}"
+                                BackgroundColor="#1a6fe8"
+                                TextColor="White"
+                                IsEnabled="{Binding IsSavingDelivery, Converter={StaticResource InverseBool}}" />
+                        <ActivityIndicator IsRunning="{Binding IsSavingDelivery}"
+                                           IsVisible="{Binding IsSavingDelivery}"
+                                           Color="#1a6fe8" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Label Text="Site Images" FontAttributes="Bold" FontSize="16" Margin="4,4,0,0" />
+                <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+
+                <CollectionView ItemsSource="{Binding Items}"
+                                HeightRequest="520"
+                                SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:SiteImageModel">
+                            <Frame Margin="0,6" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{Binding Label}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Group}" FontSize="11" TextColor="#64748b" />
+                                    <Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="120" Aspect="AspectFit" />
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Button Text="Upload" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.UploadCommand}" CommandParameter="{Binding .}" />
+                                        <Button Text="Reset" BackgroundColor="#64748b" TextColor="White" IsVisible="{Binding IsCustom}"
+                                                Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.ResetCommand}" CommandParameter="{Binding .}" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
     </RefreshView>
 </ContentPage>

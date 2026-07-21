@@ -19,13 +19,27 @@ public class SocialTokenMaintenanceHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        // Delay without letting cancel bubble as an unhandled fault (common on debug Stop/Restart).
+        if (!await DelayQuietlyAsync(TimeSpan.FromSeconds(15), stoppingToken))
+            return;
 
         while (!stoppingToken.IsCancellationRequested)
         {
             await RunMaintenanceAsync(stoppingToken);
-            await Task.Delay(Interval, stoppingToken);
+            if (!await DelayQuietlyAsync(Interval, stoppingToken))
+                return;
         }
+    }
+
+    static async Task<bool> DelayQuietlyAsync(TimeSpan delay, CancellationToken token)
+    {
+        if (token.IsCancellationRequested)
+            return false;
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var reg = token.Register(static s => ((TaskCompletionSource)s!).TrySetResult(), tcs);
+        var completed = await Task.WhenAny(Task.Delay(delay), tcs.Task);
+        return completed != tcs.Task && !token.IsCancellationRequested;
     }
 
     async Task RunMaintenanceAsync(CancellationToken cancellationToken)
@@ -35,6 +49,7 @@ public class SocialTokenMaintenanceHostedService : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var youTube = scope.ServiceProvider.GetRequiredService<IYouTubeAuthService>();
             var meta = scope.ServiceProvider.GetRequiredService<IMetaTokenService>();
+            var tikTok = scope.ServiceProvider.GetRequiredService<ITikTokAuthService>();
 
             if (youTube.IsConnected)
             {
@@ -51,6 +66,18 @@ public class SocialTokenMaintenanceHostedService : BackgroundService
                 else
                     _logger.LogWarning("Meta background maintenance failed. Reconnect Facebook/Instagram if posts fail.");
             }
+
+            if (tikTok.IsConnected)
+            {
+                if (await tikTok.TryRefreshAsync(cancellationToken))
+                    _logger.LogInformation("TikTok access token refreshed during background maintenance.");
+                else
+                    _logger.LogWarning("TikTok background refresh failed. Reconnect TikTok from Social Settings if posts fail.");
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Shutdown mid-refresh — ignore.
         }
         catch (Exception ex)
         {

@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace KidsParadiseByShoptick.AdminApp.Services;
 
 public class MetaVideoUploadService : IMetaVideoUploadService
@@ -10,6 +13,8 @@ public class MetaVideoUploadService : IMetaVideoUploadService
         Stream videoStream,
         string fileName,
         string title,
+        decimal price,
+        decimal? salePrice = null,
         string? caption = null,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
@@ -19,100 +24,85 @@ public class MetaVideoUploadService : IMetaVideoUploadService
 
         progress?.Report("Loading social media settings…");
         var settings = await _api.GetSocialMediaSettingsAsync();
-        var postCaption = BuildCaption(title, caption, settings.Description, settings.Tags);
 
-        await using var prepared = await PrepareUploadStreamAsync(videoStream, fileName, cancellationToken);
+        // Same caption format as photo posts (ToySocialCaptionBuilder).
+        var whatsApp = string.IsNullOrWhiteSpace(credentials.WhatsAppNumber)
+            ? "923217175896"
+            : credentials.WhatsAppNumber;
+        var postCaption = string.IsNullOrWhiteSpace(caption)
+            ? BuildPhotoStyleCaption(title, price, salePrice, whatsApp, settings.Tags)
+            : caption.Trim();
+
         await MetaVideoApiClient.UploadToFacebookAndInstagramAsync(
             credentials.FacebookPageId,
             credentials.PageAccessToken,
             credentials.InstagramBusinessAccountId,
-            prepared.Stream,
+            videoStream,
             fileName,
-            prepared.Length,
+            contentLength: 0,
             title,
             postCaption,
             progress,
             cancellationToken);
     }
 
-    static string BuildCaption(string title, string? caption, string? description, string? tags)
+    /// <summary>Mirrors server ToySocialCaptionBuilder for video posts.</summary>
+    internal static string BuildPhotoStyleCaption(
+        string title,
+        decimal price,
+        decimal? salePrice,
+        string? whatsAppNumber,
+        string? tags)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(caption))
-            parts.Add(caption.Trim());
-        else if (!string.IsNullOrWhiteSpace(title))
-            parts.Add(title.Trim());
+        var onSale = salePrice is not null && salePrice < price;
+        var sb = new StringBuilder();
+        sb.AppendLine(title.Trim());
+        sb.AppendLine(FormatPriceLine(price, salePrice, onSale));
+        sb.AppendLine("Excellent Working Condition");
+        sb.AppendLine($"For price and queries please feel free to contact us on WhatsApp {FormatWhatsAppDisplay(whatsAppNumber)}");
+        sb.AppendLine();
 
-        if (!string.IsNullOrWhiteSpace(description))
-            parts.Add(description.Trim());
+        var formattedTags = FormatTags(tags);
+        if (!string.IsNullOrWhiteSpace(formattedTags))
+            sb.Append(formattedTags);
 
-        if (!string.IsNullOrWhiteSpace(tags))
-        {
-            var tagLine = string.Join(' ',
-                tags.Split([',', '\n', '\r', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Select(t => t.TrimStart('#'))
-                    .Where(t => t.Length > 0)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(t => $"#{t}"));
-            if (!string.IsNullOrWhiteSpace(tagLine))
-                parts.Add(tagLine);
-        }
-
-        return string.Join("\n\n", parts);
+        return sb.ToString().Trim();
     }
 
-    static async Task<PreparedUploadStream> PrepareUploadStreamAsync(
-        Stream videoStream, string fileName, CancellationToken cancellationToken)
+    static string FormatPriceLine(decimal price, decimal? salePrice, bool onSale)
     {
-        if (videoStream.CanSeek)
-        {
-            var length = videoStream.Length - videoStream.Position;
-            if (length > 0)
-                return new PreparedUploadStream(videoStream, length, disposeStream: false, tempPath: null);
-        }
+        var regular = price.ToString("N0", CultureInfo.InvariantCulture);
+        if (!onSale || salePrice is null)
+            return $"Price: Rs. {regular}";
 
-        var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(extension))
-            extension = ".mp4";
-
-        var tempPath = Path.Combine(
-            FileSystem.CacheDirectory,
-            $"meta-upload-{Guid.NewGuid():N}{extension}");
-
-        await using (var tempFile = File.Create(tempPath))
-            await videoStream.CopyToAsync(tempFile, cancellationToken);
-
-        var length2 = new FileInfo(tempPath).Length;
-        var stream = File.OpenRead(tempPath);
-        return new PreparedUploadStream(stream, length2, disposeStream: true, tempPath);
+        var sale = salePrice.Value.ToString("N0", CultureInfo.InvariantCulture);
+        return $"Price: <del>Rs. {regular}</del> <strong>Rs. {sale}</strong>";
     }
 
-    private sealed class PreparedUploadStream : IAsyncDisposable
+    static string FormatWhatsAppDisplay(string? whatsAppNumber)
     {
-        private readonly bool _disposeStream;
-        private readonly string? _tempPath;
+        if (string.IsNullOrWhiteSpace(whatsAppNumber))
+            return string.Empty;
 
-        public PreparedUploadStream(Stream stream, long length, bool disposeStream, string? tempPath)
-        {
-            Stream = stream;
-            Length = length;
-            _disposeStream = disposeStream;
-            _tempPath = tempPath;
-        }
+        var digits = new string(whatsAppNumber.Where(char.IsDigit).ToArray());
+        if (digits.StartsWith("92", StringComparison.Ordinal) && digits.Length > 10)
+            return "0" + digits[2..];
+        return digits;
+    }
 
-        public Stream Stream { get; }
-        public long Length { get; }
+    static string FormatTags(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return string.Empty;
 
-        public async ValueTask DisposeAsync()
-        {
-            if (_disposeStream)
-                await Stream.DisposeAsync();
+        var parsed = tags
+            .Split([',', '\n', '\r', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .SelectMany(t => t.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.StartsWith('#') ? t : $"#{t}")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-            if (!string.IsNullOrWhiteSpace(_tempPath))
-            {
-                try { File.Delete(_tempPath); }
-                catch { /* ignore */ }
-            }
-        }
+        return parsed.Count == 0 ? string.Empty : string.Join(' ', parsed);
     }
 }

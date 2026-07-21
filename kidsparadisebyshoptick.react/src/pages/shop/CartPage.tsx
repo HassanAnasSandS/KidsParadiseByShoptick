@@ -24,7 +24,7 @@ export function CartPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
       <SeoHead title={PAGE_SEO.cart.title} description={PAGE_SEO.cart.description} path={PAGE_SEO.cart.path} noIndex />
       <h1 className="text-3xl font-bold text-slate-800 mb-6">Shopping Cart ({totalItems()} items)</h1>
 
@@ -42,7 +42,7 @@ export function CartPage() {
               </Link>
               <p className="text-brand-600 font-bold mt-1">{formatPrice(item.salePrice ?? item.price)}</p>
             </div>
-            <button onClick={() => removeItem(item.toyId)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+            <button onClick={() => removeItem(item.toyId)} aria-label={`Remove ${item.name} from cart`} className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>

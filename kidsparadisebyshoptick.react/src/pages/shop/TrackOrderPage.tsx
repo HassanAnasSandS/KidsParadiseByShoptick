@@ -112,10 +112,17 @@ function OrderCard({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded((v) => !v)}
-        className="w-full p-4 text-left hover:bg-slate-50/80 transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setExpanded((v) => !v);
+          }
+        }}
+        className="w-full p-4 text-left hover:bg-slate-50/80 transition-colors cursor-pointer"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -138,7 +145,7 @@ function OrderCard({
             {expanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
           </div>
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-100 pt-4 space-y-4">

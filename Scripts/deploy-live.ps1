@@ -15,10 +15,31 @@ Write-Host "==> Ensuring upload folders..."
     New-Item -ItemType Directory -Force -Path "$root\KidsParadiseByShoptick.Published\uploads\$_" | Out-Null
 }
 
-Write-Host "==> Triggering IIS app recycle (web.config touch)..."
+Write-Host "==> Triggering app recycle (web.config touch, no BOM)..."
 $wc = "$root\KidsParadiseByShoptick.Published\Live\web.config"
-Copy-Item "$root\KidsParadiseByShoptick.APIs\web.config" $wc -Force
-Add-Content -Path $wc -Value "<!-- deploy:$(Get-Date -Format o) -->"
+$src = Get-Content "$root\KidsParadiseByShoptick.APIs\web.config" -Raw
+$src = $src.TrimEnd() + "`r`n<!-- deploy:$(Get-Date -Format o) -->`r`n"
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($wc, $src, $utf8NoBom)
+
+# Keep TikTok URL verification files available without Cloudflare/DNS
+$tikTokCode = "sMNBLtnQopDSTvuIg1d4DGa3Hq97e9Sb"
+$tikTokFileName = "tiktoksMNBLtnQopDSTvuIg1d4DGa3Hq97e9Sb.txt"
+[System.IO.File]::WriteAllText("$root\KidsParadiseByShoptick.Published\tiktok-developers-site-verification.txt", $tikTokCode, $utf8NoBom)
+[System.IO.File]::WriteAllText("$root\KidsParadiseByShoptick.Published\$tikTokFileName", $tikTokCode, $utf8NoBom)
+$www = "$root\KidsParadiseByShoptick.Published\Live\wwwroot"
+if (Test-Path $www) {
+    [System.IO.File]::WriteAllText("$www\tiktok-developers-site-verification.txt", $tikTokCode, $utf8NoBom)
+    [System.IO.File]::WriteAllText("$www\$tikTokFileName", $tikTokCode, $utf8NoBom)
+}
+
+# Preserve local secrets if present (publish may not copy gitignored secrets)
+$secretsSrc = "$root\KidsParadiseByShoptick.APIs\appsettings.Secrets.json"
+$secretsDst = "$root\KidsParadiseByShoptick.Published\Live\appsettings.Secrets.json"
+if (Test-Path $secretsSrc) {
+    Copy-Item $secretsSrc $secretsDst -Force
+    Write-Host "==> Copied appsettings.Secrets.json to Live"
+}
 
 Write-Host "Done. Live: $root\KidsParadiseByShoptick.Published\Live"
 Write-Host "Site: https://kidsparadise.shoptick.shop"

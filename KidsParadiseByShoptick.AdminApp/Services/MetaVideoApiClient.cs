@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 
 namespace KidsParadiseByShoptick.AdminApp.Services;
@@ -28,28 +27,74 @@ public static class MetaVideoApiClient
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromHours(2) };
         var postCaption = string.IsNullOrWhiteSpace(caption) ? title : caption.Trim();
+        // Instagram captions should be plain text (photo-style HTML tags break Promote UX / look wrong on IG).
+        var instagramCaption = StripHtml(postCaption);
 
-        // Facebook needs a rewindable stream; buffer to temp if needed.
-        await using var prepared = await EnsureSeekableAsync(videoStream, fileName, contentLength, cancellationToken);
-
-        progress?.Report("Uploading video to Facebook…");
-        prepared.Stream.Position = 0;
-        await UploadFacebookPageVideoAsync(
-            http, facebookPageId, pageAccessToken, prepared.Stream, fileName, prepared.Length, title, postCaption, cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(instagramBusinessAccountId))
+        // Always copy to a temp file and open a FRESH stream per platform.
+        // Multipart StreamContent disposes the underlying stream after Facebook upload,
+        // which caused ObjectDisposed_FileClosed on Instagram.
+        var tempPath = await CopyToTempFileAsync(videoStream, fileName, contentLength, cancellationToken);
+        try
         {
-            progress?.Report("Uploading video to Instagram…");
-            prepared.Stream.Position = 0;
-            await UploadInstagramReelAsync(
-                http, instagramBusinessAccountId, pageAccessToken, prepared.Stream, prepared.Length, postCaption, progress, cancellationToken);
+            var length = new FileInfo(tempPath).Length;
+
+            progress?.Report("Uploading video to Facebook…");
+            await using (var fbStream = File.OpenRead(tempPath))
+            {
+                await UploadFacebookPageVideoAsync(
+                    http, facebookPageId, pageAccessToken, fbStream, fileName, length, title, postCaption, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(instagramBusinessAccountId))
+            {
+                progress?.Report("Uploading video to Instagram…");
+                await using (var igStream = File.OpenRead(tempPath))
+                {
+                    await UploadInstagramReelAsync(
+                        http, instagramBusinessAccountId, pageAccessToken, igStream, length, instagramCaption, progress, cancellationToken);
+                }
+            }
+            else
+            {
+                progress?.Report("Instagram skipped (Business account not linked).");
+            }
+
+            progress?.Report("Facebook and Instagram video posted.");
         }
-        else
+        finally
         {
-            progress?.Report("Instagram skipped (Business account not linked).");
+            try { File.Delete(tempPath); }
+            catch { /* ignore */ }
+        }
+    }
+
+    static async Task<string> CopyToTempFileAsync(
+        Stream videoStream, string fileName, long contentLength, CancellationToken cancellationToken)
+    {
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension))
+            extension = ".mp4";
+
+        var tempPath = Path.Combine(
+            FileSystem.CacheDirectory,
+            $"meta-video-{Guid.NewGuid():N}{extension}");
+
+        await using (var tempFile = File.Create(tempPath))
+        {
+            if (videoStream.CanSeek)
+                videoStream.Position = 0;
+
+            await videoStream.CopyToAsync(tempFile, cancellationToken);
+            await tempFile.FlushAsync(cancellationToken);
         }
 
-        progress?.Report("Facebook and Instagram video posted.");
+        var length = new FileInfo(tempPath).Length;
+        if (length <= 0)
+            throw new InvalidOperationException("Video file is empty — cannot upload.");
+
+        // contentLength from caller may be stale; file length is authoritative
+        _ = contentLength;
+        return tempPath;
     }
 
     static async Task UploadFacebookPageVideoAsync(
@@ -94,12 +139,13 @@ public static class MetaVideoApiClient
         IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
-        // Step 1: create resumable container
         using var initContent = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["media_type"] = "REELS",
             ["upload_type"] = "resumable",
             ["caption"] = caption,
+            // Show in profile Feed as well as Reels — improves Promote/Boost visibility in Instagram app.
+            ["share_to_feed"] = "true",
             ["access_token"] = accessToken,
         });
 
@@ -119,7 +165,6 @@ public static class MetaVideoApiClient
             ? uriEl.GetString()
             : $"https://rupload.facebook.com/ig-api-upload/{GraphVersion}/{containerId}";
 
-        // Step 2: upload binary to rupload
         progress?.Report("Sending video file to Instagram…");
         using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, uploadUri);
         uploadRequest.Headers.TryAddWithoutValidation("Authorization", $"OAuth {accessToken}");
@@ -134,11 +179,9 @@ public static class MetaVideoApiClient
         if (!uploadResponse.IsSuccessStatusCode)
             throw new InvalidOperationException($"Instagram video binary upload failed: {ParseGraphError(uploadBody)}");
 
-        // Step 3: wait until processing finished
         progress?.Report("Waiting for Instagram to process video…");
         await WaitForInstagramContainerAsync(http, containerId, accessToken, cancellationToken);
 
-        // Step 4: publish
         progress?.Report("Publishing Instagram Reel…");
         using var publishContent = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -188,26 +231,15 @@ public static class MetaVideoApiClient
         throw new InvalidOperationException("Instagram video processing timed out. Try again with a shorter video.");
     }
 
-    static async Task<PreparedStream> EnsureSeekableAsync(
-        Stream videoStream, string fileName, long contentLength, CancellationToken cancellationToken)
+    static string StripHtml(string value)
     {
-        if (videoStream.CanSeek && contentLength > 0)
-            return new PreparedStream(videoStream, contentLength, disposeStream: false, tempPath: null);
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
 
-        var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(extension))
-            extension = ".mp4";
-
-        var tempPath = Path.Combine(
-            FileSystem.CacheDirectory,
-            $"meta-video-{Guid.NewGuid():N}{extension}");
-
-        await using (var tempFile = File.Create(tempPath))
-            await videoStream.CopyToAsync(tempFile, cancellationToken);
-
-        var length = new FileInfo(tempPath).Length;
-        var stream = File.OpenRead(tempPath);
-        return new PreparedStream(stream, length, disposeStream: true, tempPath);
+        return System.Text.RegularExpressions.Regex
+            .Replace(value, "<.*?>", string.Empty)
+            .Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase)
+            .Trim();
     }
 
     static string ResolveVideoContentType(string fileName)
@@ -239,34 +271,5 @@ public static class MetaVideoApiClient
         }
 
         return string.IsNullOrWhiteSpace(body) ? "No error details returned." : body;
-    }
-
-    private sealed class PreparedStream : IAsyncDisposable
-    {
-        private readonly bool _disposeStream;
-        private readonly string? _tempPath;
-
-        public PreparedStream(Stream stream, long length, bool disposeStream, string? tempPath)
-        {
-            Stream = stream;
-            Length = length;
-            _disposeStream = disposeStream;
-            _tempPath = tempPath;
-        }
-
-        public Stream Stream { get; }
-        public long Length { get; }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_disposeStream)
-                await Stream.DisposeAsync();
-
-            if (!string.IsNullOrWhiteSpace(_tempPath))
-            {
-                try { File.Delete(_tempPath); }
-                catch { /* ignore */ }
-            }
-        }
     }
 }

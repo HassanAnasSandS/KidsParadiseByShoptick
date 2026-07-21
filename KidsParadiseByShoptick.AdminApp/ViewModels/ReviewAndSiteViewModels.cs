@@ -251,7 +251,10 @@ public partial class SiteImagesViewModel : ObservableObject
 
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool isRefreshing;
+    [ObservableProperty] private bool isSavingDelivery;
     [ObservableProperty] private string? errorMessage;
+    [ObservableProperty] private string karachiChargeText = "300";
+    [ObservableProperty] private string otherCitiesChargeText = "400";
     public ObservableCollection<SiteImageModel> Items { get; } = [];
 
     public SiteImagesViewModel(AdminApiService api) => _api = api;
@@ -268,9 +271,16 @@ public partial class SiteImagesViewModel : ObservableObject
         {
             IsBusy = true;
             ErrorMessage = null;
-            var data = await _api.GetSiteImagesAsync();
+            var deliveryTask = _api.GetDeliveryChargesAsync();
+            var imagesTask = _api.GetSiteImagesAsync();
+            await Task.WhenAll(deliveryTask, imagesTask);
+
+            var delivery = await deliveryTask;
+            KarachiChargeText = delivery.Karachi.ToString("0.##");
+            OtherCitiesChargeText = delivery.OtherCities.ToString("0.##");
+
             Items.Clear();
-            foreach (var img in data.OrderBy(x => x.Group).ThenBy(x => x.SortOrder))
+            foreach (var img in (await imagesTask).OrderBy(x => x.Group).ThenBy(x => x.SortOrder))
                 Items.Add(img);
         }
         catch (Exception ex)
@@ -283,6 +293,42 @@ public partial class SiteImagesViewModel : ObservableObject
         {
             IsBusy = false;
             IsRefreshing = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task SaveDeliveryChargesAsync()
+    {
+        if (!decimal.TryParse(KarachiChargeText.Trim(), out var karachi) || karachi < 0)
+        {
+            await Shell.Current.DisplayAlert("Validation", "Enter a valid Karachi delivery charge.", "OK");
+            return;
+        }
+
+        if (!decimal.TryParse(OtherCitiesChargeText.Trim(), out var other) || other < 0)
+        {
+            await Shell.Current.DisplayAlert("Validation", "Enter a valid Other cities delivery charge.", "OK");
+            return;
+        }
+
+        try
+        {
+            IsSavingDelivery = true;
+            var saved = await _api.UpdateDeliveryChargesAsync(karachi, other);
+            KarachiChargeText = saved.Karachi.ToString("0.##");
+            OtherCitiesChargeText = saved.OtherCities.ToString("0.##");
+            await Shell.Current.DisplayAlert(
+                "Saved",
+                "Delivery charges updated. Website checkout and order totals will use these rates.",
+                "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        finally
+        {
+            IsSavingDelivery = false;
         }
     }
 

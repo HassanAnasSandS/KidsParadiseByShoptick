@@ -9,9 +9,16 @@ import { ToyInquiryButton } from '@/components/shop/ToyInquiryButton';
 import { ImageLightbox } from '@/components/shop/ImageLightbox';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
-import { buildBreadcrumbJsonLd, buildProductJsonLd } from '@/lib/seo';
+import {
+  PRODUCT_FAQS,
+  buildBreadcrumbJsonLd,
+  buildFaqJsonLd,
+  buildProductJsonLd,
+  buildProductSeo,
+} from '@/lib/seo';
 import { buildShopPath, mergeShopFilters } from '@/lib/shopFilters';
 import { useShopPath, useShopFiltersStore } from '@/store/shopFilters';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 function BackToShopButton({ shopPath }: { shopPath: string }) {
   const navigate = useNavigate();
@@ -33,6 +40,7 @@ export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const shopPath = useShopPath();
+  const { rates } = useDeliveryRates();
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
@@ -74,14 +82,23 @@ export function ProductPage() {
     mergeShopFilters(useShopFiltersStore.getState().filters, { categoryId: toy.categoryId }),
   );
 
+  const productSeo = buildProductSeo(toy);
+  const productFaqs = [
+    {
+      question: `Can I buy ${toy.name} online in Pakistan?`,
+      answer: `Yes. Order ${toy.name} from Kids Paradise by Shoptick with cash on delivery. Karachi delivery Rs.${rates.karachi.toLocaleString('en-PK')}, other cities Rs.${rates.otherCities.toLocaleString('en-PK')}.`,
+    },
+    ...PRODUCT_FAQS,
+  ];
   const productJsonLd = [
     buildProductJsonLd({ ...toy, price: toy.price, salePrice: toy.salePrice }),
     buildBreadcrumbJsonLd([
       { name: 'Home', path: '/' },
-      { name: 'Shop', path: shopPath },
-      { name: toy.categoryName, path: categoryShopPath },
+      { name: 'Shop', path: '/shop' },
+      { name: toy.categoryName, path: `/category/${toy.categoryId}` },
       { name: toy.name, path: `/product/${toy.id}` },
     ]),
+    buildFaqJsonLd(productFaqs),
   ];
 
   const handleAddToCart = () => {
@@ -121,21 +138,51 @@ export function ProductPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <SeoHead
-        title={`${toy.name} — Buy Online`}
-        description={`Buy ${toy.name} online at Kids Paradise by Shoptick. ${toy.categoryName}. Rs. ${price.toLocaleString()} with delivery across Pakistan.`}
+        title={productSeo.title}
+        description={productSeo.description}
+        keywords={productSeo.keywords}
         path={`/product/${toy.id}`}
         image={toyPrimaryImage(toy)}
         jsonLd={productJsonLd}
       />
+
+      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-slate-500">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          <li>
+            <Link to="/" className="hover:text-brand-600">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden>/</li>
+          <li>
+            <Link to={shopPath} className="hover:text-brand-600">
+              Shop
+            </Link>
+          </li>
+          <li aria-hidden>/</li>
+          <li>
+            <Link to={categoryShopPath} className="hover:text-brand-600">
+              {toy.categoryName}
+            </Link>
+          </li>
+          <li aria-hidden>/</li>
+          <li className="text-slate-700 font-medium truncate max-w-[12rem] sm:max-w-none">{toy.name}</li>
+        </ol>
+      </nav>
+
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         <div>
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
             className="group relative w-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm cursor-zoom-in"
-            aria-label="View full size image"
+            aria-label={`View full size photo of ${toy.name}`}
           >
-            <img src={images[activeImage]} alt={toy.name} className="w-full aspect-square object-contain bg-slate-50 p-2" />
+            <img
+              src={images[activeImage]}
+              alt={`Buy ${toy.name} online Pakistan – ${toy.categoryName} from Kids Paradise`}
+              className="w-full aspect-square object-contain bg-slate-50 p-2"
+            />
             <span className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/55 text-white text-xs font-medium px-3 py-1.5 rounded-full sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <ZoomIn className="w-3.5 h-3.5" /> Tap to zoom
             </span>
@@ -148,7 +195,11 @@ export function ProductPage() {
                   onClick={() => setActiveImage(i)}
                   className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${activeImage === i ? 'border-brand-500' : 'border-transparent'}`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-contain bg-slate-50 p-0.5" />
+                  <img
+                    src={img}
+                    alt={`${toy.name} photo ${i + 1}`}
+                    className="w-full h-full object-contain bg-slate-50 p-0.5"
+                  />
                 </button>
               ))}
             </div>
@@ -157,9 +208,12 @@ export function ProductPage() {
 
         <div className="animate-fade-in">
           <p className="text-sm text-brand-500 font-medium">
-            <Link to={`/category/${toy.categoryId}`}>{toy.categoryName}</Link>
+            <Link to={categoryShopPath}>{toy.categoryName}</Link>
           </p>
           <h1 className="text-3xl font-bold text-slate-800 mt-1">{toy.name}</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Buy {toy.name} online in Pakistan with cash on delivery from Kids Paradise by Shoptick (Karachi).
+          </p>
 
           {toy.averageRating != null && toy.reviewCount > 0 && (
             <Link to="/reviews" className="flex items-center gap-2 mt-2 hover:opacity-80">
@@ -177,9 +231,11 @@ export function ProductPage() {
             {onSale && <p className="text-lg text-slate-400 line-through">{formatPrice(toy.price)}</p>}
           </div>
 
-          <div className="flex items-center gap-2 mt-4 text-sm text-slate-500">
-            <Truck className="w-4 h-4" />
-            Karachi Rs.300 | Other cities Rs.400 delivery · {PAYMENT_POLICY}
+          <div className="flex items-start gap-2 mt-4 text-sm text-slate-500">
+            <Truck className="w-4 h-4 mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words">
+              Karachi Rs.{rates.karachi.toLocaleString('en-PK')} | Other cities Rs.{rates.otherCities.toLocaleString('en-PK')} delivery · {PAYMENT_POLICY}
+            </span>
           </div>
 
           <p className={`mt-2 text-sm font-medium ${toy.isSold ? 'text-red-500' : 'text-green-600'}`}>
@@ -211,6 +267,18 @@ export function ProductPage() {
           )}
         </div>
       </div>
+
+      <section className="mt-12 max-w-3xl">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Order &amp; delivery FAQs</h2>
+        <div className="space-y-3">
+          {productFaqs.map((faq) => (
+            <details key={faq.question} className="rounded-xl border border-slate-200 bg-white p-4">
+              <summary className="cursor-pointer font-medium text-slate-800">{faq.question}</summary>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
 
       {lightboxOpen && (
         <ImageLightbox

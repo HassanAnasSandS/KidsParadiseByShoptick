@@ -9,8 +9,10 @@ export function formatPrice(amount: number) {
   return `Rs. ${amount.toLocaleString('en-PK')}`;
 }
 
-export function getDeliveryCharge(city: string) {
-  return city.trim().toLowerCase() === 'karachi' ? 300 : 400;
+export function getDeliveryCharge(city: string, rates?: { karachi: number; otherCities: number }) {
+  const karachi = rates?.karachi ?? 300;
+  const other = rates?.otherCities ?? 400;
+  return city.trim().toLowerCase() === 'karachi' ? karachi : other;
 }
 
 export const PAYMENT_POLICY = '10% advance payment required';

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { BrandName } from '@/components/ui/BrandName';
 import { useSiteImages } from '@/hooks/useSiteImages';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 import type { SiteImageKey } from '@/lib/siteImages';
 
 const slideMeta = [
@@ -31,7 +32,7 @@ const slideMeta = [
   {
     imageKey: 'hero_slide_4' as SiteImageKey,
     title: 'Easy Ordering',
-    subtitle: 'Karachi Rs.300 | Other cities Rs.400 — 10% advance payment required.',
+    subtitleKey: 'delivery' as const,
     cta: 'Order Today',
     link: '/shop',
   },
@@ -39,11 +40,21 @@ const slideMeta = [
 
 export function HeroSlider() {
   const { get, images } = useSiteImages();
+  const { label: deliveryLabel } = useDeliveryRates();
   const [current, setCurrent] = useState(0);
 
   const slides = useMemo(
-    () => slideMeta.map((s) => ({ ...s, image: get(s.imageKey) })),
-    [get, images]
+    () =>
+      slideMeta.map((s) => ({
+        ...s,
+        image: get(s.imageKey),
+        subtitle: 'subtitleKey' in s && s.subtitleKey === 'delivery'
+          ? `${deliveryLabel} — 10% advance payment required.`
+          : 'subtitle' in s
+            ? s.subtitle
+            : '',
+      })),
+    [get, images, deliveryLabel]
   );
 
   const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
@@ -78,16 +89,16 @@ export function HeroSlider() {
       />
 
       <div className="absolute inset-0 z-30 flex items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+        <div className="max-w-7xl mx-auto px-14 sm:px-6 w-full">
           <div className="max-w-xl animate-fade-in">
             <span className="inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full mb-4 border border-white/20">
               <span className="text-base">🧸</span>
               <BrandName variant="hero" />
             </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3 drop-shadow-lg">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3 drop-shadow-lg">
               {slide.title}
             </h1>
-            <p className="text-lg text-white/90 mb-6 leading-relaxed max-w-md">
+            <p className="text-base sm:text-lg text-white/90 mb-6 leading-relaxed max-w-md">
               {slide.subtitle}
             </p>
             <Link to={slide.link}>
@@ -114,14 +125,16 @@ export function HeroSlider() {
         <ChevronRight className="w-6 h-6" />
       </button>
 
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 flex gap-2">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex">
         {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className={`h-2 rounded-full transition-all ${i === current ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
+            className="h-8 px-1.5 flex items-center"
             aria-label={`Go to slide ${i + 1}`}
-          />
+          >
+            <span className={`h-2 rounded-full transition-all ${i === current ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`} />
+          </button>
         ))}
       </div>
     </section>

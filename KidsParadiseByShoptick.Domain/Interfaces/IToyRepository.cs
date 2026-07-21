@@ -8,6 +8,7 @@ public interface IToyRepository : IRepository<Toy>
         int? categoryId, string? search, bool? onSale, string? sort, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<int> CountAvailableAsync(int? categoryId, string? search, bool? onSale, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Toy>> GetLatestAvailableAsync(int count, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Toy>> GetAllAvailableWithDetailsAsync(CancellationToken cancellationToken = default);
     Task<Toy?> GetWithDetailsAsync(int id, CancellationToken cancellationToken = default);
     Task<Toy?> GetWithImagesAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Toy>> GetAllAdminWithDetailsAsync(CancellationToken cancellationToken = default);

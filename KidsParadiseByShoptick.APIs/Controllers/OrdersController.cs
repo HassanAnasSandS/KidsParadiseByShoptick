@@ -49,4 +49,8 @@ public class OrdersController : ControllerBase
     [HttpGet("delivery-charge")]
     public ActionResult<object> GetDeliveryCharge([FromQuery] string city)
         => Ok(new { deliveryCharge = _deliveryCharge.Calculate(city) });
+
+    [HttpGet("delivery-rates")]
+    public async Task<ActionResult<DeliveryChargeSettingsDto>> GetDeliveryRates(CancellationToken cancellationToken)
+        => Ok(await _deliveryCharge.GetAsync(cancellationToken));
 }

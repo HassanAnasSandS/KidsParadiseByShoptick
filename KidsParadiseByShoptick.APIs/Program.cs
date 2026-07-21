@@ -10,6 +10,7 @@ using KidsParadiseByShoptick.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,31 @@ builder.Services.Configure<MetaSocialOptions>(options =>
     if (!string.IsNullOrWhiteSpace(siteBase))
         options.SiteBaseUrl = siteBase;
 });
+builder.Services.Configure<TikTokSocialOptions>(options =>
+{
+    builder.Configuration.GetSection(TikTokSocialOptions.SectionName).Bind(options);
+    var siteBase = builder.Configuration["Seo:SiteBaseUrl"]?.TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(siteBase) && string.IsNullOrWhiteSpace(options.RedirectUri))
+        options.RedirectUri = $"{siteBase}/api/admin/tiktok/oauth/callback";
+    if (string.IsNullOrWhiteSpace(options.PostMode))
+        options.PostMode = "MEDIA_UPLOAD";
+    if (string.IsNullOrWhiteSpace(options.PrivacyLevel))
+        options.PrivacyLevel = "SELF_ONLY";
+    // Draft posting only — matches Content Posting API without Direct Post / video.publish audit.
+    if (string.IsNullOrWhiteSpace(options.Scopes))
+        options.Scopes = "user.info.basic,video.upload";
+});
+builder.Services.Configure<PinterestSocialOptions>(options =>
+{
+    builder.Configuration.GetSection(PinterestSocialOptions.SectionName).Bind(options);
+    var siteBase = builder.Configuration["Seo:SiteBaseUrl"]?.TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(siteBase) && string.IsNullOrWhiteSpace(options.RedirectUri))
+        options.RedirectUri = $"{siteBase}/api/admin/pinterest/oauth/callback";
+    if (string.IsNullOrWhiteSpace(options.Scopes))
+        options.Scopes = "boards:read,boards:write,pins:write,user_accounts:read";
+    if (string.IsNullOrWhiteSpace(options.DefaultBoardName))
+        options.DefaultBoardName = "Kids Paradise Toys";
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     // Only forward client IP and HTTPS scheme — NOT host (prevents www↔apex rewrite bugs).
@@ -51,7 +77,10 @@ builder.Services.AddScoped<IOrderNotificationService, SignalROrderNotificationSe
 builder.Services.AddSingleton<SocialPostQueue>();
 builder.Services.AddSingleton<ISocialPostQueue>(sp => sp.GetRequiredService<SocialPostQueue>());
 builder.Services.AddScoped<ISocialPostNotificationService, SignalRSocialPostNotificationService>();
-builder.Services.AddHostedService<SocialTokenMaintenanceHostedService>();
+builder.Services.Configure<HostOptions>(options =>
+    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
+// Token auto-refresh disabled for now (was throwing TaskCanceledException on debug stop).
+// builder.Services.AddHostedService<SocialTokenMaintenanceHostedService>();
 builder.Services.AddHostedService<SocialPostBackgroundService>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -149,6 +178,114 @@ app.UseResponseCaching();
 
 app.MapControllers();
 app.MapHub<AdminOrderHub>("/hubs/admin-orders");
+
+// TikTok URL ownership — serve EXACT downloaded signature file from wwwroot (not a hardcoded short code).
+IResult ServeTikTokVerifyFile(HttpContext ctx, string fileName)
+{
+    ctx.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+
+    var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot", fileName);
+    var published = Path.Combine(
+        builder.Configuration["FileStorage:BasePath"] ?? Path.Combine(app.Environment.ContentRootPath, ".."),
+        fileName);
+    published = Path.GetFullPath(published);
+
+    foreach (var path in new[] { wwwroot, published })
+    {
+        if (System.IO.File.Exists(path))
+            return Results.File(path, "text/plain; charset=utf-8");
+    }
+
+    // Fallback exact TikTok download body if files missing
+    return Results.Text(
+        "tiktok-developers-site-verification=sMNBLtnQopDSTvuIg1d4DGa3Hq97e9Sb",
+        "text/plain; charset=utf-8");
+}
+
+app.MapGet("/tiktoksMNBLtnQopDSTvuIg1d4DGa3Hq97e9Sb.txt", (HttpContext ctx) =>
+    ServeTikTokVerifyFile(ctx, "tiktoksMNBLtnQopDSTvuIg1d4DGa3Hq97e9Sb.txt"));
+app.MapGet("/tiktoksMNBLtnQopDSTvulg1d4DGa3Hq97e9Sb.txt", (HttpContext ctx) =>
+    ServeTikTokVerifyFile(ctx, "tiktoksMNBLtnQopDSTvulg1d4DGa3Hq97e9Sb.txt"));
+app.MapGet("/tiktok-developers-site-verification.txt", (HttpContext ctx) =>
+    ServeTikTokVerifyFile(ctx, "tiktok-developers-site-verification.txt"));
+
+// Crawler-friendly product HTML: inject title/description/JSON-LD into SPA shell before JS runs.
+app.MapGet("/product/{id:int}", async (
+    int id,
+    IToyService toyService,
+    IOptions<SeoOptions> seoOptions,
+    IWebHostEnvironment env,
+    CancellationToken cancellationToken) =>
+{
+    var indexPath = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "index.html");
+    if (!System.IO.File.Exists(indexPath))
+        return Results.NotFound();
+
+    var html = await System.IO.File.ReadAllTextAsync(indexPath, cancellationToken);
+    var toy = await toyService.GetByIdAsync(id, cancellationToken);
+    if (toy is null)
+        return Results.Content(html, "text/html; charset=utf-8");
+
+    var seo = seoOptions.Value;
+    var root = seo.SiteBaseUrl.TrimEnd('/');
+    var image = toy.ImageUrls.FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(image)
+        && !image.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+        && !image.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+    {
+        image = root + (image.StartsWith('/') ? image : "/" + image);
+    }
+
+    html = KidsParadiseByShoptick.Application.Helpers.ProductSeoHelper.InjectIntoIndexHtml(
+        html, toy, seo, image ?? seo.DefaultOgImageUrl);
+
+    return Results.Content(html, "text/html; charset=utf-8");
+});
+
+// Crawler-friendly static pages: correct title/description/canonical per route
+// (otherwise every SPA route serves the home-page meta and Google under-indexes them).
+foreach (var (route, pageSeo) in KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.StaticPages)
+{
+    app.MapGet(route, async (
+        IOptions<SeoOptions> seoOptions,
+        IWebHostEnvironment env,
+        CancellationToken cancellationToken) =>
+    {
+        var indexPath = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "index.html");
+        if (!System.IO.File.Exists(indexPath))
+            return Results.NotFound();
+
+        var html = await System.IO.File.ReadAllTextAsync(indexPath, cancellationToken);
+        html = KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.InjectIntoIndexHtml(
+            html, pageSeo, seoOptions.Value);
+        return Results.Content(html, "text/html; charset=utf-8");
+    });
+}
+
+// Crawler-friendly category pages with the category name in title/description.
+app.MapGet("/category/{id:int}", async (
+    int id,
+    ICategoryService categoryService,
+    IOptions<SeoOptions> seoOptions,
+    IWebHostEnvironment env,
+    CancellationToken cancellationToken) =>
+{
+    var indexPath = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "index.html");
+    if (!System.IO.File.Exists(indexPath))
+        return Results.NotFound();
+
+    var html = await System.IO.File.ReadAllTextAsync(indexPath, cancellationToken);
+    var category = await categoryService.GetByIdAsync(id, cancellationToken);
+    if (category is not null)
+    {
+        var pageSeo = KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.ForCategory(id, category.Name);
+        html = KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.InjectIntoIndexHtml(
+            html, pageSeo, seoOptions.Value);
+    }
+    return Results.Content(html, "text/html; charset=utf-8");
+});
+
 app.MapFallbackToFile("index.html");
 
 await DbSeeder.SeedAsync(app.Services);

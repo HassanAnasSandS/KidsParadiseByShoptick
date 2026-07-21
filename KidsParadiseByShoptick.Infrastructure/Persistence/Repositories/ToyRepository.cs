@@ -33,6 +33,15 @@ public class ToyRepository : Repository<Toy>, IToyRepository
             .Take(count)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Toy>> GetAllAvailableWithDetailsAsync(CancellationToken cancellationToken = default)
+        => await DbSet
+            .AsNoTracking()
+            .Include(x => x.Category)
+            .Include(x => x.Images)
+            .Where(x => !x.IsSold)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task<Toy?> GetWithDetailsAsync(int id, CancellationToken cancellationToken = default)
         => await DbSet
             .Include(x => x.Category)

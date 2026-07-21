@@ -1,5 +1,5 @@
 android app bnanay k lie
-dotnet build KidsParadiseByShoptick.AdminApp -f net9.0-android -c Release
+dotnet build "E:\KidsParadiseByShoptickSolution\KidsParadiseByShoptick.AdminApp\KidsParadiseByShoptick.AdminApp.csproj" -f net9.0-android -c Release
 
 
 Apis run krnay k lie

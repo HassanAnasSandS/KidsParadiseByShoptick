@@ -243,6 +243,12 @@ public class AdminApiService
     public Task<SiteImageModel> ResetSiteImageAsync(string key) =>
         DeleteWithBodyAsync<SiteImageModel>($"admin/site-images/{key}/custom");
 
+    public Task<DeliveryChargeSettingsModel> GetDeliveryChargesAsync() =>
+        GetAsync<DeliveryChargeSettingsModel>("admin/delivery-charges");
+
+    public Task<DeliveryChargeSettingsModel> UpdateDeliveryChargesAsync(decimal karachi, decimal otherCities) =>
+        PutAsync<DeliveryChargeSettingsModel>("admin/delivery-charges", new { karachi, otherCities });
+
     public Task<SocialMediaSettingsModel> GetSocialMediaSettingsAsync() =>
         GetAsync<SocialMediaSettingsModel>("admin/social-media-settings");
 
@@ -289,6 +295,123 @@ public class AdminApiService
             throw new InvalidOperationException("Server did not return a Facebook page access token.");
 
         return data;
+    }
+
+    public Task<TikTokStatusModel> GetTikTokStatusAsync() =>
+        GetAsync<TikTokStatusModel>("admin/tiktok/status");
+
+    public async Task<string> GetTikTokAuthUrlAsync()
+    {
+        using var res = await _http.GetAsync("admin/tiktok/auth-url");
+        var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("message", out var message))
+                    throw new InvalidOperationException(message.GetString() ?? body);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch
+            {
+                // fall through
+            }
+
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body)
+                    ? $"TikTok auth URL request failed ({(int)res.StatusCode})."
+                    : body);
+        }
+
+        var data = JsonSerializer.Deserialize<TikTokAuthUrlModel>(body, JsonOptions)
+            ?? throw new InvalidOperationException("Server returned empty TikTok auth URL.");
+        if (string.IsNullOrWhiteSpace(data.Url))
+            throw new InvalidOperationException("Server did not return a TikTok auth URL.");
+        return data.Url;
+    }
+
+    public Task DisconnectTikTokAsync() =>
+        PostAsync<TikTokStatusModel>("admin/tiktok/disconnect", new { });
+
+    public Task<PinterestStatusModel> GetPinterestStatusAsync() =>
+        GetAsync<PinterestStatusModel>("admin/pinterest/status");
+
+    public async Task<string> GetPinterestAuthUrlAsync()
+    {
+        using var res = await _http.GetAsync("admin/pinterest/auth-url");
+        var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("message", out var message))
+                    throw new InvalidOperationException(message.GetString() ?? body);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch
+            {
+                // fall through
+            }
+
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body)
+                    ? $"Pinterest auth URL request failed ({(int)res.StatusCode})."
+                    : body);
+        }
+
+        var data = JsonSerializer.Deserialize<PinterestAuthUrlModel>(body, JsonOptions)
+            ?? throw new InvalidOperationException("Server returned empty Pinterest auth URL.");
+        if (string.IsNullOrWhiteSpace(data.Url))
+            throw new InvalidOperationException("Server did not return a Pinterest auth URL.");
+        return data.Url;
+    }
+
+    public Task DisconnectPinterestAsync() =>
+        PostAsync<PinterestStatusModel>("admin/pinterest/disconnect", new { });
+
+    /// <summary>
+    /// Returns TikTok upload credentials. When not connected, AccessToken is empty and AuthUrl may be set.
+    /// </summary>
+    public async Task<TikTokAccessTokenModel> GetTikTokAccessTokenAsync()
+    {
+        using var res = await _http.GetAsync("admin/tiktok/access-token");
+        var body = await res.Content.ReadAsStringAsync();
+
+        if (res.IsSuccessStatusCode)
+        {
+            var data = JsonSerializer.Deserialize<TikTokAccessTokenModel>(body, JsonOptions)
+                ?? throw new InvalidOperationException("Server returned empty TikTok token response.");
+            if (string.IsNullOrWhiteSpace(data.AccessToken))
+                throw new InvalidOperationException("Server did not return a TikTok access token.");
+            return data;
+        }
+
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            try
+            {
+                var err = JsonSerializer.Deserialize<TikTokAccessTokenModel>(body, JsonOptions);
+                if (err is not null)
+                    return err;
+            }
+            catch (JsonException)
+            {
+                // fall through
+            }
+        }
+
+        throw new InvalidOperationException(
+            string.IsNullOrWhiteSpace(body)
+                ? $"TikTok token request failed ({(int)res.StatusCode})."
+                : body);
     }
 
     public async Task<UploadResult> UploadAsync(Stream stream, string fileName, string folder)

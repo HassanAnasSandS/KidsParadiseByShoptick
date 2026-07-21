@@ -6,6 +6,7 @@ type SeoHeadProps = {
   description?: string;
   path?: string;
   image?: string | null;
+  keywords?: string;
   noIndex?: boolean;
   jsonLd?: object | object[];
 };
@@ -53,6 +54,7 @@ export function SeoHead({
   description = SITE.description,
   path = '/',
   image,
+  keywords,
   noIndex = false,
   jsonLd,
 }: SeoHeadProps) {
@@ -63,11 +65,16 @@ export function SeoHead({
     const canonical = absoluteUrl(path);
     const ogImage = image ? absoluteUrl(image) : SITE.ogImage;
     const robots = noIndex ? 'noindex, nofollow' : 'index, follow';
+    const ogType = path.startsWith('/product/')
+      ? 'product'
+      : path === '/'
+        ? 'website'
+        : 'article';
 
     document.title = fullTitle;
 
     upsertMeta('name', 'description', description);
-    upsertMeta('name', 'keywords', SITE.keywords);
+    upsertMeta('name', 'keywords', keywords?.trim() || SITE.keywords);
     upsertMeta('name', 'robots', robots);
     upsertMeta('name', 'author', SITE.name);
     upsertMeta('name', 'geo.region', SITE.region);
@@ -78,7 +85,7 @@ export function SeoHead({
     upsertMeta('property', 'og:site_name', SITE.name);
     upsertMeta('property', 'og:title', fullTitle);
     upsertMeta('property', 'og:description', description);
-    upsertMeta('property', 'og:type', path === '/' ? 'website' : 'article');
+    upsertMeta('property', 'og:type', ogType);
     upsertMeta('property', 'og:url', canonical);
     upsertMeta('property', 'og:image', ogImage);
     upsertMeta('property', 'og:locale', SITE.locale);
@@ -89,7 +96,7 @@ export function SeoHead({
     upsertMeta('name', 'twitter:image', ogImage);
 
     upsertJsonLd(jsonLd);
-  }, [title, description, path, image, noIndex, jsonLdKey, jsonLd]);
+  }, [title, description, path, image, keywords, noIndex, jsonLdKey, jsonLd]);
 
   return null;
 }

@@ -32,5 +32,16 @@ public class SeoOptions
 
     public int SitemapCacheMinutes { get; set; } = 60;
 
+    /// <summary>Google Merchant Center product feed cache TTL.</summary>
+    public int MerchantFeedCacheMinutes { get; set; } = 15;
+
+    public string MerchantBrand { get; set; } = "Kids Paradise";
+
+    /// <summary>Google condition: new | refurbished | used. Unique second-hand toys use used.</summary>
+    public string MerchantCondition { get; set; } = "used";
+
+    /// <summary>Default shipping price (PKR) included in the Merchant feed.</summary>
+    public decimal MerchantDefaultShippingPkr { get; set; } = 300m;
+
     public string DefaultOgImageUrl => $"{SiteBaseUrl.TrimEnd('/')}{DefaultOgImagePath}";
 }

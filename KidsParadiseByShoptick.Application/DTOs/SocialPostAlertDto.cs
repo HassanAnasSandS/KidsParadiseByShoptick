@@ -9,5 +9,9 @@ public record SocialPostAlertDto(
     string? InstagramPostId,
     bool WhatsAppCatalogPosted,
     string? WhatsAppCatalogProductId,
+    bool TikTokPosted,
+    string? TikTokPublishId,
+    bool PinterestPosted,
+    string? PinterestPinId,
     string? Message,
     DateTimeOffset CompletedAt);

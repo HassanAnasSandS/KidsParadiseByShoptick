@@ -71,7 +71,3 @@ public interface IAdminAuthService
     Task<AdminLoginResponse?> LoginAsync(AdminLoginRequest request, CancellationToken cancellationToken = default);
 }
 
-public interface IDeliveryChargeService
-{
-    decimal Calculate(string city);
-}

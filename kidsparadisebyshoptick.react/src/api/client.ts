@@ -164,6 +164,8 @@ export const api = {
     ),
   getDeliveryCharge: (city: string) =>
     request<{ deliveryCharge: number }>(`/orders/delivery-charge?city=${encodeURIComponent(city)}`),
+  getDeliveryRates: () =>
+    request<{ karachi: number; otherCities: number }>('/orders/delivery-rates'),
   getAllReviews: (params?: PagedParams) =>
     request<PagedResult<Review>>(`/reviews${buildQuery({ page: params?.page ?? 1, pageSize: params?.pageSize ?? 20, search: params?.search })}`),
   getReviewsByToy: (toyId: number, params?: PagedParams) =>

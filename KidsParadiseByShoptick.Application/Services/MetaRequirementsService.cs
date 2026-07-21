@@ -105,20 +105,47 @@ public class MetaRequirementsService : IMetaRequirementsService
                 "WhatsApp Business Account is not linked to your Facebook Page. Complete Step 1 first.");
         }
 
-        var url = $"{GraphBase}/{wabaId}/product_catalogs";
-        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        // Page tokens usually cannot POST to WABA edges — prefer long-lived user token.
+        var userToken = _metaToken.GetStoredUserAccessToken();
+        var tokensToTry = new List<(string Label, string Token)>();
+        if (!string.IsNullOrWhiteSpace(userToken))
+            tokensToTry.Add(("user", userToken));
+        tokensToTry.Add(("page", credentials.PageAccessToken));
+
+        string? lastError = null;
+        foreach (var (label, token) in tokensToTry)
         {
-            ["catalog_id"] = catalogId.Trim(),
-            ["access_token"] = credentials.PageAccessToken,
-        });
+            var url = $"{GraphBase}/{wabaId}/product_catalogs";
+            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["catalog_id"] = catalogId.Trim(),
+                ["access_token"] = token,
+            });
 
-        using var response = await _http.PostAsync(url, content, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException(ParseGraphError(body));
+            using var response = await _http.PostAsync(url, content, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation(
+                    "Linked catalog {CatalogId} to WABA {WabaId} using {TokenKind} token",
+                    catalogId, wabaId, label);
+                return await GetStatusAsync(cancellationToken);
+            }
 
-        _logger.LogInformation("Linked catalog {CatalogId} to WABA {WabaId}", catalogId, wabaId);
-        return await GetStatusAsync(cancellationToken);
+            lastError = ParseGraphError(body);
+            _logger.LogWarning(
+                "Link catalog via {TokenKind} token failed for WABA {WabaId}: {Error}",
+                label, wabaId, lastError);
+        }
+
+        throw new InvalidOperationException(
+            "Could not link catalog to WhatsApp from the app.\n\n" +
+            $"WABA: {wabaId}\nCatalog: {catalogId.Trim()}\nMeta: {lastError}\n\n" +
+            "Do this instead (recommended):\n" +
+            "1) Meta Business Suite → WhatsApp Manager → Catalog → connect your Commerce catalog\n" +
+            "   OR WhatsApp Business app → Settings → Business tools → Catalog → connect Meta catalog\n" +
+            "2) If linking via API: reconnect Meta with a USER token that has whatsapp_business_management " +
+            "and access to this WABA (Page token alone often fails with 'Object does not exist / missing permissions').");
     }
 
     static IReadOnlyList<MetaRequirementCheckDto> NotConfiguredChecks() =>

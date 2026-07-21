@@ -80,6 +80,92 @@
             </Frame>
 
             <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Google Merchant Center" FontAttributes="Bold" FontSize="16" />
+                    <Label Text="Product feed auto-updates when you Create/Update/Delete a toy or when stock changes. Register this URL once in Merchant Center (Products → Feeds)."
+                           FontSize="12" TextColor="#64748b" />
+                    <Label Text="{Binding GoogleMerchantFeedUrl}"
+                           FontSize="12"
+                           TextColor="#0f172a"
+                           LineBreakMode="CharacterWrap" />
+                    <Button Text="Copy Feed URL"
+                            Command="{Binding CopyGoogleMerchantFeedUrlCommand}"
+                            BackgroundColor="#e2e8f0"
+                            TextColor="#334155" />
+                    <Button Text="Open Feed"
+                            Command="{Binding OpenGoogleMerchantFeedCommand}"
+                            BackgroundColor="#1a73e8"
+                            TextColor="White" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="TikTok" FontAttributes="Bold" FontSize="16" />
+                    <Label Text="Photos post from the server with Facebook/Instagram. Videos upload directly from this app on Save."
+                           FontSize="12" TextColor="#64748b" />
+                    <Label Text="{Binding TikTokSummary}" FontSize="13" TextColor="#334155" />
+
+                    <Button Text="Refresh Status"
+                            Command="{Binding RefreshTikTokStatusCommand}"
+                            BackgroundColor="#e2e8f0"
+                            TextColor="#334155"
+                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+
+                    <Button Text="Connect TikTok"
+                            Command="{Binding ConnectTikTokCommand}"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            IsVisible="{Binding TikTokConnected, Converter={StaticResource InverseBool}}"
+                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+
+                    <Button Text="Disconnect TikTok"
+                            Command="{Binding DisconnectTikTokCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="#dc2626"
+                            BorderColor="#fecaca"
+                            BorderWidth="1"
+                            IsVisible="{Binding TikTokConnected}"
+                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+
+                    <ActivityIndicator IsRunning="{Binding IsCheckingTikTok}" IsVisible="{Binding IsCheckingTikTok}" Color="#111827" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Pinterest" FontAttributes="Bold" FontSize="16" />
+                    <Label Text="On toy Create/Update (social posting on), a Pin is created with photo + product link. Board is auto-created as Kids Paradise Toys if needed."
+                           FontSize="12" TextColor="#64748b" />
+                    <Label Text="{Binding PinterestSummary}" FontSize="13" TextColor="#334155" />
+
+                    <Button Text="Refresh Status"
+                            Command="{Binding RefreshPinterestStatusCommand}"
+                            BackgroundColor="#e2e8f0"
+                            TextColor="#334155"
+                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+
+                    <Button Text="Connect Pinterest"
+                            Command="{Binding ConnectPinterestCommand}"
+                            BackgroundColor="#E60023"
+                            TextColor="White"
+                            IsVisible="{Binding PinterestConnected, Converter={StaticResource InverseBool}}"
+                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+
+                    <Button Text="Disconnect Pinterest"
+                            Command="{Binding DisconnectPinterestCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="#dc2626"
+                            BorderColor="#fecaca"
+                            BorderWidth="1"
+                            IsVisible="{Binding PinterestConnected}"
+                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+
+                    <ActivityIndicator IsRunning="{Binding IsCheckingPinterest}" IsVisible="{Binding IsCheckingPinterest}" Color="#E60023" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="YouTube Description" FontAttributes="Bold" />
                     <Label Text="Used as the video description when uploading to YouTube from toy edit."
@@ -94,7 +180,7 @@
             <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Tags" FontAttributes="Bold" />
-                    <Label Text="Used on Facebook, Instagram, and YouTube uploads. Separate with spaces or commas (e.g. #KidsParadise #Toys)."
+                    <Label Text="Used on Facebook, Instagram, TikTok, Pinterest, and YouTube uploads. Separate with spaces or commas (e.g. #KidsParadise #Toys)."
                            FontSize="12" TextColor="#64748b" />
                     <Editor Text="{Binding Tags}"
                             AutoSize="TextChanges"

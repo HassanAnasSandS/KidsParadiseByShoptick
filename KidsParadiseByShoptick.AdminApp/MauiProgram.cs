@@ -33,6 +33,7 @@ public static class MauiProgram
 #endif
         builder.Services.AddSingleton<IYouTubeUploadService, YouTubeUploadService>();
         builder.Services.AddSingleton<IMetaVideoUploadService, MetaVideoUploadService>();
+        builder.Services.AddSingleton<ITikTokVideoUploadService, TikTokVideoUploadService>();
         builder.Services.AddSingleton<OrderNotificationService>();
         builder.Services.AddSingleton<SocialPostAlertService>();
 

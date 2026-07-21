@@ -4,10 +4,11 @@ import { useCartStore, type CartItem } from '@/store/cart';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { formatPrice, getDeliveryCharge, PAYMENT_POLICY } from '@/lib/utils';
+import { formatPrice, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
 import { useShopPath } from '@/store/shopFilters';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 export function CheckoutPage() {
   const shopPath = useShopPath();
@@ -18,12 +19,13 @@ export function CheckoutPage() {
   const checkoutItems = buyNow ? [buyNow] : items;
   const checkoutSubTotal = () =>
     checkoutItems.reduce((sum, i) => sum + (i.salePrice ?? i.price), 0);
+  const { getCharge } = useDeliveryRates();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', whatsapp: '', city: '', address: '' });
 
-  const deliveryCharge = getDeliveryCharge(form.city);
+  const deliveryCharge = getCharge(form.city);
   const total = checkoutSubTotal() + (form.city.trim() ? deliveryCharge : 0);
 
   if (checkoutItems.length === 0) {
@@ -54,12 +56,12 @@ export function CheckoutPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 sm:pb-8">
       <SeoHead title={PAGE_SEO.checkout.title} description={PAGE_SEO.checkout.description} path={PAGE_SEO.checkout.path} noIndex />
       <h1 className="text-3xl font-bold text-slate-800 mb-2">Checkout</h1>
       {buyNow && (
         <p className="text-sm text-brand-600 bg-brand-50 border border-brand-100 rounded-xl px-4 py-2.5 mb-6">
-          Ordering <span className="font-semibold">{buyNow.name}</span> only. Your cart is unchanged.
+          Ordering <span className="font-semibold break-words">{buyNow.name}</span> only. Your cart is unchanged.
         </p>
       )}
 
@@ -99,9 +101,9 @@ export function CheckoutPage() {
             <h2 className="font-semibold text-slate-800 mb-4">Order Summary</h2>
             <div className="space-y-3 text-sm">
               {checkoutItems.map((item) => (
-                <div key={item.toyId} className="flex justify-between">
-                  <span className="text-slate-600">{item.name}</span>
-                  <span className="font-medium">{formatPrice(item.salePrice ?? item.price)}</span>
+                <div key={item.toyId} className="flex justify-between gap-3">
+                  <span className="text-slate-600 min-w-0 flex-1 break-words">{item.name}</span>
+                  <span className="font-medium shrink-0">{formatPrice(item.salePrice ?? item.price)}</span>
                 </div>
               ))}
             </div>

@@ -42,7 +42,7 @@
         <ShellContent ContentTemplate="{DataTemplate views:ReviewsPage}" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Site Images" Icon="dotnet_bot.png" Route="site-images">
+    <FlyoutItem Title="Site Settings" Icon="dotnet_bot.png" Route="site-images">
         <ShellContent ContentTemplate="{DataTemplate views:SiteImagesPage}" />
     </FlyoutItem>
 

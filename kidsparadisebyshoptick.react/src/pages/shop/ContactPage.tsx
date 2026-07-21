@@ -3,8 +3,10 @@ import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 export function ContactPage() {
+  const { shortLabel } = useDeliveryRates();
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <SeoHead
@@ -50,7 +52,7 @@ export function ContactPage() {
           </div>
           <div>
             <p className="font-semibold text-slate-800">Delivery &amp; Payment</p>
-            <p className="text-sm text-slate-500">Karachi Rs.300 · Other cities Rs.400 · {PAYMENT_POLICY_DETAIL}</p>
+            <p className="text-sm text-slate-500">{shortLabel} · {PAYMENT_POLICY_DETAIL}</p>
           </div>
         </div>
       </div>

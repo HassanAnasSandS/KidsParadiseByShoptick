@@ -1,0 +1,12 @@
+---
+description: Deploy and infra preferences for Kids Paradise
+alwaysApply: true
+---
+
+# Deploy / infra preferences
+
+- Do **not** change Cloudflare DNS or Cloudflare dashboard settings unless the user explicitly asks in that message.
+- Prefer site-side solutions (meta tags, static verification files, API routes) over DNS TXT.
+- User does **not** use IIS Manager UI. Deploy with `Scripts/deploy-live.ps1` (React build + `dotnet publish` to `KidsParadiseByShoptick.Published\Live`).
+- After publish, live runs from the Live folder; avoid telling the user to open IIS Manager. If the site is 502 after deploy, ask them to restart via their usual publish/run flow or Windows Services (`W3SVC`), not IIS Manager.
+- When writing `Live\web.config`, always use UTF-8 **without BOM** (BOM breaks the site with 502).

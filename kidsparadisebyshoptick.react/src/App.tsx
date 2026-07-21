@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ScrollToTop } from '@/components/ScrollToTop';
+import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import { ShopLayout } from '@/components/layout/ShopLayout';
 import { HomePage } from '@/pages/shop/HomePage';
 import { ShopPage } from '@/pages/shop/ShopPage';
@@ -14,6 +15,7 @@ import { ReviewsPage } from '@/pages/shop/ReviewsPage';
 import { AboutPage } from '@/pages/shop/AboutPage';
 import { ContactPage } from '@/pages/shop/ContactPage';
 import { PrivacyPolicyPage } from '@/pages/shop/PrivacyPolicyPage';
+import { TermsOfServicePage } from '@/pages/shop/TermsOfServicePage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -24,6 +26,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ScrollToTop />
+        <GoogleAnalytics />
         <Routes>
           <Route element={<ShopLayout />}>
             <Route index element={<HomePage />} />
@@ -38,6 +41,7 @@ export default function App() {
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="terms-of-service" element={<TermsOfServicePage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

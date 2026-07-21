@@ -382,6 +382,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     private readonly AdminApiService _api;
     private readonly IYouTubeUploadService _youTubeUpload;
     private readonly IMetaVideoUploadService _metaVideoUpload;
+    private readonly ITikTokVideoUploadService _tikTokVideoUpload;
     private int? _id;
     private FileResult? _selectedVideo;
 
@@ -407,11 +408,16 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     public ObservableCollection<CategoryModel> Categories { get; } = [];
     public ObservableCollection<ToyImageItem> Images { get; } = [];
 
-    public ToyEditViewModel(AdminApiService api, IYouTubeUploadService youTubeUpload, IMetaVideoUploadService metaVideoUpload)
+    public ToyEditViewModel(
+        AdminApiService api,
+        IYouTubeUploadService youTubeUpload,
+        IMetaVideoUploadService metaVideoUpload,
+        ITikTokVideoUploadService tikTokVideoUpload)
     {
         _api = api;
         _youTubeUpload = youTubeUpload;
         _metaVideoUpload = metaVideoUpload;
+        _tikTokVideoUpload = tikTokVideoUpload;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -456,16 +462,34 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     async Task PickImagesAsync()
     {
-        var files = await FilePicker.Default.PickMultipleAsync(new PickOptions { PickerTitle = "Toy images" });
+        var files = await FilePicker.Default.PickMultipleAsync(new PickOptions
+        {
+            PickerTitle = "Toy images",
+            FileTypes = FilePickerFileType.Images,
+        });
         if (files is null) return;
+
+        var skipped = 0;
         foreach (var file in files)
         {
+            // Some platform pickers ignore the type filter, so double-check the extension.
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            if (ext is not (".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp" or ".heic" or ".heif"))
+            {
+                skipped++;
+                continue;
+            }
             await using var stream = await file.OpenReadAsync();
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
             ms.Position = 0;
             var result = await _api.UploadAsync(ms, file.FileName, "toys");
             Images.Add(new ToyImageItem { Path = result.Path, Url = result.Url });
+        }
+
+        if (skipped > 0)
+        {
+            await Shell.Current.DisplayAlert("Images only", $"{skipped} file(s) skipped. Please select images only; use \"Select video\" for videos.", "OK");
         }
     }
 
@@ -487,8 +511,8 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         _selectedVideo = file;
         SelectedVideoFileName = file.FileName;
         VideoUploadStatus = _youTubeUpload.IsSupported
-            ? "Video selected. Upload to YouTube (optional). On Save, video also posts to Facebook & Instagram when social posting is on."
-            : "Video selected. On Save, video posts to Facebook & Instagram when social posting is on.";
+            ? "Video selected. Upload to YouTube (optional). On Save, video also posts to Facebook, Instagram & TikTok when social posting is on."
+            : "Video selected. On Save, video posts to Facebook, Instagram & TikTok when social posting is on.";
         OnPropertyChanged(nameof(CanUploadVideo));
     }
 
@@ -595,7 +619,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         {
             await Shell.Current.DisplayAlert(
                 "Validation",
-                "At least one image is required for Facebook and Instagram posting.",
+                "At least one image is required for Facebook, Instagram, TikTok and Pinterest posting.",
                 "OK");
             return;
         }
@@ -633,35 +657,87 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
             if (willPostToSocial && _selectedVideo is not null)
             {
+                var videoErrors = new List<string>();
+                IsUploadingVideo = true;
                 try
                 {
-                    IsUploadingVideo = true;
-                    SavingStatus = "Posting video to Facebook & Instagram…";
-                    VideoUploadStatus = "Preparing Facebook/Instagram video upload…";
-
-                    await using var stream = await _selectedVideo.OpenReadAsync();
-                    var progress = new Progress<string>(status =>
+                    try
                     {
-                        VideoUploadStatus = status;
-                        SavingStatus = status;
-                    });
+                        SavingStatus = "Posting video to Facebook & Instagram…";
+                        VideoUploadStatus = "Preparing Facebook/Instagram video upload…";
+
+                        await using var stream = await _selectedVideo.OpenReadAsync();
+                        var progress = new Progress<string>(status =>
+                        {
+                            VideoUploadStatus = status;
+                            SavingStatus = status;
+                        });
 
                     await _metaVideoUpload.UploadAsync(
                         stream,
                         _selectedVideo.FileName,
                         Name.Trim(),
+                        price,
+                        salePrice,
                         caption: null,
                         progress);
+                    }
+                    catch (Exception metaEx)
+                    {
+                        videoErrors.Add($"Facebook/Instagram: {metaEx.Message}");
+                    }
 
-                    VideoUploadStatus = "Video posted to Facebook & Instagram.";
-                }
-                catch (Exception videoEx)
-                {
-                    VideoUploadStatus = string.Empty;
-                    await Shell.Current.DisplayAlert(
-                        "Video post failed",
-                        $"Toy was saved (photos may still post in background), but Facebook/Instagram video failed:\n\n{videoEx.Message}",
-                        "OK");
+                    var tikTokPosted = false;
+                    try
+                    {
+                        var tikTokStatus = await _api.GetTikTokStatusAsync();
+                        if (tikTokStatus.Enabled && tikTokStatus.Connected)
+                        {
+                            SavingStatus = "Posting video to TikTok…";
+                            VideoUploadStatus = "Preparing TikTok video upload…";
+
+                            await using var stream = await _selectedVideo.OpenReadAsync();
+                            var progress = new Progress<string>(status =>
+                            {
+                                VideoUploadStatus = status;
+                                SavingStatus = status;
+                            });
+
+                            await _tikTokVideoUpload.UploadAsync(
+                                stream,
+                                _selectedVideo.FileName,
+                                Name.Trim(),
+                                price,
+                                salePrice,
+                                caption: null,
+                                progress);
+                            tikTokPosted = true;
+                        }
+                        else if (tikTokStatus.Enabled)
+                        {
+                            // Soft skip — do not show error dialog while TikTok OAuth is pending review.
+                            VideoUploadStatus = "Facebook/Instagram video done. TikTok skipped (not connected).";
+                        }
+                    }
+                    catch (Exception tikTokEx)
+                    {
+                        videoErrors.Add($"TikTok: {tikTokEx.Message}");
+                    }
+
+                    if (videoErrors.Count == 0)
+                    {
+                        VideoUploadStatus = tikTokPosted
+                            ? "Video posted to Facebook, Instagram & TikTok."
+                            : "Video posted to Facebook & Instagram.";
+                    }
+                    else
+                    {
+                        VideoUploadStatus = string.Empty;
+                        await Shell.Current.DisplayAlert(
+                            "Video post incomplete",
+                            $"Toy was saved (photos may still post in background).\n\n{string.Join("\n\n", videoErrors)}",
+                            "OK");
+                    }
                 }
                 finally
                 {

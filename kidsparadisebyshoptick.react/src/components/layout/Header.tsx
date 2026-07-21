@@ -80,8 +80,9 @@ export function Header() {
               )}
             </Link>
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
+              className="md:hidden p-2.5 rounded-lg hover:bg-slate-100"
               onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -90,6 +91,17 @@ export function Header() {
 
         {menuOpen && (
           <nav className="md:hidden pb-4 flex flex-col gap-1 border-t border-slate-100 pt-3">
+            <form onSubmit={handleSearch} className="px-1 pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search toys..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-full border border-slate-200 bg-slate-50/80 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white text-base transition-all"
+                />
+              </div>
+            </form>
             <Link to="/" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
             <Link to={shopPath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Shop</Link>
             <Link to="/reviews" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Reviews</Link>

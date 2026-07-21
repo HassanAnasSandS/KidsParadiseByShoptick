@@ -20,11 +20,19 @@ public record SocialPostResultDto(
     string? Message,
     bool Queued = false,
     bool WhatsAppCatalogPosted = false,
-    string? WhatsAppCatalogProductId = null);
+    string? WhatsAppCatalogProductId = null,
+    bool TikTokPosted = false,
+    string? TikTokPublishId = null,
+    bool PinterestPosted = false,
+    string? PinterestPinId = null);
 
 public record SocialMediaSettingsDto(string Description, string Tags);
 
 public record UpdateSocialMediaSettingsRequest(string Description, string Tags);
+
+public record DeliveryChargeSettingsDto(decimal Karachi, decimal OtherCities);
+
+public record UpdateDeliveryChargeSettingsRequest(decimal Karachi, decimal OtherCities);
 
 public record AdminToySaveResponse(ToyListDto Toy, SocialPostResultDto SocialPost);
 

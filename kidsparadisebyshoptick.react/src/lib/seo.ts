@@ -4,9 +4,9 @@ export const SITE = {
   url: 'https://kidsparadise.shoptick.shop',
   title: 'Kids Paradise by Shoptick — Online Toy Shop Karachi & Pakistan',
   description:
-    'Shop unique kids toys online in Karachi & Pakistan. Soft toys, dolls, educational toys, cars & gifts with fast delivery. 10% advance, balance on delivery.',
+    'Buy kids toys online in Karachi & Pakistan with cash on delivery. Soft toys, dolls, RC cars, educational toys & gifts. 10% advance, balance on delivery.',
   keywords:
-    'kids toys Pakistan, online toy shop Karachi, buy toys online Pakistan, toy store Pakistan, soft toys, educational toys, baby toys, Shoptick',
+    'buy toys online Pakistan, kids toys Karachi, online toy shop Pakistan, cash on delivery toys, soft toys, educational toys, RC cars, Shoptick Kids Paradise',
   ogImage: 'https://kidsparadise.shoptick.shop/hero/slide-2.jpg',
   locale: 'en_PK',
   region: 'PK',
@@ -21,6 +21,50 @@ export function absoluteUrl(path: string): string {
 export function pageTitle(title?: string): string {
   if (!title) return SITE.title;
   return `${title} | ${SITE.name}`;
+}
+
+/** Keep meta title/description within typical SERP limits. */
+export function clipSeo(text: string, max: number): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const sliced = clean.slice(0, max - 1);
+  const lastSpace = sliced.lastIndexOf(' ');
+  return `${(lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced).trimEnd()}…`;
+}
+
+/**
+ * Per-toy SEO for organic search (Pakistan buy intent + COD).
+ * Title becomes: `{title} | Kids Paradise by Shoptick`
+ */
+export function buildProductSeo(toy: {
+  name: string;
+  categoryName: string;
+  price: number;
+  salePrice: number | null;
+  isSold?: boolean;
+}) {
+  const price = toy.salePrice ?? toy.price;
+  const priceLabel = `Rs. ${price.toLocaleString('en-PK')}`;
+  const soldNote = toy.isSold ? ' Currently sold out.' : '';
+
+  const title = clipSeo(`${toy.name} – Buy Online Pakistan`, 58);
+
+  const description = clipSeo(
+    `Buy original ${toy.name} in Pakistan with cash on delivery.${soldNote} ${toy.categoryName} from Kids Paradise by Shoptick (Karachi). Price ${priceLabel}. Fast delivery nationwide.`,
+    158,
+  );
+
+  const keywords = [
+    toy.name,
+    `buy ${toy.name} Pakistan`,
+    toy.categoryName,
+    'kids toys Pakistan',
+    'toys Karachi cash on delivery',
+    'online toy shop Pakistan',
+    SITE.name,
+  ].join(', ');
+
+  return { title, description, keywords };
 }
 
 export function buildBreadcrumbJsonLd(items: { name: string; path: string }[]) {
@@ -54,6 +98,78 @@ export function buildOrganizationJsonLd() {
   };
 }
 
+/** Local pack / map signals — pair with a real Google Business Profile. */
+export function buildLocalBusinessJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ToyStore',
+    name: SITE.name,
+    url: SITE.url,
+    image: SITE.ogImage,
+    description: SITE.description,
+    priceRange: 'PKR',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Karachi',
+      addressRegion: 'Sindh',
+      addressCountry: 'PK',
+    },
+    areaServed: [
+      { '@type': 'City', name: 'Karachi' },
+      { '@type': 'Country', name: 'Pakistan' },
+    ],
+    openingHoursSpecification: {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      opens: '10:00',
+      closes: '22:00',
+    },
+  };
+}
+
+export function buildFaqJsonLd(faqs: { question: string; answer: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    })),
+  };
+}
+
+export const HOME_FAQS = [
+  {
+    question: 'Do you deliver kids toys across Pakistan?',
+    answer:
+      'Yes. Kids Paradise by Shoptick delivers nationwide. Karachi delivery is Rs.300 and other cities are Rs.400. Pay 10% advance and the balance on delivery.',
+  },
+  {
+    question: 'Are the toys new or used?',
+    answer:
+      'We sell unique pre-loved and carefully listed toys. Each item is usually available only once — check the product page for condition and photos.',
+  },
+  {
+    question: 'How do I order toys online with cash on delivery?',
+    answer:
+      'Browse the shop, add a toy to cart or tap Order Now, then complete checkout. We confirm on WhatsApp and arrange delivery across Pakistan.',
+  },
+] as const;
+
+export const PRODUCT_FAQS = [
+  {
+    question: 'Is cash on delivery available for this toy?',
+    answer:
+      'Yes for most of Pakistan. Pay a small advance (about 10%), then pay the remaining amount on delivery.',
+  },
+  {
+    question: 'How fast is delivery from Kids Paradise by Shoptick?',
+    answer:
+      'Orders are usually prepared quickly after WhatsApp confirmation. Delivery timing depends on your city (Karachi is typically fastest).',
+  },
+] as const;
+
 export function buildWebSiteJsonLd() {
   return {
     '@context': 'https://schema.org',
@@ -82,13 +198,14 @@ export function buildProductJsonLd(toy: {
 }) {
   const price = toy.salePrice ?? toy.price;
   const images = toy.imageUrls.length > 0 ? toy.imageUrls.map(absoluteUrl) : [SITE.ogImage];
+  const { description } = buildProductSeo(toy);
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: toy.name,
     image: images,
-    description: `${toy.name} — ${toy.categoryName}. Buy online at ${SITE.name} with delivery across Pakistan.`,
+    description,
     sku: `KP-${toy.id}`,
     brand: { '@type': 'Brand', name: SITE.name },
     category: toy.categoryName,
@@ -100,7 +217,15 @@ export function buildProductJsonLd(toy: {
       availability: toy.isSold
         ? 'https://schema.org/OutOfStock'
         : 'https://schema.org/InStock',
+      itemCondition: 'https://schema.org/UsedCondition',
       seller: { '@type': 'Organization', name: SITE.name },
+      shippingDetails: {
+        '@type': 'OfferShippingDetails',
+        shippingDestination: {
+          '@type': 'DefinedRegion',
+          addressCountry: 'PK',
+        },
+      },
     },
   };
 }
@@ -112,9 +237,9 @@ export const PAGE_SEO = {
     path: '/',
   },
   shop: {
-    title: 'Shop All Toys',
+    title: 'Shop Kids Toys Online Pakistan',
     description:
-      'Browse all available kids toys at Kids Paradise by Shoptick. Filter by category, price & sale. Unique toys with delivery in Karachi & Pakistan.',
+      'Browse kids toys online in Pakistan with cash on delivery. Soft toys, dolls, RC cars & educational toys from Kids Paradise by Shoptick — Karachi & nationwide delivery.',
     path: '/shop',
   },
   reviews: {
@@ -126,7 +251,7 @@ export const PAGE_SEO = {
   about: {
     title: 'About Us',
     description:
-      'Kids Paradise by Shoptick — online toys shop in Karachi & Pakistan. Unique kids toys, soft toys, educational toys with delivery nationwide.',
+      'Kids Paradise by Shoptick — online toys shop in Karachi & Pakistan. Unique kids toys, soft toys, educational toys with cash on delivery nationwide.',
     path: '/about',
   },
   contact: {
@@ -139,6 +264,11 @@ export const PAGE_SEO = {
     title: 'Privacy Policy',
     description: 'Privacy policy for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
     path: '/privacy-policy',
+  },
+  terms: {
+    title: 'Terms of Service',
+    description: 'Terms of service for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
+    path: '/terms-of-service',
   },
   trackOrder: {
     title: 'Track Your Order',

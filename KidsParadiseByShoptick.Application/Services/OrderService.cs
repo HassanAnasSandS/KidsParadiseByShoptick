@@ -13,17 +13,20 @@ public class OrderService : IOrderService
     private readonly IDeliveryChargeService _deliveryCharge;
     private readonly IFileStorageService _fileStorage;
     private readonly IOrderNotificationService _orderNotification;
+    private readonly IGoogleMerchantFeedCache _merchantFeedCache;
 
     public OrderService(
         IUnitOfWork unitOfWork,
         IDeliveryChargeService deliveryCharge,
         IFileStorageService fileStorage,
-        IOrderNotificationService orderNotification)
+        IOrderNotificationService orderNotification,
+        IGoogleMerchantFeedCache merchantFeedCache)
     {
         _unitOfWork = unitOfWork;
         _deliveryCharge = deliveryCharge;
         _fileStorage = fileStorage;
         _orderNotification = orderNotification;
+        _merchantFeedCache = merchantFeedCache;
     }
 
     public async Task<OrderPlacedDto> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken cancellationToken = default)
@@ -102,6 +105,7 @@ public class OrderService : IOrderService
 
         await _unitOfWork.Orders.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _merchantFeedCache.Invalidate();
 
         await _orderNotification.NotifyNewOrderAsync(new NewOrderNotification(
             order.OrderNumber,
@@ -339,6 +343,8 @@ public class OrderService : IOrderService
 
         await _unitOfWork.Orders.UpdateAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (toysChanged)
+            _merchantFeedCache.Invalidate();
 
         var updated = await _unitOfWork.Orders.GetWithDetailsAsync(id, cancellationToken);
         return updated is null ? null : Map(updated);
@@ -361,6 +367,8 @@ public class OrderService : IOrderService
             toy.IsSold = sold;
             await _unitOfWork.Toys.UpdateAsync(toy, cancellationToken);
         }
+
+        _merchantFeedCache.Invalidate();
     }
 
     private static string GenerateOrderNumber() =>

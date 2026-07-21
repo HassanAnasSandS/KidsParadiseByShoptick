@@ -152,6 +152,10 @@ public class SocialPostResultModel
     [JsonPropertyName("instagramPostId")] public string? InstagramPostId { get; set; }
     [JsonPropertyName("whatsAppCatalogPosted")] public bool WhatsAppCatalogPosted { get; set; }
     [JsonPropertyName("whatsAppCatalogProductId")] public string? WhatsAppCatalogProductId { get; set; }
+    [JsonPropertyName("tikTokPosted")] public bool TikTokPosted { get; set; }
+    [JsonPropertyName("tikTokPublishId")] public string? TikTokPublishId { get; set; }
+    [JsonPropertyName("pinterestPosted")] public bool PinterestPosted { get; set; }
+    [JsonPropertyName("pinterestPinId")] public string? PinterestPinId { get; set; }
     [JsonPropertyName("message")] public string? Message { get; set; }
     [JsonPropertyName("queued")] public bool Queued { get; set; }
 }
@@ -174,6 +178,12 @@ public class SocialMediaSettingsModel
 {
     [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
     [JsonPropertyName("tags")] public string Tags { get; set; } = string.Empty;
+}
+
+public class DeliveryChargeSettingsModel
+{
+    [JsonPropertyName("karachi")] public decimal Karachi { get; set; }
+    [JsonPropertyName("otherCities")] public decimal OtherCities { get; set; }
 }
 
 public class MetaRequirementCheckModel
@@ -200,6 +210,7 @@ public class MetaUploadCredentialsModel
     [JsonPropertyName("facebookPageId")] public string FacebookPageId { get; set; } = string.Empty;
     [JsonPropertyName("pageAccessToken")] public string PageAccessToken { get; set; } = string.Empty;
     [JsonPropertyName("instagramBusinessAccountId")] public string? InstagramBusinessAccountId { get; set; }
+    [JsonPropertyName("whatsAppNumber")] public string? WhatsAppNumber { get; set; }
 }
 
 public class ApiError

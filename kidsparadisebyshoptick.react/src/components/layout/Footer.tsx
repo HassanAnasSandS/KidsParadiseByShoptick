@@ -5,6 +5,7 @@ import { MessageCircle } from 'lucide-react';
 import { BrandName } from '@/components/ui/BrandName';
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 function SocialIcon({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -79,6 +80,7 @@ const SOCIAL_LINKS = [
 
 export function Footer() {
   const shopPath = useShopPath();
+  const { rates } = useDeliveryRates();
   return (
     <footer className="relative bg-slate-900 text-slate-300 mt-auto overflow-hidden">
       <div
@@ -130,6 +132,7 @@ export function Footer() {
               <Link to="/about" className="hover:text-white transition-colors">About Us</Link>
               <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
               <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link to="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
               <Link to="/track-order" className="hover:text-white transition-colors">My Orders</Link>
               <Link to="/cart" className="hover:text-white transition-colors">My Cart</Link>
             </div>
@@ -137,8 +140,8 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-white mb-3">Delivery Info</h4>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Karachi: Rs. 300 delivery<br />
-              Other cities: Rs. 400 delivery<br />
+              Karachi: Rs. {rates.karachi.toLocaleString('en-PK')} delivery<br />
+              Other cities: Rs. {rates.otherCities.toLocaleString('en-PK')} delivery<br />
               Cash on Delivery — {PAYMENT_POLICY_DETAIL}
             </p>
           </div>

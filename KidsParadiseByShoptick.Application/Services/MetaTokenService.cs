@@ -687,6 +687,12 @@ public class MetaTokenService : IMetaTokenService
         }
     }
 
+    public string? GetStoredUserAccessToken()
+    {
+        var store = LoadStore();
+        return FirstNonEmpty(store.LongLivedUserToken, _options.LongLivedUserToken);
+    }
+
     MetaTokenStore LoadStore()
     {
         if (!File.Exists(_tokenFilePath))

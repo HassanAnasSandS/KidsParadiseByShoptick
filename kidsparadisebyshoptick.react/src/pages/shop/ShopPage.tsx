@@ -176,8 +176,12 @@ export function ShopPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-800/90 to-brand-600/60 flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">Shop All Toys</h1>
-            <p className="text-white/85 mt-1">{totalCount} unique items available</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">
+              Shop Kids Toys Online Pakistan
+            </h1>
+            <p className="text-white/85 mt-1">
+              {totalCount} unique toys · cash on delivery · Karachi &amp; nationwide
+            </p>
           </div>
         </div>
         <div
@@ -200,6 +204,9 @@ export function ShopPage() {
               />
             </div>
             <Button type="submit" className="shrink-0 hidden sm:inline-flex">Search</Button>
+            <Button type="submit" className="shrink-0 sm:hidden px-3" aria-label="Search">
+              <Search className="w-4 h-4" />
+            </Button>
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}

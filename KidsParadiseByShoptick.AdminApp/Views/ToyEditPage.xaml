@@ -16,7 +16,7 @@
                 <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
 
                 <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
-                <Label Text="Paste a YouTube link, or select a video. YouTube upload is optional. On Save (with social posting), the same video also posts to Facebook &amp; Instagram from this app."
+                <Label Text="Paste a YouTube link, or select a video. YouTube upload is optional. On Save (with social posting), the same video also posts to Facebook, Instagram &amp; TikTok from this app."
                        FontSize="12" TextColor="#64748b" />
                 <Entry Placeholder="YouTube link (optional)"
                        Text="{Binding VideoLinkText}"
@@ -58,7 +58,7 @@
                 <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
                     <CheckBox IsChecked="{Binding PostToSocialMedia}"
                               IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
-                    <Label Text="Post to Facebook and Instagram"
+                    <Label Text="Post to Facebook, Instagram, TikTok &amp; Pinterest"
                            VerticalOptions="Center"
                            FontSize="14"
                            TextColor="#334155" />

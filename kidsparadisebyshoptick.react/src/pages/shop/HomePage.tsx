@@ -13,11 +13,27 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useScrollRestore } from '@/hooks/useScrollRestore';
 import { useShopPath } from '@/store/shopFilters';
 import { SeoHead } from '@/components/seo/SeoHead';
-import { PAGE_SEO, buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/seo';
+import {
+  PAGE_SEO,
+  HOME_FAQS,
+  buildFaqJsonLd,
+  buildLocalBusinessJsonLd,
+  buildOrganizationJsonLd,
+  buildWebSiteJsonLd,
+} from '@/lib/seo';
+import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 export function HomePage() {
   const { get } = useSiteImages();
   const shopPath = useShopPath();
+  const { label: deliveryLabel, rates } = useDeliveryRates();
+  const homeFaqs = [
+    {
+      question: 'Do you deliver kids toys across Pakistan?',
+      answer: `Yes. Kids Paradise by Shoptick delivers nationwide. Karachi delivery is Rs.${rates.karachi.toLocaleString('en-PK')} and other cities are Rs.${rates.otherCities.toLocaleString('en-PK')}. Pay 10% advance and the balance on delivery.`,
+    },
+    ...HOME_FAQS.slice(1),
+  ];
 
   const { data: categoriesData, isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
@@ -69,14 +85,19 @@ export function HomePage() {
       <SeoHead
         description={PAGE_SEO.home.description}
         path={PAGE_SEO.home.path}
-        jsonLd={[buildOrganizationJsonLd(), buildWebSiteJsonLd()]}
+        jsonLd={[
+          buildOrganizationJsonLd(),
+          buildWebSiteJsonLd(),
+          buildLocalBusinessJsonLd(),
+          buildFaqJsonLd(homeFaqs),
+        ]}
       />
       <HeroSlider />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 -mt-2">
           {[
-            { icon: Truck, title: 'Fast Delivery', desc: 'Karachi Rs.300 | Others Rs.400', color: 'bg-blue-50 text-blue-600' },
+            { icon: Truck, title: 'Fast Delivery', desc: deliveryLabel, color: 'bg-blue-50 text-blue-600' },
             { icon: Shield, title: 'Unique Items', desc: 'Each toy available once only', color: 'bg-emerald-50 text-emerald-600' },
             { icon: Star, title: 'Easy Payment', desc: '10% advance · balance on delivery', color: 'bg-amber-50 text-amber-600' },
           ].map(({ icon: Icon, title, desc, color }) => (
@@ -101,7 +122,7 @@ export function HomePage() {
               alt=""
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-pink-600/80 to-transparent flex items-center p-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-pink-600/80 to-transparent flex items-center p-5 sm:p-8">
               <div>
                 <Sparkles className="w-8 h-8 text-white mb-2" />
                 <h3 className="text-2xl font-bold text-white">New Arrivals</h3>
@@ -116,7 +137,7 @@ export function HomePage() {
               alt=""
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-700/80 to-transparent flex items-center p-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-700/80 to-transparent flex items-center p-5 sm:p-8">
               <div>
                 <Gift className="w-8 h-8 text-white mb-2" />
                 <h3 className="text-2xl font-bold text-white">Perfect Gifts</h3>
@@ -199,6 +220,26 @@ export function HomePage() {
               <p className="text-slate-400 text-sm mt-1">New arrivals will appear here soon.</p>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+        <h2 className="text-2xl md:text-3xl font-bold text-slate-800 section-title mb-6">
+          Buying toys online in Pakistan — FAQs
+        </h2>
+        <div className="space-y-4">
+          {homeFaqs.map((faq) => (
+            <details
+              key={faq.question}
+              className="group glass-card rounded-2xl p-5 open:shadow-md"
+            >
+              <summary className="cursor-pointer font-semibold text-slate-800 list-none flex items-center justify-between gap-3">
+                {faq.question}
+                <span className="text-brand-500 text-lg group-open:rotate-45 transition-transform">+</span>
+              </summary>
+              <p className="mt-3 text-sm text-slate-600 leading-relaxed">{faq.answer}</p>
+            </details>
+          ))}
         </div>
       </section>
 

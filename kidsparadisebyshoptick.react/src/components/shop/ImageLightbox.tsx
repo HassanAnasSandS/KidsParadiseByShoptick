@@ -187,7 +187,8 @@ export function ImageLightbox({ images, initialIndex = 0, alt = '', onClose }: I
       </div>
 
       <p className="text-center text-white/50 text-xs pb-4 safe-area-pb px-4">
-        Scroll or tap image to zoom · Drag when zoomed · Esc to close
+        <span className="sm:hidden">Tap image to zoom · Drag when zoomed</span>
+        <span className="hidden sm:inline">Scroll or tap image to zoom · Drag when zoomed · Esc to close</span>
       </p>
     </div>
   );

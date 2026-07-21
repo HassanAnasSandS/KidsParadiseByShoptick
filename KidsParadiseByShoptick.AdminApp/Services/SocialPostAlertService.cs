@@ -95,7 +95,8 @@ public class SocialPostAlertService
 
     static async Task HandleAsync(SocialPostAlertPayload payload)
     {
-        var succeeded = payload.FacebookPosted || payload.InstagramPosted || payload.WhatsAppCatalogPosted;
+        var succeeded = payload.FacebookPosted || payload.InstagramPosted
+            || payload.WhatsAppCatalogPosted || payload.TikTokPosted || payload.PinterestPosted;
         var title = succeeded ? "Social post succeeded" : "Social post failed";
         var message = BuildMessage(payload);
 
@@ -133,6 +134,12 @@ public class SocialPostAlertService
         if (payload.WhatsAppCatalogPosted)
             lines.Add("Meta catalog: updated (WhatsApp app may need WABA sync — see Social Settings Step 3)");
 
+        if (payload.TikTokPosted)
+            lines.Add("TikTok: photo post started");
+
+        if (payload.PinterestPosted)
+            lines.Add("Pinterest: pin created");
+
         if (!string.IsNullOrWhiteSpace(payload.Message))
             lines.Add(payload.Message!);
 
@@ -149,6 +156,10 @@ public class SocialPostAlertService
         [JsonPropertyName("instagramPostId")] public string? InstagramPostId { get; set; }
         [JsonPropertyName("whatsAppCatalogPosted")] public bool WhatsAppCatalogPosted { get; set; }
         [JsonPropertyName("whatsAppCatalogProductId")] public string? WhatsAppCatalogProductId { get; set; }
+        [JsonPropertyName("tikTokPosted")] public bool TikTokPosted { get; set; }
+        [JsonPropertyName("tikTokPublishId")] public string? TikTokPublishId { get; set; }
+        [JsonPropertyName("pinterestPosted")] public bool PinterestPosted { get; set; }
+        [JsonPropertyName("pinterestPinId")] public string? PinterestPinId { get; set; }
         [JsonPropertyName("message")] public string? Message { get; set; }
         [JsonPropertyName("completedAt")] public DateTimeOffset CompletedAt { get; set; }
     }

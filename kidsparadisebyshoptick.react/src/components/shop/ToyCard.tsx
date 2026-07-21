@@ -44,7 +44,7 @@ export function ToyCard({ toy, listItemCount, page }: ToyCardProps) {
         <div className="aspect-square overflow-hidden bg-slate-50 relative">
           <img
             src={primary}
-            alt={toy.name}
+            alt={`Buy ${toy.name} online Pakistan`}
             className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
@@ -70,8 +70,8 @@ export function ToyCard({ toy, listItemCount, page }: ToyCardProps) {
               <span className="text-xs text-slate-500">{toy.averageRating.toFixed(1)}</span>
             </div>
           )}
-          <div className="mt-2 flex items-center gap-2">
-            <p className="text-lg font-bold text-brand-600">{formatPrice(price)}</p>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p className="text-base sm:text-lg font-bold text-brand-600">{formatPrice(price)}</p>
             {onSale && (
               <p className="text-sm text-slate-400 line-through">{formatPrice(toy.price)}</p>
             )}

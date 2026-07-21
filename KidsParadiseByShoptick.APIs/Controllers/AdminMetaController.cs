@@ -1,7 +1,9 @@
 using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
+using KidsParadiseByShoptick.Application.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace KidsParadiseByShoptick.APIs.Controllers;
 
@@ -11,11 +13,16 @@ public class AdminMetaController : ControllerBase
 {
     private readonly IMetaTokenService _metaToken;
     private readonly IMetaRequirementsService _requirements;
+    private readonly MetaSocialOptions _metaOptions;
 
-    public AdminMetaController(IMetaTokenService metaToken, IMetaRequirementsService requirements)
+    public AdminMetaController(
+        IMetaTokenService metaToken,
+        IMetaRequirementsService requirements,
+        IOptions<MetaSocialOptions> metaOptions)
     {
         _metaToken = metaToken;
         _requirements = requirements;
+        _metaOptions = metaOptions.Value;
     }
 
     [Authorize(Roles = "Admin")]
@@ -41,6 +48,7 @@ public class AdminMetaController : ControllerBase
                 facebookPageId = credentials.FacebookPageId,
                 pageAccessToken = credentials.PageAccessToken,
                 instagramBusinessAccountId = credentials.InstagramBusinessAccountId,
+                whatsAppNumber = _metaOptions.WhatsAppNumber,
             });
         }
         catch (InvalidOperationException ex)
@@ -59,7 +67,16 @@ public class AdminMetaController : ControllerBase
     public async Task<ActionResult<MetaRequirementsStatusDto>> LinkCatalog(
         [FromBody] LinkWhatsAppCatalogRequest request,
         CancellationToken cancellationToken)
-        => Ok(await _requirements.LinkCatalogAsync(request.CatalogId, cancellationToken));
+    {
+        try
+        {
+            return Ok(await _requirements.LinkCatalogAsync(request.CatalogId, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpPost("connect")]

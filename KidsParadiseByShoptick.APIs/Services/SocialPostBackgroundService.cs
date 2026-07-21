@@ -21,9 +21,16 @@ public class SocialPostBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var job in _queue.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            await ProcessJobAsync(job, stoppingToken);
+            await foreach (var job in _queue.Reader.ReadAllAsync(stoppingToken))
+            {
+                await ProcessJobAsync(job, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Normal on app shutdown / debug restart.
         }
     }
 

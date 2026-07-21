@@ -25,6 +25,10 @@ public class SignalRSocialPostNotificationService : ISocialPostNotificationServi
             result.InstagramPostId,
             result.WhatsAppCatalogPosted,
             result.WhatsAppCatalogProductId,
+            result.TikTokPosted,
+            result.TikTokPublishId,
+            result.PinterestPosted,
+            result.PinterestPinId,
             result.Message,
             DateTimeOffset.UtcNow);
 

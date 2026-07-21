@@ -23,4 +23,17 @@ public class SitemapRepository : ISitemapRepository
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => new SitemapEntityEntry(t.Id, t.CreatedAt))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SitemapProductEntry>> GetAvailableProductsWithImagesAsync(
+        CancellationToken cancellationToken = default)
+        => await _context.Toys
+            .AsNoTracking()
+            .Where(t => !t.IsSold)
+            .OrderByDescending(t => t.CreatedAt)
+            .Select(t => new SitemapProductEntry(
+                t.Id,
+                t.CreatedAt,
+                t.Name,
+                t.Images.OrderBy(i => i.SortOrder).Select(i => i.ImagePath).FirstOrDefault()))
+            .ToListAsync(cancellationToken);
 }

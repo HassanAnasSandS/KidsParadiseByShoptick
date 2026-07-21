@@ -101,11 +101,16 @@ public class AdminToysController : ControllerBase
 {
     private readonly IToyService _toyService;
     private readonly ISocialPostQueue _socialPostQueue;
+    private readonly IGoogleMerchantFeedCache _merchantFeedCache;
 
-    public AdminToysController(IToyService toyService, ISocialPostQueue socialPostQueue)
+    public AdminToysController(
+        IToyService toyService,
+        ISocialPostQueue socialPostQueue,
+        IGoogleMerchantFeedCache merchantFeedCache)
     {
         _toyService = toyService;
         _socialPostQueue = socialPostQueue;
+        _merchantFeedCache = merchantFeedCache;
     }
 
     [HttpGet]
@@ -132,10 +137,11 @@ public class AdminToysController : ControllerBase
         [FromBody] CreateToyRequest request, CancellationToken cancellationToken)
     {
         var toy = await _toyService.CreateAsync(request, cancellationToken);
+        _merchantFeedCache.Invalidate();
         await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
         var social = new SocialPostResultDto(
             false, null, false, null,
-            "Posting to Facebook and Instagram in background.",
+            "Posting to Facebook, Instagram, TikTok and Pinterest in background. Google Merchant feed updated.",
             Queued: true);
         return Ok(new AdminToySaveResponse(toy, social));
     }
@@ -145,7 +151,9 @@ public class AdminToysController : ControllerBase
     {
         try
         {
-            return Ok(await _toyService.CloneAsync(id, cancellationToken));
+            var toy = await _toyService.CloneAsync(id, cancellationToken);
+            _merchantFeedCache.Invalidate();
+            return Ok(toy);
         }
         catch (InvalidOperationException ex)
         {
@@ -160,18 +168,22 @@ public class AdminToysController : ControllerBase
         var toy = await _toyService.UpdateAsync(id, request, cancellationToken);
         if (toy is null) return NotFound();
 
+        _merchantFeedCache.Invalidate();
+
         SocialPostResultDto social;
         if (request.PostToSocialMedia)
         {
             await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
             social = new SocialPostResultDto(
                 false, null, false, null,
-                "Posting to Facebook and Instagram in background.",
+                "Posting to Facebook, Instagram, TikTok and Pinterest in background. Google Merchant feed updated.",
                 Queued: true);
         }
         else
         {
-            social = new SocialPostResultDto(false, null, false, null, null);
+            social = new SocialPostResultDto(
+                false, null, false, null,
+                "Google Merchant feed updated.");
         }
 
         return Ok(new AdminToySaveResponse(toy, social));
@@ -181,6 +193,8 @@ public class AdminToysController : ControllerBase
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var deleted = await _toyService.DeleteAsync(id, cancellationToken);
+        if (deleted)
+            _merchantFeedCache.Invalidate();
         return deleted ? NoContent() : NotFound();
     }
 }
