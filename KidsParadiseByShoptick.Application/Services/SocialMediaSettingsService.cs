@@ -1,7 +1,9 @@
 using System.Text.Json;
 using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
+using KidsParadiseByShoptick.Application.Options;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace KidsParadiseByShoptick.Application.Services;
 
@@ -11,14 +13,19 @@ public class SocialMediaSettingsService : ISocialMediaSettingsService
         "For Order Whatsapp 0321-7175-896 Or Visit https://kidsparadise.shoptick.shop/";
 
     public const string DefaultTags = "#KidsParadise #Toys #Karachi #Pakistan";
+    // Keep ≤5 hashtags so TikTok posts stay within platform limits when defaults are used.
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private readonly string _settingsFilePath;
+    private readonly TikTokSocialOptions _tikTokOptions;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public SocialMediaSettingsService(IConfiguration configuration)
+    public SocialMediaSettingsService(
+        IConfiguration configuration,
+        IOptions<TikTokSocialOptions> tikTokOptions)
     {
+        _tikTokOptions = tikTokOptions.Value;
         var basePath = configuration["FileStorage:BasePath"]
             ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "KidsParadiseByShoptick.Published");
         basePath = Path.GetFullPath(basePath);
@@ -39,20 +46,53 @@ public class SocialMediaSettingsService : ISocialMediaSettingsService
         }
     }
 
+    public async Task<string> GetTikTokPostModeAsync(CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            return ResolvePostMode(await LoadAsync(cancellationToken));
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task<string> SetTikTokPostModeAsync(string postMode, CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadAsync(cancellationToken);
+            data.TikTokPostMode = TikTokSocialOptions.NormalizePostMode(postMode);
+            await SaveAsync(data, cancellationToken);
+            return data.TikTokPostMode;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public async Task<SocialMediaSettingsDto> UpdateAsync(
         UpdateSocialMediaSettingsRequest request, CancellationToken cancellationToken = default)
     {
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            var data = new SocialMediaSettingsData
-            {
-                Description = request.Description?.Trim() ?? string.Empty,
-                Tags = request.Tags?.Trim() ?? string.Empty,
-            };
+            var existing = await LoadAsync(cancellationToken);
+            existing.Description = request.Description?.Trim() ?? string.Empty;
+            existing.Tags = request.Tags?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(request.TikTokPostMode))
+                existing.TikTokPostMode = TikTokSocialOptions.NormalizePostMode(request.TikTokPostMode);
+            if (request.OnCreate is not null)
+                existing.OnCreate = CloneActions(request.OnCreate);
+            if (request.OnEdit is not null)
+                existing.OnEdit = CloneActions(request.OnEdit);
 
-            await SaveAsync(data, cancellationToken);
-            return MapToDto(data);
+            await SaveAsync(existing, cancellationToken);
+            return MapToDto(existing);
         }
         finally
         {
@@ -83,17 +123,72 @@ public class SocialMediaSettingsService : ISocialMediaSettingsService
         await JsonSerializer.SerializeAsync(stream, data, JsonOptions, cancellationToken);
     }
 
-    private static SocialMediaSettingsData CreateDefaults() =>
-        new() { Description = DefaultDescription, Tags = DefaultTags };
+    private SocialMediaSettingsData CreateDefaults() =>
+        new()
+        {
+            Description = DefaultDescription,
+            Tags = DefaultTags,
+            TikTokPostMode = TikTokSocialOptions.NormalizePostMode(_tikTokOptions.PostMode),
+            OnCreate = CloneActions(SocialPostActionsDto.AllEnabled),
+            OnEdit = CloneActions(SocialPostActionsDto.AllEnabled),
+        };
 
-    private static SocialMediaSettingsDto MapToDto(SocialMediaSettingsData data) =>
+    private SocialMediaSettingsDto MapToDto(SocialMediaSettingsData data) =>
         new(
             string.IsNullOrWhiteSpace(data.Description) ? DefaultDescription : data.Description.Trim(),
-            string.IsNullOrWhiteSpace(data.Tags) ? DefaultTags : data.Tags.Trim());
+            string.IsNullOrWhiteSpace(data.Tags) ? DefaultTags : data.Tags.Trim(),
+            ResolvePostMode(data),
+            NormalizeActions(data.OnCreate),
+            NormalizeActions(data.OnEdit));
+
+    private string ResolvePostMode(SocialMediaSettingsData data) =>
+        TikTokSocialOptions.NormalizePostMode(
+            string.IsNullOrWhiteSpace(data.TikTokPostMode) ? _tikTokOptions.PostMode : data.TikTokPostMode);
+
+    private static SocialPostActionsDto NormalizeActions(SocialPostActionsData? data) =>
+        data is null
+            ? SocialPostActionsDto.AllEnabled
+            : new SocialPostActionsDto(
+                data.FacebookPhotos,
+                data.InstagramPhotos,
+                data.WhatsAppCatalog,
+                data.TikTokPhotos,
+                data.Pinterest,
+                data.YouTube,
+                data.MetaVideo,
+                data.TikTokVideo);
+
+    private static SocialPostActionsData CloneActions(SocialPostActionsDto dto) =>
+        new()
+        {
+            FacebookPhotos = dto.FacebookPhotos,
+            InstagramPhotos = dto.InstagramPhotos,
+            WhatsAppCatalog = dto.WhatsAppCatalog,
+            TikTokPhotos = dto.TikTokPhotos,
+            Pinterest = dto.Pinterest,
+            YouTube = dto.YouTube,
+            MetaVideo = dto.MetaVideo,
+            TikTokVideo = dto.TikTokVideo,
+        };
 
     private sealed class SocialMediaSettingsData
     {
         public string Description { get; set; } = string.Empty;
         public string Tags { get; set; } = string.Empty;
+        public string TikTokPostMode { get; set; } = string.Empty;
+        public SocialPostActionsData? OnCreate { get; set; }
+        public SocialPostActionsData? OnEdit { get; set; }
+    }
+
+    private sealed class SocialPostActionsData
+    {
+        public bool FacebookPhotos { get; set; } = true;
+        public bool InstagramPhotos { get; set; } = true;
+        public bool WhatsAppCatalog { get; set; } = true;
+        public bool TikTokPhotos { get; set; } = true;
+        public bool Pinterest { get; set; } = true;
+        public bool YouTube { get; set; } = true;
+        public bool MetaVideo { get; set; } = true;
+        public bool TikTokVideo { get; set; } = true;
     }
 }

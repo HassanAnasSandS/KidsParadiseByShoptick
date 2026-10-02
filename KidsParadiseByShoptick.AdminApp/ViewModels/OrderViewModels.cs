@@ -246,6 +246,35 @@ public partial class OrdersViewModel : ObservableObject
             await Shell.Current.DisplayAlert("WhatsApp", ex.Message, "OK");
         }
     }
+
+    [RelayCommand]
+    async Task DeleteAsync(OrderModel? order)
+    {
+        if (order is null) return;
+        if (!order.IsPending)
+        {
+            await Shell.Current.DisplayAlert("Not allowed", "Only pending orders can be deleted.", "OK");
+            return;
+        }
+
+        var ok = await Shell.Current.DisplayAlert(
+            "Delete order?",
+            $"Delete {order.OrderNumber}? Toys in this order will become available again on the website.",
+            "Delete",
+            "Cancel");
+        if (!ok) return;
+
+        try
+        {
+            await _api.DeleteOrderAsync(order.Id);
+            await ReloadAsync();
+            await LoadStatusCountsAsync();
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+    }
 }
 
 public partial class OrderDetailViewModel : ObservableObject, IQueryAttributable
@@ -257,7 +286,9 @@ public partial class OrderDetailViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(PayableAfterDiscount))]
     [NotifyPropertyChangedFor(nameof(ShowPaymentDetails))]
     [NotifyPropertyChangedFor(nameof(CanOpenWhatsApp))]
+    [NotifyPropertyChangedFor(nameof(CanDelete))]
     [NotifyCanExecuteChangedFor(nameof(OpenWhatsAppCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     private OrderModel? order;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private string selectedStatus = "Pending";
@@ -276,6 +307,8 @@ public partial class OrderDetailViewModel : ObservableObject, IQueryAttributable
 
     public bool CanOpenWhatsApp =>
         !string.IsNullOrWhiteSpace(Order?.Whatsapp);
+
+    public bool CanDelete => Order?.IsPending == true;
 
     public OrderDetailViewModel(AdminApiService api) => _api = api;
 
@@ -385,6 +418,35 @@ public partial class OrderDetailViewModel : ObservableObject, IQueryAttributable
         }
         await Shell.Current.GoToAsync($"order-edit?id={_id}");
     }
+
+    [RelayCommand(CanExecute = nameof(CanDelete))]
+    async Task DeleteAsync()
+    {
+        if (Order is null || !CanDelete) return;
+
+        var ok = await Shell.Current.DisplayAlert(
+            "Delete order?",
+            $"Delete {Order.OrderNumber}? Toys in this order will become available again on the website.",
+            "Delete",
+            "Cancel");
+        if (!ok) return;
+
+        try
+        {
+            IsBusy = true;
+            await _api.DeleteOrderAsync(_id);
+            await Shell.Current.DisplayAlert("Deleted", "Order deleted. Toys are available again.", "OK");
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 }
 
 public partial class CreateOrderViewModel : ObservableObject
@@ -394,19 +456,82 @@ public partial class CreateOrderViewModel : ObservableObject
     private CancellationTokenSource? _searchDebounce;
 
     [ObservableProperty] private string customerName = string.Empty;
-    [ObservableProperty] private string whatsapp = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanOpenWhatsApp))]
+    [NotifyCanExecuteChangedFor(nameof(OpenWhatsAppCommand))]
+    private string whatsapp = string.Empty;
     [ObservableProperty] private string city = string.Empty;
     [ObservableProperty] private string address = string.Empty;
     [ObservableProperty] private string toySearch = string.Empty;
     [ObservableProperty] private bool isBusy;
+    [ObservableProperty] private AffiliatePartnerModel? selectedAffiliate;
+
+    public bool CanOpenWhatsApp => !string.IsNullOrWhiteSpace(Whatsapp);
 
     public ObservableCollection<ToyListModel> AvailableToys { get; } = [];
     public ObservableCollection<ToyListModel> SelectedToys { get; } = [];
+    public ObservableCollection<AffiliatePartnerModel> Affiliates { get; } = [];
 
     public CreateOrderViewModel(AdminApiService api) => _api = api;
 
+    [RelayCommand(CanExecute = nameof(CanOpenWhatsApp))]
+    async Task OpenWhatsAppAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Whatsapp))
+        {
+            await Shell.Current.DisplayAlert("WhatsApp", "Enter customer WhatsApp number first.", "OK");
+            return;
+        }
+
+        try
+        {
+            var items = SelectedToys.Select(t => new OrderItemModel
+            {
+                ToyId = t.Id,
+                ToyName = t.Name,
+                Price = t.EffectivePrice,
+                ImageUrl = string.IsNullOrWhiteSpace(t.PrimaryImage) ? null : t.PrimaryImage,
+            }).ToList();
+            var subTotal = items.Sum(i => i.Price);
+            var draft = new OrderModel
+            {
+                OrderNumber = "(new order)",
+                Status = "Pending",
+                CustomerName = string.IsNullOrWhiteSpace(CustomerName) ? "Customer" : CustomerName.Trim(),
+                Whatsapp = Whatsapp.Trim(),
+                City = City.Trim(),
+                Address = Address.Trim(),
+                SubTotal = subTotal,
+                DeliveryCharge = 0,
+                Total = subTotal,
+                Items = items,
+            };
+            await OrderWhatsAppHelper.OpenCustomerChatAsync(draft);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("WhatsApp", ex.Message, "OK");
+        }
+    }
+
     [RelayCommand]
-    async Task AppearingAsync() => await RefreshAvailableAsync();
+    async Task AppearingAsync()
+    {
+        await RefreshAvailableAsync();
+        try
+        {
+            var partners = await _api.GetAffiliatesAsync(isActive: true);
+            Affiliates.Clear();
+            Affiliates.Add(new AffiliatePartnerModel { Id = 0, Name = "(None)", Code = string.Empty });
+            foreach (var p in partners)
+                Affiliates.Add(p);
+            SelectedAffiliate ??= Affiliates.FirstOrDefault();
+        }
+        catch
+        {
+            // Optional — order can still be created without affiliate list.
+        }
+    }
 
     async Task RefreshAvailableAsync()
     {
@@ -483,6 +608,7 @@ public partial class CreateOrderViewModel : ObservableObject
                 city = City.Trim(),
                 address = Address.Trim(),
                 toyIds = SelectedToys.Select(t => t.Id).ToList(),
+                affiliateCode = SelectedAffiliate is { Id: > 0 } ? SelectedAffiliate.Code : null,
             });
             await Shell.Current.DisplayAlert("Order Created", $"Order {result.OrderNumber} — Rs. {result.Total:N0}", "OK");
             await Shell.Current.GoToAsync("..");
@@ -505,9 +631,13 @@ public partial class OrderEditViewModel : ObservableObject, IQueryAttributable
     private int _id;
     private CancellationTokenSource? _searchDebounce;
     private bool _delivered;
+    private OrderModel? _loadedOrder;
 
     [ObservableProperty] private string customerName = string.Empty;
-    [ObservableProperty] private string whatsapp = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanOpenWhatsApp))]
+    [NotifyCanExecuteChangedFor(nameof(OpenWhatsAppCommand))]
+    private string whatsapp = string.Empty;
     [ObservableProperty] private string city = string.Empty;
     [ObservableProperty] private string address = string.Empty;
     [ObservableProperty] private string deliveryChargeText = "0";
@@ -517,6 +647,8 @@ public partial class OrderEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string toySearch = string.Empty;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool canEditToys = true;
+
+    public bool CanOpenWhatsApp => !string.IsNullOrWhiteSpace(Whatsapp);
 
     public ObservableCollection<ToyListModel> SelectedToys { get; } = [];
     public ObservableCollection<ToyListModel> AvailableToys { get; } = [];
@@ -533,6 +665,7 @@ public partial class OrderEditViewModel : ObservableObject, IQueryAttributable
     async Task AppearingAsync()
     {
         var order = await _api.GetOrderAsync(_id);
+        _loadedOrder = order;
         CustomerName = order.CustomerName;
         Whatsapp = order.Whatsapp;
         City = order.City;
@@ -556,6 +689,38 @@ public partial class OrderEditViewModel : ObservableObject, IQueryAttributable
             });
         }
         await RefreshAvailableAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenWhatsApp))]
+    async Task OpenWhatsAppAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Whatsapp))
+        {
+            await Shell.Current.DisplayAlert("WhatsApp", "Customer WhatsApp number is missing.", "OK");
+            return;
+        }
+
+        try
+        {
+            var order = _loadedOrder ?? await _api.GetOrderAsync(_id);
+            order.CustomerName = CustomerName.Trim();
+            order.Whatsapp = Whatsapp.Trim();
+            order.City = City.Trim();
+            order.Address = Address.Trim();
+            order.TrackingNumber = string.IsNullOrWhiteSpace(TrackingNumber) ? null : TrackingNumber.Trim();
+            if (decimal.TryParse(DeliveryChargeText, out var delivery))
+                order.DeliveryCharge = delivery;
+            if (decimal.TryParse(AdvanceText, out var advance))
+                order.AdvanceAmount = advance;
+            if (decimal.TryParse(DiscountText, out var discount))
+                order.DiscountAmount = discount;
+
+            await OrderWhatsAppHelper.OpenCustomerChatAsync(order);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("WhatsApp", ex.Message, "OK");
+        }
     }
 
     async Task RefreshAvailableAsync()

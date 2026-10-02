@@ -9,8 +9,14 @@
              Title="Edit Order">
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="10">
+            <Button Text="WhatsApp Customer"
+                    Command="{Binding OpenWhatsAppCommand}"
+                    IsEnabled="{Binding CanOpenWhatsApp}"
+                    BackgroundColor="#25D366"
+                    TextColor="White"
+                    FontAttributes="Bold" />
             <Entry Placeholder="Customer name" Text="{Binding CustomerName}" />
-            <Entry Placeholder="WhatsApp" Text="{Binding Whatsapp}" />
+            <Entry Placeholder="WhatsApp" Text="{Binding Whatsapp}" Keyboard="Telephone" />
             <Entry Placeholder="City" Text="{Binding City}" />
             <Editor Placeholder="Address" Text="{Binding Address}" AutoSize="TextChanges" />
             <Entry Placeholder="Delivery charge" Keyboard="Numeric" Text="{Binding DeliveryChargeText}" />

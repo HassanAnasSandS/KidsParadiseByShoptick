@@ -4,15 +4,25 @@ import { useState } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useShopFiltersStore, useShopPath } from '@/store/shopFilters';
 import { buildShopPath, mergeShopFilters } from '@/lib/shopFilters';
+import { useAffiliateStore, withAffiliatePath } from '@/store/affiliate';
 import { BrandName } from '@/components/ui/BrandName';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 
 export function Header() {
   const totalItems = useCartStore((s) => s.totalItems());
+  // Re-render nav links when affiliate code is captured from ?aff=.
+  useAffiliateStore((s) => s.code);
   const shopPath = useShopPath();
   const patchFilters = useShopFiltersStore((s) => s.patchFilters);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
+
+  const homePath = withAffiliatePath('/');
+  const reviewsPath = withAffiliatePath('/reviews');
+  const trackPath = withAffiliatePath('/track-order');
+  const cartPath = withAffiliatePath('/cart');
+  const shopWithAff = withAffiliatePath(shopPath);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +31,7 @@ export function Header() {
 
     const filters = mergeShopFilters(useShopFiltersStore.getState().filters, { search: term });
     patchFilters({ search: term });
-    navigate(buildShopPath(filters));
+    navigate(withAffiliatePath(buildShopPath(filters)));
     setMenuOpen(false);
   };
 
@@ -29,10 +39,11 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-brand-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 gap-4">
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-xl shadow-md shadow-brand-500/30 group-hover:scale-105 transition-transform">
-              🧸
-            </div>
+          <Link to={homePath} className="flex items-center gap-2.5 shrink-0 group">
+            <BrandLogo
+              size={40}
+              className="w-10 h-10 shadow-md shadow-brand-500/30 group-hover:scale-105 transition-transform"
+            />
             <div>
               <BrandName />
             </div>
@@ -52,10 +63,10 @@ export function Header() {
 
           <nav className="hidden md:flex items-center gap-1 text-sm font-semibold">
             {[
-              { to: '/', label: 'Home' },
-              { to: shopPath, label: 'Shop' },
-              { to: '/reviews', label: 'Reviews' },
-              { to: '/track-order', label: 'My Orders' },
+              { to: homePath, label: 'Home' },
+              { to: shopWithAff, label: 'Shop' },
+              { to: reviewsPath, label: 'Reviews' },
+              { to: trackPath, label: 'My Orders' },
             ].map(({ to, label }) => (
               <Link
                 key={label}
@@ -69,7 +80,7 @@ export function Header() {
 
           <div className="flex items-center gap-2">
             <Link
-              to="/cart"
+              to={cartPath}
               className="relative p-2.5 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-600 transition-colors"
             >
               <ShoppingCart className="w-5 h-5" />
@@ -102,10 +113,10 @@ export function Header() {
                 />
               </div>
             </form>
-            <Link to="/" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
-            <Link to={shopPath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Shop</Link>
-            <Link to="/reviews" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Reviews</Link>
-            <Link to="/track-order" className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>My Orders</Link>
+            <Link to={homePath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
+            <Link to={shopWithAff} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Shop</Link>
+            <Link to={reviewsPath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>Reviews</Link>
+            <Link to={trackPath} className="px-3 py-2.5 rounded-xl hover:bg-brand-50 font-medium" onClick={() => setMenuOpen(false)}>My Orders</Link>
           </nav>
         )}
       </div>

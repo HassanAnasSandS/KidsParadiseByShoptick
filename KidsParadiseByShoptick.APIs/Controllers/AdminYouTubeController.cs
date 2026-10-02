@@ -61,6 +61,19 @@ public class AdminYouTubeController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpDelete("disconnect")]
+    public async Task<ActionResult<object>> Disconnect(CancellationToken cancellationToken)
+    {
+        await _youTubeAuth.DisconnectAsync(cancellationToken);
+        return Ok(new
+        {
+            configured = _youTubeAuth.IsOAuthConfigured,
+            connected = false,
+            message = "YouTube account disconnected.",
+        });
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpGet("access-token")]
     public async Task<ActionResult<object>> GetAccessToken(CancellationToken cancellationToken)
     {

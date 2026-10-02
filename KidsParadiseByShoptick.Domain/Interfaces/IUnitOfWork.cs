@@ -9,5 +9,7 @@ public interface IUnitOfWork
     IReviewRepository Reviews { get; }
     IAdminUserRepository AdminUsers { get; }
     ISiteImageRepository SiteImages { get; }
+    IAffiliatePartnerRepository AffiliatePartners { get; }
+    IAffiliateLedgerRepository AffiliateLedgers { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

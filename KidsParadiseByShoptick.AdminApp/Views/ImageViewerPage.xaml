@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.ImageViewerPage"
+             Title="Image"
+             BackgroundColor="#0f172a"
+             Shell.NavBarIsVisible="False">
+    <Grid>
+        <Image x:Name="ViewerImage"
+               Aspect="AspectFit"
+               HorizontalOptions="Fill"
+               VerticalOptions="Fill">
+            <Image.GestureRecognizers>
+                <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
+                <PanGestureRecognizer PanUpdated="OnPanUpdated" />
+                <TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnDoubleTapped" />
+            </Image.GestureRecognizers>
+        </Image>
+
+        <Button Text="✕ Close"
+                Clicked="OnCloseClicked"
+                HorizontalOptions="End"
+                VerticalOptions="Start"
+                Margin="12,48,12,0"
+                BackgroundColor="#00000099"
+                TextColor="White"
+                FontAttributes="Bold"
+                CornerRadius="18"
+                Padding="14,8"
+                ZIndex="10" />
+
+        <Label Text="Pinch to zoom · Double-tap reset · Drag when zoomed"
+               FontSize="11"
+               TextColor="#94a3b8"
+               HorizontalOptions="Center"
+               VerticalOptions="End"
+               Margin="12,0,12,28"
+               ZIndex="10" />
+    </Grid>
+</ContentPage>

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.CreateOrderPage"
              x:Name="ThisPage"
              x:DataType="vm:CreateOrderViewModel"
@@ -10,10 +11,21 @@
              BackgroundColor="{StaticResource PageBg}">
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="12">
+            <Button Text="WhatsApp Customer"
+                    Command="{Binding OpenWhatsAppCommand}"
+                    IsEnabled="{Binding CanOpenWhatsApp}"
+                    BackgroundColor="#25D366"
+                    TextColor="White"
+                    FontAttributes="Bold" />
             <Entry Placeholder="Customer name" Text="{Binding CustomerName}" />
             <Entry Placeholder="WhatsApp" Keyboard="Telephone" Text="{Binding Whatsapp}" />
             <Entry Placeholder="City" Text="{Binding City}" />
             <Editor Placeholder="Address" Text="{Binding Address}" AutoSize="TextChanges" MinimumHeightRequest="60" />
+            <Label Text="Affiliate (optional)" FontAttributes="Bold" FontSize="13" />
+            <Picker Title="Affiliate partner"
+                    ItemsSource="{Binding Affiliates}"
+                    ItemDisplayBinding="{Binding Name}"
+                    SelectedItem="{Binding SelectedAffiliate}" />
             <SearchBar Placeholder="Search toys to add..." Text="{Binding ToySearch}" />
 
             <Label Text="Selected Toys" FontAttributes="Bold" FontSize="15" />
@@ -24,7 +36,13 @@
                             <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10">
                                 <Image Grid.Column="0"
                                        Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}"
-                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                            CommandParameter="{Binding PrimaryImage}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
                                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                                     <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
                                     <Label Text="{Binding EffectivePrice, StringFormat='Rs. {0:N0}'}" FontSize="12" TextColor="#1a6fe8" FontAttributes="Bold" />
@@ -46,7 +64,13 @@
                             <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10">
                                 <Image Grid.Column="0"
                                        Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}"
-                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                       HeightRequest="52" WidthRequest="52" Aspect="AspectFill">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                            CommandParameter="{Binding PrimaryImage}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
                                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                                     <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
                                     <Label Text="{Binding EffectivePrice, StringFormat='Rs. {0:N0}'}" FontSize="12" TextColor="#1a6fe8" FontAttributes="Bold" />

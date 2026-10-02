@@ -3,58 +3,46 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { BrandName } from '@/components/ui/BrandName';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { useSiteImages } from '@/hooks/useSiteImages';
 import { useDeliveryRates } from '@/hooks/useDeliveryRates';
-import type { SiteImageKey } from '@/lib/siteImages';
+import { resolveSiteColor, resolveSiteText, type SiteImageKey } from '@/lib/siteImages';
+import { withAffiliatePath } from '@/store/affiliate';
+import { useShopPath } from '@/store/shopFilters';
 
-const slideMeta = [
-  {
-    imageKey: 'hero_slide_1' as SiteImageKey,
-    title: 'Where Every Child\'s Dream Comes True',
-    subtitle: 'Unique toys — one of a kind. Grab yours before it\'s gone!',
-    cta: 'Shop Now',
-    link: '/shop',
-  },
-  {
-    imageKey: 'hero_slide_2' as SiteImageKey,
-    title: 'Joy in Every Box',
-    subtitle: 'Quality toys delivered across Pakistan with love.',
-    cta: 'Explore Toys',
-    link: '/shop',
-  },
-  {
-    imageKey: 'hero_slide_3' as SiteImageKey,
-    title: 'Soft Hugs & Big Smiles',
-    subtitle: 'From plush friends to learning fun — find the perfect gift.',
-    cta: 'Browse Collection',
-    link: '/shop',
-  },
-  {
-    imageKey: 'hero_slide_4' as SiteImageKey,
-    title: 'Easy Ordering',
-    subtitleKey: 'delivery' as const,
-    cta: 'Order Today',
-    link: '/shop',
-  },
+const HERO_KEYS: SiteImageKey[] = [
+  'hero_slide_1',
+  'hero_slide_2',
+  'hero_slide_3',
+  'hero_slide_4',
 ];
 
 export function HeroSlider() {
-  const { get, images } = useSiteImages();
+  const { getContent, images } = useSiteImages();
   const { label: deliveryLabel } = useDeliveryRates();
+  const shopPath = useShopPath();
   const [current, setCurrent] = useState(0);
 
   const slides = useMemo(
     () =>
-      slideMeta.map((s) => ({
-        ...s,
-        image: get(s.imageKey),
-        subtitle: 'subtitleKey' in s && s.subtitleKey === 'delivery'
-          ? `${deliveryLabel} — 10% advance payment required.`
-          : 'subtitle' in s
-            ? s.subtitle
-            : '',
-      })),
-    [get, images, deliveryLabel]
+      HERO_KEYS.map((imageKey) => {
+        const content = getContent(imageKey);
+        const title = content.title?.trim() || '';
+        const subtitle = resolveSiteText(content.subtitle, { delivery: deliveryLabel });
+        const cta = content.ctaText?.trim() || '';
+        return {
+          imageKey,
+          image: content.imageUrl,
+          title,
+          subtitle,
+          cta,
+          link: withAffiliatePath(content.linkUrl?.trim() || shopPath),
+          titleColor: resolveSiteColor(content.titleColor),
+          subtitleColor: resolveSiteColor(content.subtitleColor, '#FFFFFFE6'),
+          ctaColor: resolveSiteColor(content.ctaColor),
+        };
+      }),
+    [getContent, images, deliveryLabel, shopPath],
   );
 
   const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
@@ -92,20 +80,36 @@ export function HeroSlider() {
         <div className="max-w-7xl mx-auto px-14 sm:px-6 w-full">
           <div className="max-w-xl animate-fade-in">
             <span className="inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full mb-4 border border-white/20">
-              <span className="text-base">🧸</span>
+              <BrandLogo size={20} className="w-5 h-5 rounded-md" />
               <BrandName variant="hero" />
             </span>
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3 drop-shadow-lg">
-              {slide.title}
-            </h1>
-            <p className="text-base sm:text-lg text-white/90 mb-6 leading-relaxed max-w-md">
-              {slide.subtitle}
-            </p>
-            <Link to={slide.link}>
-              <Button size="lg" className="bg-accent-500 hover:bg-accent-400 text-white shadow-lg shadow-accent-500/30 border-0">
-                {slide.cta} <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
+            {slide.title ? (
+              <h1
+                className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight mb-3 drop-shadow-lg"
+                style={{ color: slide.titleColor }}
+              >
+                {slide.title}
+              </h1>
+            ) : null}
+            {slide.subtitle ? (
+              <p
+                className="text-base sm:text-lg mb-6 leading-relaxed max-w-md"
+                style={{ color: slide.subtitleColor }}
+              >
+                {slide.subtitle}
+              </p>
+            ) : null}
+            {slide.cta ? (
+              <Link to={slide.link}>
+                <Button
+                  size="lg"
+                  className="bg-accent-500 hover:bg-accent-400 shadow-lg shadow-accent-500/30 border-0"
+                  style={{ color: slide.ctaColor }}
+                >
+                  {slide.cta} <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

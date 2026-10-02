@@ -1,3 +1,4 @@
+using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Domain.Interfaces;
 using KidsParadiseByShoptick.Infrastructure.Persistence;
 using KidsParadiseByShoptick.Infrastructure.Persistence.Repositories;
@@ -22,10 +23,14 @@ public static class DependencyInjection
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
         services.AddScoped<ISiteImageRepository, SiteImageRepository>();
+        services.AddScoped<IAffiliatePartnerRepository, AffiliatePartnerRepository>();
+        services.AddScoped<IAffiliateLedgerRepository, AffiliateLedgerRepository>();
         services.AddScoped<ISitemapRepository, SitemapRepository>();
         services.AddScoped<IDashboardRepository, DashboardRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IFileStorageService, FileStorageService>();
+        services.AddSingleton<ITikTokPhotoPrepareService, TikTokPhotoPrepareService>();
+        services.AddSingleton<IImageFingerprintService, ImageFingerprintService>();
 
         return services;
     }

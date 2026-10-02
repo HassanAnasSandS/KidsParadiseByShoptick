@@ -14,7 +14,9 @@ public class UnitOfWork : IUnitOfWork
         IOrderRepository orders,
         IReviewRepository reviews,
         IAdminUserRepository adminUsers,
-        ISiteImageRepository siteImages)
+        ISiteImageRepository siteImages,
+        IAffiliatePartnerRepository affiliatePartners,
+        IAffiliateLedgerRepository affiliateLedgers)
     {
         _context = context;
         Customers = customers;
@@ -24,6 +26,8 @@ public class UnitOfWork : IUnitOfWork
         Reviews = reviews;
         AdminUsers = adminUsers;
         SiteImages = siteImages;
+        AffiliatePartners = affiliatePartners;
+        AffiliateLedgers = affiliateLedgers;
     }
 
     public ICustomerRepository Customers { get; }
@@ -33,6 +37,8 @@ public class UnitOfWork : IUnitOfWork
     public IReviewRepository Reviews { get; }
     public IAdminUserRepository AdminUsers { get; }
     public ISiteImageRepository SiteImages { get; }
+    public IAffiliatePartnerRepository AffiliatePartners { get; }
+    public IAffiliateLedgerRepository AffiliateLedgers { get; }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);

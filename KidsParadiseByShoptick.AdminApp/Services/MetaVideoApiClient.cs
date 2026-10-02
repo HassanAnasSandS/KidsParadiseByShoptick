@@ -12,6 +12,11 @@ public static class MetaVideoApiClient
     private const string GraphVersion = "v21.0";
     private const string GraphBase = "https://graph.facebook.com/" + GraphVersion;
     private const string GraphVideoBase = "https://graph-video.facebook.com/" + GraphVersion;
+    /// <summary>
+    /// Meta's rupload endpoint often returns ProcessingFailedError intermittently even for valid MP4s.
+    /// Fresh container + retry usually succeeds on a later attempt.
+    /// </summary>
+    private const int InstagramUploadMaxAttempts = 3;
 
     public static async Task UploadToFacebookAndInstagramAsync(
         string facebookPageId,
@@ -27,8 +32,9 @@ public static class MetaVideoApiClient
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromHours(2) };
         var postCaption = string.IsNullOrWhiteSpace(caption) ? title : caption.Trim();
-        // Instagram captions should be plain text (photo-style HTML tags break Promote UX / look wrong on IG).
-        var instagramCaption = StripHtml(postCaption);
+        // Keep Facebook + Instagram captions plain (same details as photo posts; no HTML tags).
+        postCaption = StripHtml(postCaption);
+        var instagramCaption = postCaption;
 
         // Always copy to a temp file and open a FRESH stream per platform.
         // Multipart StreamContent disposes the underlying stream after Facebook upload,
@@ -37,6 +43,8 @@ public static class MetaVideoApiClient
         try
         {
             var length = new FileInfo(tempPath).Length;
+            var facebookOk = false;
+            var instagramOk = false;
 
             progress?.Report("Uploading video to Facebook…");
             await using (var fbStream = File.OpenRead(tempPath))
@@ -44,28 +52,86 @@ public static class MetaVideoApiClient
                 await UploadFacebookPageVideoAsync(
                     http, facebookPageId, pageAccessToken, fbStream, fileName, length, title, postCaption, cancellationToken);
             }
+            facebookOk = true;
 
             if (!string.IsNullOrWhiteSpace(instagramBusinessAccountId))
             {
                 progress?.Report("Uploading video to Instagram…");
-                await using (var igStream = File.OpenRead(tempPath))
+                Exception? lastIgError = null;
+                for (var attempt = 1; attempt <= InstagramUploadMaxAttempts; attempt++)
                 {
-                    await UploadInstagramReelAsync(
-                        http, instagramBusinessAccountId, pageAccessToken, igStream, length, instagramCaption, progress, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        if (attempt > 1)
+                        {
+                            progress?.Report(
+                                $"Instagram upload failed earlier — retry {attempt}/{InstagramUploadMaxAttempts}…");
+                            await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken);
+                        }
+
+                        await using var igStream = File.OpenRead(tempPath);
+                        await UploadInstagramReelAsync(
+                            http,
+                            instagramBusinessAccountId,
+                            pageAccessToken,
+                            igStream,
+                            length,
+                            instagramCaption,
+                            progress,
+                            cancellationToken);
+                        instagramOk = true;
+                        lastIgError = null;
+                        break;
+                    }
+                    catch (Exception ex) when (IsTransientInstagramUploadFailure(ex) && attempt < InstagramUploadMaxAttempts)
+                    {
+                        lastIgError = ex;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastIgError = ex;
+                        break;
+                    }
+                }
+
+                if (!instagramOk)
+                {
+                    var detail = lastIgError?.Message ?? "Unknown Instagram upload error.";
+                    // Facebook may already have succeeded — surface that clearly.
+                    throw new InvalidOperationException(
+                        facebookOk
+                            ? $"Facebook video posted, but Instagram failed after {InstagramUploadMaxAttempts} attempts: {detail}"
+                            : detail);
                 }
             }
             else
             {
                 progress?.Report("Instagram skipped (Business account not linked).");
+                instagramOk = true;
             }
 
-            progress?.Report("Facebook and Instagram video posted.");
+            progress?.Report(
+                facebookOk && instagramOk
+                    ? "Facebook and Instagram video posted."
+                    : "Facebook video posted.");
         }
         finally
         {
             try { File.Delete(tempPath); }
             catch { /* ignore */ }
         }
+    }
+
+    static bool IsTransientInstagramUploadFailure(Exception ex)
+    {
+        var msg = ex.Message ?? string.Empty;
+        return msg.Contains("ProcessingFailedError", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Request processing failed", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Instagram video binary upload failed", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Instagram video processing failed", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Instagram video processing timed out", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Instagram video init failed", StringComparison.OrdinalIgnoreCase);
     }
 
     static async Task<string> CopyToTempFileAsync(
@@ -166,18 +232,24 @@ public static class MetaVideoApiClient
             : $"https://rupload.facebook.com/ig-api-upload/{GraphVersion}/{containerId}";
 
         progress?.Report("Sending video file to Instagram…");
+        // Match Meta docs: Authorization + offset + file_size only (no Content-Type).
+        // Extra Content-Type has been linked to intermittent ProcessingFailedError on rupload.
         using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, uploadUri);
         uploadRequest.Headers.TryAddWithoutValidation("Authorization", $"OAuth {accessToken}");
         uploadRequest.Headers.TryAddWithoutValidation("offset", "0");
         uploadRequest.Headers.TryAddWithoutValidation("file_size", contentLength.ToString());
-        uploadRequest.Content = new StreamContent(videoStream);
-        uploadRequest.Content.Headers.ContentLength = contentLength;
-        uploadRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        var streamContent = new StreamContent(videoStream);
+        streamContent.Headers.ContentLength = contentLength;
+        uploadRequest.Content = streamContent;
 
         using var uploadResponse = await http.SendAsync(uploadRequest, cancellationToken);
         var uploadBody = await uploadResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!uploadResponse.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Instagram video binary upload failed: {ParseGraphError(uploadBody)}");
+        {
+            // Prefer raw body so callers can detect ProcessingFailedError for retries.
+            var detail = string.IsNullOrWhiteSpace(uploadBody) ? ParseGraphError(uploadBody) : uploadBody.Trim();
+            throw new InvalidOperationException($"Instagram video binary upload failed: {detail}");
+        }
 
         progress?.Report("Waiting for Instagram to process video…");
         await WaitForInstagramContainerAsync(http, containerId, accessToken, cancellationToken);

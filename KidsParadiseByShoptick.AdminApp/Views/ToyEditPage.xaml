@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.ToyEditPage"
              x:Name="ThisPage"
              x:DataType="vm:ToyEditViewModel"
@@ -16,7 +17,7 @@
                 <Entry Placeholder="Sale price (optional)" Keyboard="Numeric" Text="{Binding SalePriceText}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
 
                 <Label Text="Video (optional)" FontAttributes="Bold" TextColor="#0f172a" />
-                <Label Text="Paste a YouTube link, or select a video. YouTube upload is optional. On Save (with social posting), the same video also posts to Facebook, Instagram &amp; TikTok from this app."
+                <Label Text="Paste a YouTube link, or select a video. On Save the video is stored on the server (and YouTube if no link yet). On Edit with social posting, a saved server video re-posts without selecting again."
                        FontSize="12" TextColor="#64748b" />
                 <Entry Placeholder="YouTube link (optional)"
                        Text="{Binding VideoLinkText}"
@@ -48,7 +49,13 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ToyImageItem">
                             <Grid WidthRequest="90">
-                                <Image Source="{Binding Url, Converter={StaticResource ImageUrl}}" HeightRequest="80" Aspect="AspectFit" />
+                                <Image Source="{Binding Url, Converter={StaticResource ImageUrl}}" HeightRequest="80" Aspect="AspectFit">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                            CommandParameter="{Binding Url}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
                                 <Button Text="×" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#dc2626" TextColor="White" FontSize="10" Padding="4"
                                         Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemoveImageCommand}" CommandParameter="{Binding .}" />
                             </Grid>
@@ -58,7 +65,7 @@
                 <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
                     <CheckBox IsChecked="{Binding PostToSocialMedia}"
                               IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
-                    <Label Text="Post to Facebook, Instagram, TikTok &amp; Pinterest"
+                    <Label Text="Post to Facebook, Instagram, TikTok &amp; Pinterest (video reuses server copy if already saved)"
                            VerticalOptions="Center"
                            FontSize="14"
                            TextColor="#334155" />

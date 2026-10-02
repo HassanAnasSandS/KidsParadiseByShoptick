@@ -17,4 +17,7 @@ public interface IToyRepository : IRepository<Toy>
         int page, int pageSize, CancellationToken cancellationToken = default);
     Task<int> CountAdminAsync(
         int? categoryId, string? search, bool? isSold, bool? onSale, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Toy>> GetAllWithImagesTrackedAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Toy>> GetAllWithImagesForSearchAsync(CancellationToken cancellationToken = default);
 }

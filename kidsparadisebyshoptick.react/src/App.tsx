@@ -16,6 +16,7 @@ import { AboutPage } from '@/pages/shop/AboutPage';
 import { ContactPage } from '@/pages/shop/ContactPage';
 import { PrivacyPolicyPage } from '@/pages/shop/PrivacyPolicyPage';
 import { TermsOfServicePage } from '@/pages/shop/TermsOfServicePage';
+import { PartnerPortalPage } from '@/pages/shop/PartnerPortalPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="contact" element={<ContactPage />} />
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="partner" element={<PartnerPortalPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

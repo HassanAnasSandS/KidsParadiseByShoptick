@@ -12,6 +12,7 @@ public class SiteImagesController : ControllerBase
     public SiteImagesController(ISiteImageService siteImageService) => _siteImageService = siteImageService;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyDictionary<string, string>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _siteImageService.GetPublicUrlsAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyDictionary<string, SiteImagePublicDto>>> GetAll(
+        CancellationToken cancellationToken)
+        => Ok(await _siteImageService.GetPublicContentAsync(cancellationToken));
 }

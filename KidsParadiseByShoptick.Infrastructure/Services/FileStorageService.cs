@@ -63,4 +63,17 @@ public class FileStorageService : IFileStorageService
         if (string.IsNullOrWhiteSpace(relativePath)) return string.Empty;
         return "/" + relativePath.TrimStart('/');
     }
+
+    public string? GetAbsolutePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return null;
+        var normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        return Path.Combine(_basePath, normalized.Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    public bool FileExists(string? relativePath)
+    {
+        var absolute = GetAbsolutePath(relativePath);
+        return !string.IsNullOrWhiteSpace(absolute) && File.Exists(absolute);
+    }
 }

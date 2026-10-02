@@ -34,6 +34,10 @@
         <ShellContent ContentTemplate="{DataTemplate views:OrdersPage}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Affiliates" Icon="dotnet_bot.png" Route="affiliates">
+        <ShellContent ContentTemplate="{DataTemplate views:AffiliatesPage}" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Order Alerts" Icon="dotnet_bot.png" Route="notifications">
         <ShellContent ContentTemplate="{DataTemplate views:NotificationsPage}" />
     </FlyoutItem>

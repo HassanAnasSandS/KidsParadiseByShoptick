@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KidsParadiseByShoptick.AdminApp.Config;
 using KidsParadiseByShoptick.AdminApp.Helpers;
 using KidsParadiseByShoptick.AdminApp.Models;
 using KidsParadiseByShoptick.AdminApp.Services;
@@ -34,6 +35,10 @@ public partial class ToysViewModel : ObservableObject
     [ObservableProperty] private bool showFilters;
     [ObservableProperty] private string? errorMessage;
     [ObservableProperty] private string statusText = string.Empty;
+    [ObservableProperty] private bool isImageSearchActive;
+    [ObservableProperty] private string? imageSearchHint;
+
+    partial void OnIsImageSearchActiveChanged(bool value) => LoadMoreCommand.NotifyCanExecuteChanged();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoadMoreCommand))]
@@ -47,7 +52,8 @@ public partial class ToysViewModel : ObservableObject
         ["Newest First", "Name (A-Z)", "Price: Low to High", "Price: High to Low"];
 
     public bool HasActiveFilters =>
-        !string.IsNullOrWhiteSpace(SearchText)
+        IsImageSearchActive
+        || !string.IsNullOrWhiteSpace(SearchText)
         || (!string.IsNullOrWhiteSpace(CategoryFilter) && CategoryFilter != "All")
         || StatusFilter != "All"
         || SaleFilter != "All"
@@ -118,13 +124,16 @@ public partial class ToysViewModel : ObservableObject
             HasMoreItems = false;
             ErrorMessage = null;
             StatusText = string.Empty;
+            IsImageSearchActive = false;
+            ImageSearchHint = null;
             Items.Clear();
+            NotifyHasActiveFiltersChanged();
             LoadMoreCommand.NotifyCanExecuteChanged();
             await LoadNextPageCoreAsync(isRefresh: true);
         });
     }
 
-    bool CanLoadMore() => PagedListLoadCoordinator.CanLoadMore(HasMoreItems, IsBusy, IsLoadingMore, Items.Count);
+    bool CanLoadMore() => !IsImageSearchActive && PagedListLoadCoordinator.CanLoadMore(HasMoreItems, IsBusy, IsLoadingMore, Items.Count);
 
     [RelayCommand(CanExecute = nameof(CanLoadMore))]
     async Task LoadMoreAsync()
@@ -297,8 +306,94 @@ public partial class ToysViewModel : ObservableObject
         StatusFilter = "All";
         SaleFilter = "All";
         SortFilter = "Newest First";
+        IsImageSearchActive = false;
+        ImageSearchHint = null;
         NotifyHasActiveFiltersChanged();
         await ReloadAsync();
+    }
+
+    [RelayCommand]
+    async Task SearchByImageAsync()
+    {
+        try
+        {
+            var file = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Search toys by image",
+                FileTypes = FilePickerFileType.Images,
+            });
+            if (file is null) return;
+
+            IsBusy = true;
+            ErrorMessage = null;
+            StatusText = "Searching by image…";
+
+            await using var stream = await file.OpenReadAsync();
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var matches = await _api.SearchToysByImageAsync(ms, file.FileName);
+            Items.Clear();
+            HasMoreItems = false;
+            IsImageSearchActive = true;
+            ImageSearchHint = matches.Count == 0
+                ? "No matching toys. Tip: run “Index images” once for existing toys, or try a clearer photo."
+                : $"Image search: {matches.Count} match(es). Exact = same upload; Similar = same toy, other photo.";
+
+            foreach (var match in matches)
+                Items.Add(match);
+
+            StatusText = matches.Count == 0
+                ? "No image matches"
+                : $"Showing {matches.Count} image match(es)";
+            NotifyHasActiveFiltersChanged();
+            LoadMoreCommand.NotifyCanExecuteChanged();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            StatusText = string.Empty;
+            if (ex is UnauthorizedAccessException)
+                await Shell.Current.GoToAsync("//login");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task IndexImagesAsync()
+    {
+        if (!await Shell.Current.DisplayAlert(
+                "Index images",
+                "Build free image fingerprints for all existing toys (perceptual hash + CLIP). First run may download a free ~87MB model. Continue?",
+                "Index",
+                "Cancel"))
+            return;
+
+        try
+        {
+            IsBusy = true;
+            ErrorMessage = null;
+            StatusText = "Indexing toy images…";
+            var result = await _api.IndexToyImagesAsync();
+            StatusText = result.Message;
+            await Shell.Current.DisplayAlert("Index complete", result.Message, "OK");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            StatusText = string.Empty;
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+            if (ex is UnauthorizedAccessException)
+                await Shell.Current.GoToAsync("//login");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     void ScheduleFilterReload()
@@ -384,7 +479,12 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     private readonly IMetaVideoUploadService _metaVideoUpload;
     private readonly ITikTokVideoUploadService _tikTokVideoUpload;
     private int? _id;
-    private FileResult? _selectedVideo;
+    /// <summary>Stable cache copy of the picked video (FileResult streams can go stale before Save).</summary>
+    private string? _selectedVideoPath;
+    private string _selectedVideoFileNameOnly = string.Empty;
+    /// <summary>Previously saved server video (so Edit can re-post without re-selecting).</summary>
+    private string? _storedVideoFilePath;
+    private string? _storedVideoFileUrl;
 
     [ObservableProperty] private string name = string.Empty;
     [ObservableProperty] private string priceText = "0";
@@ -401,7 +501,9 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
 
     public bool IsEditMode => _id.HasValue;
 
-    public bool CanUploadVideo => _youTubeUpload.IsSupported && _selectedVideo is not null && !IsUploadingVideo && !IsBusy;
+    public bool HasSelectedVideo => !string.IsNullOrWhiteSpace(_selectedVideoPath) && File.Exists(_selectedVideoPath);
+    public bool HasStoredVideo => !string.IsNullOrWhiteSpace(_storedVideoFileUrl);
+    public bool CanUploadVideo => _youTubeUpload.IsSupported && HasSelectedVideo && !IsUploadingVideo && !IsBusy;
     public bool CanSave => !IsBusy && !IsUploadingVideo;
     public bool CanPickVideo => !IsUploadingVideo && !IsBusy;
 
@@ -447,6 +549,8 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         PriceText = toy.Price.ToString("0");
         SalePriceText = toy.SalePrice?.ToString("0") ?? string.Empty;
         VideoLinkText = toy.VideoLink ?? string.Empty;
+        _storedVideoFilePath = toy.VideoFilePath;
+        _storedVideoFileUrl = toy.VideoFileUrl;
         SelectedCategory = Categories.FirstOrDefault(c => c.Id == toy.CategoryId) ?? Categories.FirstOrDefault();
         Images.Clear();
         for (var i = 0; i < toy.ImageUrls.Count; i++)
@@ -457,6 +561,14 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
                 Url = toy.ImageUrls[i],
             });
         }
+
+        if (HasStoredVideo && !HasSelectedVideo)
+        {
+            SelectedVideoFileName = "Saved video on server (ready to re-post)";
+            VideoUploadStatus = "Server already has this toy's video. Check social posting and Save — no need to select again.";
+        }
+
+        OnPropertyChanged(nameof(HasStoredVideo));
     }
 
     [RelayCommand]
@@ -508,12 +620,41 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         if (file is null)
             return;
 
-        _selectedVideo = file;
-        SelectedVideoFileName = file.FileName;
-        VideoUploadStatus = _youTubeUpload.IsSupported
-            ? "Video selected. Upload to YouTube (optional). On Save, video also posts to Facebook, Instagram & TikTok when social posting is on."
-            : "Video selected. On Save, video posts to Facebook, Instagram & TikTok when social posting is on.";
-        OnPropertyChanged(nameof(CanUploadVideo));
+        try
+        {
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(extension))
+                extension = ".mp4";
+
+            var cachePath = Path.Combine(
+                FileSystem.CacheDirectory,
+                $"toy-video-{Guid.NewGuid():N}{extension}");
+
+            await using (var source = await file.OpenReadAsync())
+            await using (var dest = File.Create(cachePath))
+                await source.CopyToAsync(dest);
+
+            if (new FileInfo(cachePath).Length <= 0)
+            {
+                try { File.Delete(cachePath); } catch { /* ignore */ }
+                await Shell.Current.DisplayAlert("Video", "Selected video file is empty.", "OK");
+                return;
+            }
+
+            DeleteCachedVideo();
+            _selectedVideoPath = cachePath;
+            _selectedVideoFileNameOnly = file.FileName;
+            SelectedVideoFileName = file.FileName;
+            VideoUploadStatus = _youTubeUpload.IsSupported
+                ? "Video selected. On Save it uploads to YouTube (if no link yet) and posts to Facebook, Instagram & TikTok when social posting is on."
+                : "Video selected. On Save it posts to Facebook, Instagram & TikTok when social posting is on.";
+            OnPropertyChanged(nameof(HasSelectedVideo));
+            OnPropertyChanged(nameof(CanUploadVideo));
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Video", $"Could not load video: {ex.Message}", "OK");
+        }
     }
 
     [RelayCommand]
@@ -525,7 +666,7 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
-        if (_selectedVideo is null)
+        if (!HasSelectedVideo)
         {
             await Shell.Current.DisplayAlert("Video", "Please select a video first.", "OK");
             return;
@@ -543,12 +684,12 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
             VideoUploadStatus = "Preparing upload…";
             OnPropertyChanged(nameof(CanUploadVideo));
 
-            await using var stream = await _selectedVideo.OpenReadAsync();
+            await using var stream = File.OpenRead(_selectedVideoPath!);
             var progress = new Progress<string>(status => VideoUploadStatus = status);
 
             VideoLinkText = await _youTubeUpload.UploadAsync(
                 stream,
-                _selectedVideo.FileName,
+                _selectedVideoFileNameOnly,
                 Name.Trim(),
                 progress);
 
@@ -569,10 +710,22 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     void ClearVideo()
     {
-        _selectedVideo = null;
+        DeleteCachedVideo();
         SelectedVideoFileName = string.Empty;
         VideoUploadStatus = string.Empty;
+        OnPropertyChanged(nameof(HasSelectedVideo));
         OnPropertyChanged(nameof(CanUploadVideo));
+    }
+
+    void DeleteCachedVideo()
+    {
+        if (!string.IsNullOrWhiteSpace(_selectedVideoPath))
+        {
+            try { File.Delete(_selectedVideoPath); } catch { /* ignore */ }
+        }
+
+        _selectedVideoPath = null;
+        _selectedVideoFileNameOnly = string.Empty;
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -615,29 +768,113 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
         }
 
         var willPostToSocial = !_id.HasValue || PostToSocialMedia;
-        if (willPostToSocial && Images.Count == 0)
+        SocialPostActionsModel actions;
+        try
+        {
+            var socialSettings = await _api.GetSocialMediaSettingsAsync();
+            actions = (!_id.HasValue
+                ? socialSettings.OnCreate
+                : socialSettings.OnEdit) ?? new SocialPostActionsModel();
+        }
+        catch
+        {
+            actions = new SocialPostActionsModel();
+        }
+
+        var willPostPhotos = willPostToSocial && actions.HasAnyServerAction;
+        var willPostMetaVideo = willPostToSocial && actions.MetaVideo;
+        var willPostTikTokVideo = willPostToSocial && actions.TikTokVideo;
+        var willUploadYouTube = actions.YouTube;
+
+        if (willPostPhotos && Images.Count == 0)
         {
             await Shell.Current.DisplayAlert(
                 "Validation",
-                "At least one image is required for Facebook, Instagram, TikTok and Pinterest posting.",
+                "At least one image is required for the enabled photo/catalog social actions.",
                 "OK");
             return;
         }
 
-        var payload = new
+        // Edit + social video: need a local pick OR a previously stored server video.
+        if ((willPostMetaVideo || willPostTikTokVideo) && IsEditMode && !HasSelectedVideo && !HasStoredVideo)
         {
-            categoryId = SelectedCategory.Id,
-            name = Name.Trim(),
-            price,
-            salePrice,
-            videoLink = string.IsNullOrWhiteSpace(VideoLinkText) ? null : VideoLinkText.Trim(),
-            imagePaths = Images.Select(i => i.Path).ToList(),
-        };
+            var continuePhotosOnly = await Shell.Current.DisplayAlert(
+                "No video on server",
+                "Photos may still post.\n\nThis toy has no saved video file yet. Select a video once and Save — next time you can re-post without selecting again.",
+                "Continue without video",
+                "Cancel");
+            if (!continuePhotosOnly)
+                return;
+        }
 
         try
         {
-            SavingStatus = "Saving toy…";
             IsBusy = true;
+
+            // Persist video on Save: upload to YouTube if a file is selected and no link yet.
+            if (HasSelectedVideo
+                && string.IsNullOrWhiteSpace(VideoLinkText)
+                && willUploadYouTube
+                && _youTubeUpload.IsSupported)
+            {
+                try
+                {
+                    SavingStatus = "Uploading video to YouTube…";
+                    VideoUploadStatus = "Uploading video to YouTube…";
+                    await using var ytStream = File.OpenRead(_selectedVideoPath!);
+                    var ytProgress = new Progress<string>(status =>
+                    {
+                        VideoUploadStatus = status;
+                        SavingStatus = status;
+                    });
+                    VideoLinkText = await _youTubeUpload.UploadAsync(
+                        ytStream,
+                        _selectedVideoFileNameOnly,
+                        Name.Trim(),
+                        ytProgress);
+                    VideoUploadStatus = "Uploaded to YouTube.";
+                }
+                catch (Exception ytEx)
+                {
+                    var continueWithoutYt = await Shell.Current.DisplayAlert(
+                        "YouTube upload failed",
+                        $"{ytEx.Message}\n\nContinue saving without a YouTube link?",
+                        "Continue",
+                        "Cancel");
+                    if (!continueWithoutYt)
+                        return;
+                }
+            }
+
+            // Keep a copy on our server so Edit can re-post video later without re-selecting.
+            string? videoFilePath = _storedVideoFilePath;
+            if (HasSelectedVideo)
+            {
+                try
+                {
+                    SavingStatus = "Saving video to server…";
+                    VideoUploadStatus = "Saving video to server…";
+                    await using var uploadStream = File.OpenRead(_selectedVideoPath!);
+                    var uploaded = await _api.UploadVideoAsync(uploadStream, _selectedVideoFileNameOnly);
+                    videoFilePath = uploaded.Path;
+                    _storedVideoFilePath = uploaded.Path;
+                    _storedVideoFileUrl = uploaded.Url;
+                    OnPropertyChanged(nameof(HasStoredVideo));
+                }
+                catch (Exception uploadEx)
+                {
+                    var continueWithoutServerVideo = await Shell.Current.DisplayAlert(
+                        "Server video save failed",
+                        $"{uploadEx.Message}\n\nContinue? (Social video can still post now, but Edit won't be able to re-post without selecting again.)",
+                        "Continue",
+                        "Cancel");
+                    if (!continueWithoutServerVideo)
+                        return;
+                }
+            }
+
+            SavingStatus = "Saving toy…";
+            var videoLink = string.IsNullOrWhiteSpace(VideoLinkText) ? null : VideoLinkText.Trim();
             if (_id.HasValue)
             {
                 var updatePayload = new
@@ -646,91 +883,134 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
                     name = Name.Trim(),
                     price,
                     salePrice,
-                    videoLink = string.IsNullOrWhiteSpace(VideoLinkText) ? null : VideoLinkText.Trim(),
+                    videoLink,
+                    videoFilePath,
                     imagePaths = Images.Select(i => i.Path).ToList(),
                     postToSocialMedia = PostToSocialMedia,
                 };
                 await _api.UpdateToyAsync(_id.Value, updatePayload);
             }
             else
+            {
+                var payload = new
+                {
+                    categoryId = SelectedCategory.Id,
+                    name = Name.Trim(),
+                    price,
+                    salePrice,
+                    videoLink,
+                    videoFilePath,
+                    imagePaths = Images.Select(i => i.Path).ToList(),
+                };
                 await _api.CreateToyAsync(payload);
+            }
 
-            if (willPostToSocial && _selectedVideo is not null)
+            if ((willPostMetaVideo || willPostTikTokVideo) && (HasSelectedVideo || HasStoredVideo))
             {
                 var videoErrors = new List<string>();
                 IsUploadingVideo = true;
+                string? socialVideoPath = null;
                 try
                 {
-                    try
+                    socialVideoPath = await ResolveSocialVideoPathAsync();
+                    if (string.IsNullOrWhiteSpace(socialVideoPath) || !File.Exists(socialVideoPath))
                     {
-                        SavingStatus = "Posting video to Facebook & Instagram…";
-                        VideoUploadStatus = "Preparing Facebook/Instagram video upload…";
-
-                        await using var stream = await _selectedVideo.OpenReadAsync();
-                        var progress = new Progress<string>(status =>
-                        {
-                            VideoUploadStatus = status;
-                            SavingStatus = status;
-                        });
-
-                    await _metaVideoUpload.UploadAsync(
-                        stream,
-                        _selectedVideo.FileName,
-                        Name.Trim(),
-                        price,
-                        salePrice,
-                        caption: null,
-                        progress);
-                    }
-                    catch (Exception metaEx)
-                    {
-                        videoErrors.Add($"Facebook/Instagram: {metaEx.Message}");
-                    }
-
-                    var tikTokPosted = false;
-                    try
-                    {
-                        var tikTokStatus = await _api.GetTikTokStatusAsync();
-                        if (tikTokStatus.Enabled && tikTokStatus.Connected)
-                        {
-                            SavingStatus = "Posting video to TikTok…";
-                            VideoUploadStatus = "Preparing TikTok video upload…";
-
-                            await using var stream = await _selectedVideo.OpenReadAsync();
-                            var progress = new Progress<string>(status =>
-                            {
-                                VideoUploadStatus = status;
-                                SavingStatus = status;
-                            });
-
-                            await _tikTokVideoUpload.UploadAsync(
-                                stream,
-                                _selectedVideo.FileName,
-                                Name.Trim(),
-                                price,
-                                salePrice,
-                                caption: null,
-                                progress);
-                            tikTokPosted = true;
-                        }
-                        else if (tikTokStatus.Enabled)
-                        {
-                            // Soft skip — do not show error dialog while TikTok OAuth is pending review.
-                            VideoUploadStatus = "Facebook/Instagram video done. TikTok skipped (not connected).";
-                        }
-                    }
-                    catch (Exception tikTokEx)
-                    {
-                        videoErrors.Add($"TikTok: {tikTokEx.Message}");
-                    }
-
-                    if (videoErrors.Count == 0)
-                    {
-                        VideoUploadStatus = tikTokPosted
-                            ? "Video posted to Facebook, Instagram & TikTok."
-                            : "Video posted to Facebook & Instagram.";
+                        videoErrors.Add("Video: Could not load video file for social posting.");
                     }
                     else
+                    {
+                        var socialFileName = HasSelectedVideo
+                            ? _selectedVideoFileNameOnly
+                            : Path.GetFileName(socialVideoPath);
+
+                        if (willPostMetaVideo)
+                        {
+                            try
+                            {
+                                SavingStatus = "Posting video to Facebook & Instagram…";
+                                VideoUploadStatus = "Preparing Facebook/Instagram video upload…";
+
+                                await using var stream = File.OpenRead(socialVideoPath);
+                                var progress = new Progress<string>(status =>
+                                {
+                                    VideoUploadStatus = status;
+                                    SavingStatus = status;
+                                });
+
+                                await _metaVideoUpload.UploadAsync(
+                                    stream,
+                                    socialFileName,
+                                    Name.Trim(),
+                                    price,
+                                    salePrice,
+                                    caption: null,
+                                    progress);
+                            }
+                            catch (Exception metaEx)
+                            {
+                                videoErrors.Add($"Facebook/Instagram: {metaEx.Message}");
+                            }
+                        }
+
+                        var tikTokPosted = false;
+                        if (willPostTikTokVideo)
+                        {
+                            try
+                            {
+                                var tikTokStatus = await _api.GetTikTokStatusAsync();
+                                if (tikTokStatus.Enabled && tikTokStatus.Connected)
+                                {
+                                    SavingStatus = "Posting video to TikTok…";
+                                    VideoUploadStatus = "Preparing TikTok video upload…";
+
+                                    await using var stream = File.OpenRead(socialVideoPath);
+                                    var progress = new Progress<string>(status =>
+                                    {
+                                        VideoUploadStatus = status;
+                                        SavingStatus = status;
+                                    });
+
+                                    await _tikTokVideoUpload.UploadAsync(
+                                        stream,
+                                        socialFileName,
+                                        Name.Trim(),
+                                        price,
+                                        salePrice,
+                                        caption: null,
+                                        progress);
+                                    tikTokPosted = true;
+                                    if (string.Equals(tikTokStatus.PostMode, "MEDIA_UPLOAD", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        await Shell.Current.DisplayAlert(
+                                            "TikTok video draft",
+                                            "Video TikTok inbox mein chali gayi.\n\nTikTok video drafts pe caption API se nahi jaata — caption clipboard pe copy ho chuka hai. TikTok editor kholo aur paste karo.",
+                                            "OK");
+                                    }
+                                }
+                                else if (tikTokStatus.Enabled)
+                                {
+                                    VideoUploadStatus = "TikTok skipped (not connected).";
+                                }
+                            }
+                            catch (Exception tikTokEx)
+                            {
+                                videoErrors.Add($"TikTok: {tikTokEx.Message}");
+                            }
+                        }
+
+                        if (videoErrors.Count == 0)
+                        {
+                            VideoUploadStatus = (willPostMetaVideo, tikTokPosted) switch
+                            {
+                                (true, true) => "Video posted to Facebook, Instagram & TikTok.",
+                                (true, false) => "Video posted to Facebook & Instagram.",
+                                (false, true) => "Video posted to TikTok.",
+                                _ => "Video posting complete.",
+                            };
+                        }
+                    }
+
+                    if (videoErrors.Count > 0)
                     {
                         VideoUploadStatus = string.Empty;
                         await Shell.Current.DisplayAlert(
@@ -742,9 +1022,16 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
                 finally
                 {
                     IsUploadingVideo = false;
+                    // Temp download from server — don't delete the user's selected cache until after.
+                    if (!string.IsNullOrWhiteSpace(socialVideoPath)
+                        && !string.Equals(socialVideoPath, _selectedVideoPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Delete(socialVideoPath); } catch { /* ignore */ }
+                    }
                 }
             }
 
+            DeleteCachedVideo();
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
@@ -756,6 +1043,36 @@ public partial class ToyEditViewModel : ObservableObject, IQueryAttributable
             IsBusy = false;
             SavingStatus = string.Empty;
         }
+    }
+
+    /// <summary>Local picked file, or download the stored server video for social upload.</summary>
+    async Task<string?> ResolveSocialVideoPathAsync()
+    {
+        if (HasSelectedVideo)
+            return _selectedVideoPath;
+
+        if (string.IsNullOrWhiteSpace(_storedVideoFileUrl))
+            return null;
+
+        SavingStatus = "Downloading saved video for social post…";
+        VideoUploadStatus = "Downloading saved video…";
+
+        var absoluteUrl = AppSettings.ResolveImageUrl(_storedVideoFileUrl);
+        var extension = Path.GetExtension(_storedVideoFilePath);
+        if (string.IsNullOrWhiteSpace(extension))
+            extension = ".mp4";
+
+        var tempPath = Path.Combine(
+            FileSystem.CacheDirectory,
+            $"toy-social-video-{Guid.NewGuid():N}{extension}");
+
+        using var http = new HttpClient { Timeout = TimeSpan.FromHours(2) };
+        await using var remote = await http.GetStreamAsync(absoluteUrl);
+        await using var local = File.Create(tempPath);
+        await remote.CopyToAsync(local);
+        await local.FlushAsync();
+
+        return new FileInfo(tempPath).Length > 0 ? tempPath : null;
     }
 }
 

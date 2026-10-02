@@ -14,19 +14,22 @@ public class OrderService : IOrderService
     private readonly IFileStorageService _fileStorage;
     private readonly IOrderNotificationService _orderNotification;
     private readonly IGoogleMerchantFeedCache _merchantFeedCache;
+    private readonly IAffiliateService _affiliateService;
 
     public OrderService(
         IUnitOfWork unitOfWork,
         IDeliveryChargeService deliveryCharge,
         IFileStorageService fileStorage,
         IOrderNotificationService orderNotification,
-        IGoogleMerchantFeedCache merchantFeedCache)
+        IGoogleMerchantFeedCache merchantFeedCache,
+        IAffiliateService affiliateService)
     {
         _unitOfWork = unitOfWork;
         _deliveryCharge = deliveryCharge;
         _fileStorage = fileStorage;
         _orderNotification = orderNotification;
         _merchantFeedCache = merchantFeedCache;
+        _affiliateService = affiliateService;
     }
 
     public async Task<OrderPlacedDto> PlaceOrderAsync(PlaceOrderRequest request, CancellationToken cancellationToken = default)
@@ -88,6 +91,14 @@ public class OrderService : IOrderService
         }
 
         var deliveryCharge = _deliveryCharge.Calculate(request.City);
+        int? affiliatePartnerId = null;
+        if (!string.IsNullOrWhiteSpace(request.AffiliateCode))
+        {
+            var partner = await _unitOfWork.AffiliatePartners.GetByCodeAsync(request.AffiliateCode, cancellationToken);
+            if (partner is not null && partner.IsActive)
+                affiliatePartnerId = partner.Id;
+        }
+
         var order = new Order
         {
             CustomerId = customer.Id,
@@ -100,6 +111,7 @@ public class OrderService : IOrderService
             Address = request.Address.Trim(),
             Phone = string.Empty,
             Whatsapp = whatsapp,
+            AffiliatePartnerId = affiliatePartnerId,
             Items = orderItems
         };
 
@@ -137,7 +149,7 @@ public class OrderService : IOrderService
         pageSize = Math.Clamp(pageSize, 1, 50);
         var orders = await _unitOfWork.Orders.GetByCustomerWhatsappPagedAsync(whatsapp, page, pageSize, cancellationToken);
         var total = await _unitOfWork.Orders.CountByCustomerWhatsappAsync(whatsapp, cancellationToken);
-        return new PagedResult<OrderDto>(orders.Select(Map).ToList(), total, page, pageSize);
+        return new PagedResult<OrderDto>(orders.Select(o => MapPublic(o)).ToList(), total, page, pageSize);
     }
 
     public async Task<IReadOnlyList<OrderDto>> GetAllAdminAsync(CancellationToken cancellationToken = default)
@@ -154,7 +166,10 @@ public class OrderService : IOrderService
         pageSize = Math.Clamp(pageSize, 1, 100);
         var orders = await _unitOfWork.Orders.GetAdminPagedAsync(status, search, city, dateFrom, dateTo, sort, page, pageSize, cancellationToken);
         var total = await _unitOfWork.Orders.CountAdminAsync(status, search, city, dateFrom, dateTo, cancellationToken);
-        return new PagedResult<OrderDto>(orders.Select(Map).ToList(), total, page, pageSize);
+        var items = new List<OrderDto>();
+        foreach (var order in orders)
+            items.Add(await MapAdminAsync(order, cancellationToken));
+        return new PagedResult<OrderDto>(items, total, page, pageSize);
     }
 
     public Task<IReadOnlyList<string>> GetAdminCitiesAsync(CancellationToken cancellationToken = default)
@@ -223,13 +238,34 @@ public class OrderService : IOrderService
 
         await _unitOfWork.Orders.UpdateAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Map(order);
+
+        if (orderStatus == OrderStatus.Delivered && previousStatus != OrderStatus.Delivered)
+            await _affiliateService.ApplyCommissionForDeliveredOrderAsync(order.Id, cancellationToken);
+        else if (previousStatus == OrderStatus.Delivered && orderStatus != OrderStatus.Delivered)
+            await _affiliateService.ReverseCommissionForOrderAsync(order.Id, cancellationToken);
+
+        var refreshed = await _unitOfWork.Orders.GetWithDetailsAsync(id, cancellationToken);
+        return refreshed is null ? null : await MapAdminAsync(refreshed, cancellationToken);
     }
 
     public async Task<OrderDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default)
     {
         var order = await _unitOfWork.Orders.GetWithDetailsAsync(id, cancellationToken);
-        return order is null ? null : Map(order);
+        return order is null ? null : await MapAdminAsync(order, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var order = await _unitOfWork.Orders.GetWithDetailsAsync(id, cancellationToken);
+        if (order is null) return false;
+
+        if (order.Status != OrderStatus.Pending)
+            throw new InvalidOperationException("Only pending orders can be deleted.");
+
+        await SetToysSoldStateForOrderAsync(order, sold: false, cancellationToken);
+        await _unitOfWork.Orders.DeleteAsync(order, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<OrderDto?> UpdateAdminAsync(int id, AdminUpdateOrderRequest request, CancellationToken cancellationToken = default)
@@ -347,7 +383,7 @@ public class OrderService : IOrderService
             _merchantFeedCache.Invalidate();
 
         var updated = await _unitOfWork.Orders.GetWithDetailsAsync(id, cancellationToken);
-        return updated is null ? null : Map(updated);
+        return updated is null ? null : await MapAdminAsync(updated, cancellationToken);
     }
 
     private async Task SetToysSoldStateForOrderAsync(Order order, bool sold, CancellationToken cancellationToken)
@@ -374,7 +410,59 @@ public class OrderService : IOrderService
     private static string GenerateOrderNumber() =>
         $"KP{DateTime.UtcNow:yyyyMMdd}{Random.Shared.Next(1000, 9999)}";
 
-    private OrderDto Map(Order order)
+    private OrderDto MapPublic(Order order) => MapCore(order, null, null, null, null);
+
+    private async Task<OrderDto> MapAdminAsync(Order order, CancellationToken cancellationToken)
+    {
+        int? partnerId = order.AffiliatePartnerId;
+        string? code = order.AffiliatePartner?.Code;
+        string? name = order.AffiliatePartner?.Name;
+
+        if (partnerId.HasValue && (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name)))
+        {
+            var partner = await _unitOfWork.AffiliatePartners.GetByIdAsync(partnerId.Value, cancellationToken);
+            code ??= partner?.Code;
+            name ??= partner?.Name;
+        }
+
+        decimal? commissionAmount = null;
+        string? commissionStatus = null;
+        if (partnerId.HasValue)
+        {
+            var expected = AffiliateService.CalculateCommission(order.SubTotal, order.DiscountAmount);
+            var earned = await _unitOfWork.AffiliateLedgers.SumByOrderAndTypeAsync(
+                order.Id, AffiliateLedgerEntryType.Commission, cancellationToken);
+            var reversed = await _unitOfWork.AffiliateLedgers.SumByOrderAndTypeAsync(
+                order.Id, AffiliateLedgerEntryType.Reversal, cancellationToken);
+            var active = earned - reversed;
+
+            if (active > 0)
+            {
+                commissionAmount = active;
+                commissionStatus = "Earned";
+            }
+            else if (earned > 0 && reversed >= earned)
+            {
+                commissionAmount = earned;
+                commissionStatus = "Reversed";
+            }
+            else
+            {
+                commissionAmount = expected;
+                commissionStatus = order.Status == OrderStatus.Delivered ? "Earned" : "Pending";
+            }
+        }
+
+        return MapCore(order, partnerId, code, name, commissionAmount, commissionStatus);
+    }
+
+    private OrderDto MapCore(
+        Order order,
+        int? affiliatePartnerId,
+        string? affiliateCode,
+        string? affiliateName,
+        decimal? affiliateCommissionAmount,
+        string? affiliateCommissionStatus = null)
     {
         var advance = order.AdvanceAmount ?? 0;
         var discount = order.DiscountAmount ?? 0;
@@ -399,7 +487,12 @@ public class OrderService : IOrderService
                 i.Toy?.Name ?? "",
                 i.Toy?.EffectivePrice ?? 0,
                 GetToyImage(i.Toy)
-            )).ToList());
+            )).ToList(),
+            affiliatePartnerId,
+            affiliateCode,
+            affiliateName,
+            affiliateCommissionAmount,
+            affiliateCommissionStatus);
     }
 
     private string? GetToyImage(Toy? toy)

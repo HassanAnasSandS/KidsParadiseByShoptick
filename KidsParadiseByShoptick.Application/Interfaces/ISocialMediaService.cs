@@ -4,5 +4,8 @@ namespace KidsParadiseByShoptick.Application.Interfaces;
 
 public interface ISocialMediaService
 {
-    Task<SocialPostResultDto> PostToyAsync(int toyId, CancellationToken cancellationToken = default);
+    Task<SocialPostResultDto> PostToyAsync(
+        int toyId,
+        SocialPostTrigger trigger = SocialPostTrigger.Create,
+        CancellationToken cancellationToken = default);
 }

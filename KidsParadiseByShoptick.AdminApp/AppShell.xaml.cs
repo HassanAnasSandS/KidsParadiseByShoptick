@@ -19,6 +19,9 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("order-edit", typeof(Views.OrderEditPage));
         Routing.RegisterRoute("create-order", typeof(Views.CreateOrderPage));
         Routing.RegisterRoute("review-edit", typeof(Views.ReviewEditPage));
+        Routing.RegisterRoute("affiliate-edit", typeof(Views.AffiliateEditPage));
+        Routing.RegisterRoute("affiliate-ledger", typeof(Views.AffiliateLedgerPage));
+        Routing.RegisterRoute("image-viewer", typeof(Views.ImageViewerPage));
     }
 
     private async void OnLogoutClicked(object? sender, EventArgs e)

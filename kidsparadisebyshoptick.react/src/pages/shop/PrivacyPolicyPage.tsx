@@ -9,7 +9,7 @@ export function PrivacyPolicyPage() {
         description={PAGE_SEO.privacy.description}
         path={PAGE_SEO.privacy.path}
       />
-      <h1 className="text-3xl font-bold text-slate-800 mb-4">Privacy Policy</h1>
+      <h1 className="text-3xl font-bold text-slate-800 mb-4">KidsParadiseByShoptick Privacy Policy</h1>
       <div className="space-y-4 text-slate-600 leading-relaxed text-sm">
         <p><strong>Last updated:</strong> {new Date().getFullYear()}</p>
         <p>

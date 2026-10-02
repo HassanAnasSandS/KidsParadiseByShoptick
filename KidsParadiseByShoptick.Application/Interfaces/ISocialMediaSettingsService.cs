@@ -6,4 +6,6 @@ public interface ISocialMediaSettingsService
 {
     Task<SocialMediaSettingsDto> GetAsync(CancellationToken cancellationToken = default);
     Task<SocialMediaSettingsDto> UpdateAsync(UpdateSocialMediaSettingsRequest request, CancellationToken cancellationToken = default);
+    Task<string> GetTikTokPostModeAsync(CancellationToken cancellationToken = default);
+    Task<string> SetTikTokPostModeAsync(string postMode, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 
 namespace KidsParadiseByShoptick.APIs.Services;
@@ -10,6 +11,10 @@ public class SocialPostQueue : ISocialPostQueue
 
     public ChannelReader<SocialPostJob> Reader => _channel.Reader;
 
-    public ValueTask EnqueueAsync(int toyId, string toyName, CancellationToken cancellationToken = default)
-        => _channel.Writer.WriteAsync(new SocialPostJob(toyId, toyName), cancellationToken);
+    public ValueTask EnqueueAsync(
+        int toyId,
+        string toyName,
+        SocialPostTrigger trigger,
+        CancellationToken cancellationToken = default)
+        => _channel.Writer.WriteAsync(new SocialPostJob(toyId, toyName, trigger), cancellationToken);
 }

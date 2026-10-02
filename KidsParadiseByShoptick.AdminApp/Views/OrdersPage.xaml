@@ -48,22 +48,46 @@
                                     <Label Text="{Binding OrderNumber}" FontAttributes="Bold" />
                                     <Label Text="{Binding CustomerName}" />
                                     <Label Text="{Binding Status}" TextColor="#1a6fe8" />
+                                    <Border IsVisible="{Binding HasAffiliate}"
+                                            Stroke="#99f6e4"
+                                            BackgroundColor="#f0fdfa"
+                                            Padding="8,4"
+                                            StrokeShape="RoundRectangle 8">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding AffiliateListLabel}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#0f766e" />
+                                            <Label Text="{Binding AffiliateCommissionDetail}"
+                                                   IsVisible="{Binding AffiliateCommissionDetail, Converter={StaticResource NullToBool}}"
+                                                   FontSize="11"
+                                                   TextColor="#115e59" />
+                                        </VerticalStackLayout>
+                                    </Border>
                                     <Label Text="{Binding Total, StringFormat='Total: Rs. {0:N0}'}" />
                                     <Label Text="{Binding CreatedAt}" FontSize="11" TextColor="#64748b" />
                                 </VerticalStackLayout>
-                                <Button Grid.Column="1"
-                                        Text="WA"
-                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.OpenWhatsAppCommand}"
-                                        CommandParameter="{Binding .}"
-                                        IsEnabled="{Binding Whatsapp, Converter={StaticResource NullToBool}}"
-                                        BackgroundColor="#25D366"
-                                        TextColor="White"
-                                        FontAttributes="Bold"
-                                        CornerRadius="22"
-                                        WidthRequest="44"
-                                        HeightRequest="44"
-                                        Padding="0"
-                                        VerticalOptions="Start" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Start">
+                                    <Button Text="WA"
+                                            Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.OpenWhatsAppCommand}"
+                                            CommandParameter="{Binding .}"
+                                            IsEnabled="{Binding Whatsapp, Converter={StaticResource NullToBool}}"
+                                            BackgroundColor="#25D366"
+                                            TextColor="White"
+                                            FontAttributes="Bold"
+                                            CornerRadius="22"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0" />
+                                    <Button Text="Del"
+                                            FontSize="12"
+                                            Padding="8,4"
+                                            BackgroundColor="#dc2626"
+                                            TextColor="White"
+                                            IsVisible="{Binding IsPending}"
+                                            Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.DeleteCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </VerticalStackLayout>
                             </Grid>
                         </Frame>
                     </DataTemplate>

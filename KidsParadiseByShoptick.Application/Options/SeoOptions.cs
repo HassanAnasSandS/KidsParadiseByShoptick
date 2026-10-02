@@ -20,8 +20,8 @@ public class SeoOptions
     public string DefaultKeywords { get; set; } =
         "kids toys Pakistan, online toy shop Karachi, buy toys online Pakistan, toy store Pakistan, soft toys, educational toys, baby toys, Shoptick";
 
-    /// <summary>Path under site root, e.g. /hero/slide-2.jpg</summary>
-    public string DefaultOgImagePath { get; set; } = "/hero/slide-2.jpg";
+    /// <summary>Path under site root, e.g. /uploads/site/....jpg</summary>
+    public string DefaultOgImagePath { get; set; } = "/uploads/site/d1b0e2a546a0425b94ffad7ab55e5d62.jpg";
 
     public string Locale { get; set; } = "en_PK";
 

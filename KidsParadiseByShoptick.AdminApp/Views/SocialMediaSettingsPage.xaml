@@ -8,194 +8,531 @@
              Title="Social Media Settings"
              BackgroundColor="{StaticResource PageBg}">
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Refresh" Command="{Binding RefreshAllAccountsCommand}" />
         <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
     </ContentPage.ToolbarItems>
-    <ScrollView Padding="16">
-        <VerticalStackLayout Spacing="16">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <VerticalStackLayout Grid.Row="0" Padding="16,12,16,0" Spacing="6">
             <Label Text="{Binding ErrorMessage}"
                    TextColor="#dc2626"
+                   FontSize="13"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Meta Setup Checklist" FontAttributes="Bold" FontSize="16" />
-                    <Label Text="Verify Facebook, Instagram and WhatsApp catalog requirements one by one."
-                           FontSize="12" TextColor="#64748b" />
-                    <Label Text="{Binding MetaSummary}" FontSize="13" TextColor="#334155" />
-
-                    <Button Text="Check Requirements"
-                            Command="{Binding CheckMetaRequirementsCommand}"
-                            BackgroundColor="#0f766e"
-                            TextColor="White"
-                            IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
-                    <ActivityIndicator IsRunning="{Binding IsCheckingMeta}" IsVisible="{Binding IsCheckingMeta}" Color="#0f766e" />
-
-                    <CollectionView ItemsSource="{Binding MetaRequirements}" SelectionMode="None">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:MetaRequirementCheckModel">
-                                <Frame Padding="12" Margin="0,4" CornerRadius="10"
-                                       BorderColor="#e2e8f0"
-                                       BackgroundColor="#f8fafc">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                        <Label Grid.Column="0"
-                                               Text="{Binding Step, StringFormat='Step {0}'}"
-                                               FontAttributes="Bold"
-                                               TextColor="#1a6fe8"
-                                               VerticalOptions="Start" />
-                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
-                                            <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="14" />
-                                            <Label Text="{Binding Status}" FontSize="12" TextColor="#64748b" />
-                                        </VerticalStackLayout>
-                                        <VerticalStackLayout Grid.Column="2" Spacing="0" VerticalOptions="Start">
-                                            <Label Text="✓" FontSize="18" TextColor="#16a34a"
-                                                   IsVisible="{Binding IsMet}" />
-                                            <Label Text="✗" FontSize="18" TextColor="#dc2626"
-                                                   IsVisible="{Binding IsMet, Converter={StaticResource InverseBool}}" />
-                                        </VerticalStackLayout>
-                                    </Grid>
-                                    <Frame.GestureRecognizers>
-                                        <TapGestureRecognizer
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SocialMediaSettingsViewModel}}, Path=ShowFixCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    </Frame.GestureRecognizers>
-                                </Frame>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-
-                    <Label Text="Tap any step for fix instructions." FontSize="11" TextColor="#94a3b8" />
-
-                    <Label Text="Link Catalog (Step 2)" FontAttributes="Bold" FontSize="13" Margin="0,8,0,0" />
-                    <Label Text="If catalog exists in Commerce Manager but Step 2 fails, paste Catalog ID and link."
-                           FontSize="11" TextColor="#64748b" />
-                    <Entry Placeholder="Commerce Manager Catalog ID"
-                           Text="{Binding CatalogIdToLink}"
-                           Keyboard="Numeric" />
-                    <Button Text="Link Catalog to WhatsApp"
-                            Command="{Binding LinkCatalogCommand}"
-                            BackgroundColor="#7c3aed"
-                            TextColor="White"
-                            IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Google Merchant Center" FontAttributes="Bold" FontSize="16" />
-                    <Label Text="Product feed auto-updates when you Create/Update/Delete a toy or when stock changes. Register this URL once in Merchant Center (Products → Feeds)."
-                           FontSize="12" TextColor="#64748b" />
-                    <Label Text="{Binding GoogleMerchantFeedUrl}"
-                           FontSize="12"
-                           TextColor="#0f172a"
-                           LineBreakMode="CharacterWrap" />
-                    <Button Text="Copy Feed URL"
-                            Command="{Binding CopyGoogleMerchantFeedUrlCommand}"
-                            BackgroundColor="#e2e8f0"
-                            TextColor="#334155" />
-                    <Button Text="Open Feed"
-                            Command="{Binding OpenGoogleMerchantFeedCommand}"
-                            BackgroundColor="#1a73e8"
-                            TextColor="White" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="TikTok" FontAttributes="Bold" FontSize="16" />
-                    <Label Text="Photos post from the server with Facebook/Instagram. Videos upload directly from this app on Save."
-                           FontSize="12" TextColor="#64748b" />
-                    <Label Text="{Binding TikTokSummary}" FontSize="13" TextColor="#334155" />
-
-                    <Button Text="Refresh Status"
-                            Command="{Binding RefreshTikTokStatusCommand}"
-                            BackgroundColor="#e2e8f0"
-                            TextColor="#334155"
-                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
-
-                    <Button Text="Connect TikTok"
-                            Command="{Binding ConnectTikTokCommand}"
-                            BackgroundColor="#111827"
-                            TextColor="White"
-                            IsVisible="{Binding TikTokConnected, Converter={StaticResource InverseBool}}"
-                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
-
-                    <Button Text="Disconnect TikTok"
-                            Command="{Binding DisconnectTikTokCommand}"
-                            BackgroundColor="Transparent"
-                            TextColor="#dc2626"
-                            BorderColor="#fecaca"
-                            BorderWidth="1"
-                            IsVisible="{Binding TikTokConnected}"
-                            IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
-
-                    <ActivityIndicator IsRunning="{Binding IsCheckingTikTok}" IsVisible="{Binding IsCheckingTikTok}" Color="#111827" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="Pinterest" FontAttributes="Bold" FontSize="16" />
-                    <Label Text="On toy Create/Update (social posting on), a Pin is created with photo + product link. Board is auto-created as Kids Paradise Toys if needed."
-                           FontSize="12" TextColor="#64748b" />
-                    <Label Text="{Binding PinterestSummary}" FontSize="13" TextColor="#334155" />
-
-                    <Button Text="Refresh Status"
-                            Command="{Binding RefreshPinterestStatusCommand}"
-                            BackgroundColor="#e2e8f0"
-                            TextColor="#334155"
-                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
-
-                    <Button Text="Connect Pinterest"
-                            Command="{Binding ConnectPinterestCommand}"
-                            BackgroundColor="#E60023"
-                            TextColor="White"
-                            IsVisible="{Binding PinterestConnected, Converter={StaticResource InverseBool}}"
-                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
-
-                    <Button Text="Disconnect Pinterest"
-                            Command="{Binding DisconnectPinterestCommand}"
-                            BackgroundColor="Transparent"
-                            TextColor="#dc2626"
-                            BorderColor="#fecaca"
-                            BorderWidth="1"
-                            IsVisible="{Binding PinterestConnected}"
-                            IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
-
-                    <ActivityIndicator IsRunning="{Binding IsCheckingPinterest}" IsVisible="{Binding IsCheckingPinterest}" Color="#E60023" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="YouTube Description" FontAttributes="Bold" />
-                    <Label Text="Used as the video description when uploading to YouTube from toy edit."
-                           FontSize="12" TextColor="#64748b" />
-                    <Editor Text="{Binding Description}"
-                            AutoSize="TextChanges"
-                            MinimumHeightRequest="120"
-                            Placeholder="Enter YouTube video description…" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Tags" FontAttributes="Bold" />
-                    <Label Text="Used on Facebook, Instagram, TikTok, Pinterest, and YouTube uploads. Separate with spaces or commas (e.g. #KidsParadise #Toys)."
-                           FontSize="12" TextColor="#64748b" />
-                    <Editor Text="{Binding Tags}"
-                            AutoSize="TextChanges"
-                            MinimumHeightRequest="80"
-                            Placeholder="#KidsParadise #Toys #Karachi" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <Button Text="Save Settings"
-                    Command="{Binding SaveCommand}"
-                    BackgroundColor="#1a6fe8"
-                    TextColor="White"
-                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
-
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#1a6fe8" />
         </VerticalStackLayout>
-    </ScrollView>
+
+        <Grid Grid.Row="1" RowDefinitions="*,Auto" BackgroundColor="White">
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8" Padding="16,10">
+                    <Button Text="Accounts" Command="{Binding SelectTabCommand}" CommandParameter="Accounts"
+                            BackgroundColor="#e2e8f0" TextColor="#334155" Padding="18,8"
+                            CornerRadius="20" FontAttributes="Bold" FontSize="13">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Accounts">
+                                <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                <Setter Property="TextColor" Value="White" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Posting" Command="{Binding SelectTabCommand}" CommandParameter="Posting"
+                            BackgroundColor="#e2e8f0" TextColor="#334155" Padding="18,8"
+                            CornerRadius="20" FontAttributes="Bold" FontSize="13">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Posting">
+                                <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                <Setter Property="TextColor" Value="White" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Caption" Command="{Binding SelectTabCommand}" CommandParameter="Caption"
+                            BackgroundColor="#e2e8f0" TextColor="#334155" Padding="18,8"
+                            CornerRadius="20" FontAttributes="Bold" FontSize="13">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Caption">
+                                <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                <Setter Property="TextColor" Value="White" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </HorizontalStackLayout>
+            </ScrollView>
+            <BoxView Grid.Row="1" HeightRequest="1" Color="#e2e8f0" />
+        </Grid>
+
+        <ScrollView Grid.Row="2" Padding="16">
+            <VerticalStackLayout Spacing="14">
+
+                <!-- ===================== ACCOUNTS ===================== -->
+                <VerticalStackLayout Spacing="14" IsVisible="{Binding IsAccountsTab}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Connected accounts" FontAttributes="Bold" FontSize="18" TextColor="#0f172a" />
+                        <Label Text="Pick a platform below. Choose what posts on the Posting tab."
+                               FontSize="13" TextColor="#64748b" />
+                    </VerticalStackLayout>
+
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout Spacing="6">
+                            <Button Text="Meta" Command="{Binding SelectAccountsSubTabCommand}" CommandParameter="Meta"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" Padding="14,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedAccountsSubTab}" Value="Meta">
+                                        <Setter Property="BackgroundColor" Value="#1877F2" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="TikTok" Command="{Binding SelectAccountsSubTabCommand}" CommandParameter="TikTok"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" Padding="14,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedAccountsSubTab}" Value="TikTok">
+                                        <Setter Property="BackgroundColor" Value="#111827" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="Pinterest" Command="{Binding SelectAccountsSubTabCommand}" CommandParameter="Pinterest"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" Padding="14,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedAccountsSubTab}" Value="Pinterest">
+                                        <Setter Property="BackgroundColor" Value="#E60023" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="YouTube" Command="{Binding SelectAccountsSubTabCommand}" CommandParameter="YouTube"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" Padding="14,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedAccountsSubTab}" Value="YouTube">
+                                        <Setter Property="BackgroundColor" Value="#FF0000" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="Google" Command="{Binding SelectAccountsSubTabCommand}" CommandParameter="Google"
+                                    BackgroundColor="#e2e8f0" TextColor="#334155" Padding="14,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedAccountsSubTab}" Value="Google">
+                                        <Setter Property="BackgroundColor" Value="#1a73e8" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <!-- Meta -->
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsMetaSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Meta" FontAttributes="Bold" FontSize="16" TextColor="#0f172a" />
+                                    <Label Text="Facebook · Instagram · WhatsApp catalog" FontSize="12" TextColor="#64748b" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1"
+                                        StrokeThickness="0"
+                                        BackgroundColor="#f1f5f9"
+                                        Padding="10,4"
+                                        StrokeShape="RoundRectangle 12"
+                                        VerticalOptions="Start">
+                                    <Label Text="{Binding MetaStatusLabel}" FontSize="11" FontAttributes="Bold" TextColor="#334155" />
+                                </Border>
+                            </Grid>
+
+                            <Label Text="{Binding MetaSummary}" FontSize="13" TextColor="#475569" />
+
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Refresh" Command="{Binding CheckMetaRequirementsCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155" Padding="14,8"
+                                        FontSize="13"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Connect"
+                                        Command="{Binding ToggleMetaConnectFormCommand}"
+                                        BackgroundColor="#1877F2" TextColor="White" Padding="14,8"
+                                        FontSize="13"
+                                        IsVisible="{Binding MetaConnected, Converter={StaticResource InverseBool}}"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Reconnect"
+                                        Command="{Binding ToggleMetaConnectFormCommand}"
+                                        BackgroundColor="#1877F2" TextColor="White" Padding="14,8"
+                                        FontSize="13"
+                                        IsVisible="{Binding MetaConnected}"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Disconnect" Command="{Binding DisconnectMetaCommand}"
+                                        BackgroundColor="Transparent" TextColor="#dc2626"
+                                        BorderColor="#fecaca" BorderWidth="1" Padding="14,8"
+                                        FontSize="13"
+                                        IsVisible="{Binding MetaConnected}"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                            </HorizontalStackLayout>
+
+                            <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowMetaConnectForm}">
+                                <BoxView HeightRequest="1" Color="#e2e8f0" />
+                                <Label Text="Paste Meta User Access Token"
+                                       FontAttributes="Bold" FontSize="13" />
+                                <Label Text="From Graph API Explorer: grant page, Instagram, catalog, and WhatsApp permissions, then paste the token."
+                                       FontSize="11" TextColor="#94a3b8" />
+                                <Editor Text="{Binding MetaUserAccessToken}"
+                                        Placeholder="EAAG…"
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="72" />
+                                <Button Text="Save &amp; Connect Meta"
+                                        Command="{Binding ConnectMetaCommand}"
+                                        BackgroundColor="#0f172a" TextColor="White"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="6" IsVisible="{Binding MetaConnected}">
+                                <BoxView HeightRequest="1" Color="#e2e8f0" Margin="0,4,0,0" />
+                                <Label Text="Requirements" FontAttributes="Bold" FontSize="13" TextColor="#0f172a" />
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding MetaRequirements}" Spacing="0">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:MetaRequirementCheckModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="0,8">
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding Step, StringFormat='{0}.'}"
+                                                       FontAttributes="Bold" TextColor="#94a3b8" WidthRequest="22" />
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="{Binding Title}" FontSize="13" TextColor="#0f172a" />
+                                                    <Label Text="{Binding Status}" FontSize="11" TextColor="#64748b" />
+                                                </VerticalStackLayout>
+                                                <Label Grid.Column="2"
+                                                       Text="●"
+                                                       FontSize="16"
+                                                       TextColor="#16a34a"
+                                                       VerticalOptions="Start">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsMet}" Value="False">
+                                                            <Setter Property="Text" Value="○" />
+                                                            <Setter Property="TextColor" Value="#cbd5e1" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                                <Grid.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SocialMediaSettingsViewModel}}, Path=ShowFixCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Grid.GestureRecognizers>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                                <Label Text="Tap a step for fix help." FontSize="11" TextColor="#94a3b8" />
+
+                                <Label Text="WhatsApp Catalog ID" FontAttributes="Bold" FontSize="12" Margin="0,6,0,0" />
+                                <Entry Placeholder="Commerce Manager Catalog ID"
+                                       Text="{Binding CatalogIdToLink}" Keyboard="Numeric" />
+                                <Button Text="Link Catalog"
+                                        Command="{Binding LinkCatalogCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155"
+                                        IsEnabled="{Binding IsCheckingMeta, Converter={StaticResource InverseBool}}" />
+                            </VerticalStackLayout>
+
+                            <ActivityIndicator IsRunning="{Binding IsCheckingMeta}" IsVisible="{Binding IsCheckingMeta}" Color="#1877F2" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- TikTok -->
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsTikTokSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="TikTok" FontAttributes="Bold" FontSize="16" TextColor="#0f172a" />
+                                    <Label Text="Photos &amp; videos" FontSize="12" TextColor="#64748b" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" StrokeThickness="0" BackgroundColor="#f1f5f9"
+                                        Padding="10,4" StrokeShape="RoundRectangle 12" VerticalOptions="Start">
+                                    <Label Text="{Binding TikTokStatusLabel}" FontSize="11" FontAttributes="Bold" TextColor="#334155" />
+                                </Border>
+                            </Grid>
+
+                            <Label Text="{Binding TikTokSummary}" FontSize="13" TextColor="#475569" />
+
+                            <Label Text="Post mode" FontAttributes="Bold" FontSize="12" TextColor="#64748b" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Border Grid.Column="0" Padding="12" Stroke="#e2e8f0" StrokeThickness="1"
+                                        BackgroundColor="White" StrokeShape="RoundRectangle 10">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsTikTokDraftMode}" Value="True">
+                                            <Setter Property="Stroke" Value="#0f172a" />
+                                            <Setter Property="BackgroundColor" Value="#f8fafc" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectTikTokPostModeCommand}" CommandParameter="MEDIA_UPLOAD" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="Draft" FontAttributes="Bold" FontSize="13" />
+                                        <Label Text="Inbox first" FontSize="11" TextColor="#64748b" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border Grid.Column="1" Padding="12" Stroke="#e2e8f0" StrokeThickness="1"
+                                        BackgroundColor="White" StrokeShape="RoundRectangle 10">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsTikTokDirectPostMode}" Value="True">
+                                            <Setter Property="Stroke" Value="#0f172a" />
+                                            <Setter Property="BackgroundColor" Value="#f8fafc" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectTikTokPostModeCommand}" CommandParameter="DIRECT_POST" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="Direct" FontAttributes="Bold" FontSize="13" />
+                                        <Label Text="Publish now" FontSize="11" TextColor="#64748b" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </Grid>
+
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Refresh" Command="{Binding RefreshTikTokStatusCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155" Padding="14,8" FontSize="13"
+                                        IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Connect" Command="{Binding ConnectTikTokCommand}"
+                                        BackgroundColor="#111827" TextColor="White" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding TikTokConnected, Converter={StaticResource InverseBool}}"
+                                        IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Disconnect" Command="{Binding DisconnectTikTokCommand}"
+                                        BackgroundColor="Transparent" TextColor="#dc2626"
+                                        BorderColor="#fecaca" BorderWidth="1" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding TikTokConnected}"
+                                        IsEnabled="{Binding IsCheckingTikTok, Converter={StaticResource InverseBool}}" />
+                            </HorizontalStackLayout>
+                            <ActivityIndicator IsRunning="{Binding IsCheckingTikTok}" IsVisible="{Binding IsCheckingTikTok}" Color="#111827" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- Pinterest -->
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsPinterestSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Pinterest" FontAttributes="Bold" FontSize="16" TextColor="#0f172a" />
+                                    <Label Text="Product pins" FontSize="12" TextColor="#64748b" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" StrokeThickness="0" BackgroundColor="#f1f5f9"
+                                        Padding="10,4" StrokeShape="RoundRectangle 12" VerticalOptions="Start">
+                                    <Label Text="{Binding PinterestStatusLabel}" FontSize="11" FontAttributes="Bold" TextColor="#334155" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{Binding PinterestSummary}" FontSize="13" TextColor="#475569" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Refresh" Command="{Binding RefreshPinterestStatusCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155" Padding="14,8" FontSize="13"
+                                        IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Connect" Command="{Binding ConnectPinterestCommand}"
+                                        BackgroundColor="#E60023" TextColor="White" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding PinterestConnected, Converter={StaticResource InverseBool}}"
+                                        IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Disconnect" Command="{Binding DisconnectPinterestCommand}"
+                                        BackgroundColor="Transparent" TextColor="#dc2626"
+                                        BorderColor="#fecaca" BorderWidth="1" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding PinterestConnected}"
+                                        IsEnabled="{Binding IsCheckingPinterest, Converter={StaticResource InverseBool}}" />
+                            </HorizontalStackLayout>
+                            <ActivityIndicator IsRunning="{Binding IsCheckingPinterest}" IsVisible="{Binding IsCheckingPinterest}" Color="#E60023" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- YouTube -->
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsYouTubeSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="YouTube" FontAttributes="Bold" FontSize="16" TextColor="#0f172a" />
+                                    <Label Text="Video uploads from admin app" FontSize="12" TextColor="#64748b" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" StrokeThickness="0" BackgroundColor="#f1f5f9"
+                                        Padding="10,4" StrokeShape="RoundRectangle 12" VerticalOptions="Start">
+                                    <Label Text="{Binding YouTubeStatusLabel}" FontSize="11" FontAttributes="Bold" TextColor="#334155" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{Binding YouTubeSummary}" FontSize="13" TextColor="#475569" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Refresh" Command="{Binding RefreshYouTubeStatusCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155" Padding="14,8" FontSize="13"
+                                        IsEnabled="{Binding IsCheckingYouTube, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Connect" Command="{Binding ConnectYouTubeCommand}"
+                                        BackgroundColor="#FF0000" TextColor="White" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding YouTubeConnected, Converter={StaticResource InverseBool}}"
+                                        IsEnabled="{Binding IsCheckingYouTube, Converter={StaticResource InverseBool}}" />
+                                <Button Text="Disconnect" Command="{Binding DisconnectYouTubeCommand}"
+                                        BackgroundColor="Transparent" TextColor="#dc2626"
+                                        BorderColor="#fecaca" BorderWidth="1" Padding="14,8" FontSize="13"
+                                        IsVisible="{Binding YouTubeConnected}"
+                                        IsEnabled="{Binding IsCheckingYouTube, Converter={StaticResource InverseBool}}" />
+                            </HorizontalStackLayout>
+                            <ActivityIndicator IsRunning="{Binding IsCheckingYouTube}" IsVisible="{Binding IsCheckingYouTube}" Color="#FF0000" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- Google Merchant -->
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsGoogleSubTab}">
+                        <VerticalStackLayout Spacing="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Google Merchant" FontAttributes="Bold" FontSize="16" TextColor="#0f172a" />
+                                <Label Text="Product feed · always updates on toy save" FontSize="12" TextColor="#64748b" />
+                            </VerticalStackLayout>
+                            <Label Text="{Binding GoogleMerchantFeedUrl}" FontSize="12" TextColor="#0f172a"
+                                   LineBreakMode="CharacterWrap" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Copy URL" Command="{Binding CopyGoogleMerchantFeedUrlCommand}"
+                                        BackgroundColor="#f1f5f9" TextColor="#334155" Padding="14,8" FontSize="13" />
+                                <Button Text="Open Feed" Command="{Binding OpenGoogleMerchantFeedCommand}"
+                                        BackgroundColor="#1a73e8" TextColor="White" Padding="14,8" FontSize="13" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <!-- ===================== POSTING ===================== -->
+                <VerticalStackLayout Spacing="14" IsVisible="{Binding IsPostingTab}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Auto-posting rules" FontAttributes="Bold" FontSize="18" TextColor="#0f172a" />
+                        <Label Text="Turn platforms on/off. Accounts must be connected first."
+                               FontSize="13" TextColor="#64748b" />
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout Spacing="6">
+                        <Button Text="Create" Command="{Binding SelectPostingSubTabCommand}" CommandParameter="Create"
+                                BackgroundColor="#e2e8f0" TextColor="#334155" Padding="16,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedPostingSubTab}" Value="Create">
+                                    <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Text="Edit" Command="{Binding SelectPostingSubTabCommand}" CommandParameter="Edit"
+                                BackgroundColor="#e2e8f0" TextColor="#334155" Padding="16,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedPostingSubTab}" Value="Edit">
+                                    <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </HorizontalStackLayout>
+
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsCreatePostingSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="On Create" FontAttributes="Bold" FontSize="16" />
+                                <Label Text="When you add a new toy." FontSize="12" TextColor="#64748b" />
+                            </VerticalStackLayout>
+
+                            <Label Text="Server photos &amp; catalog" FontAttributes="Bold" FontSize="12" TextColor="#64748b" />
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Facebook photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.FacebookPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Instagram photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.InstagramPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="WhatsApp catalog" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.WhatsAppCatalog}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="TikTok photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.TikTokPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Pinterest pin" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.Pinterest}" /></Grid>
+
+                            <BoxView HeightRequest="1" Color="#e2e8f0" Margin="0,4" />
+                            <Label Text="Video (admin app on Save)" FontAttributes="Bold" FontSize="12" TextColor="#64748b" />
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="YouTube upload" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.YouTube}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Facebook &amp; Instagram video" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.MetaVideo}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="TikTok video" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnCreate.TikTokVideo}" /></Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsEditPostingSubTab}">
+                        <VerticalStackLayout Spacing="12">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="On Edit" FontAttributes="Bold" FontSize="16" />
+                                <Label Text="Only when Edit Toy has “Post to social media” checked." FontSize="12" TextColor="#64748b" />
+                            </VerticalStackLayout>
+
+                            <Label Text="Server photos &amp; catalog" FontAttributes="Bold" FontSize="12" TextColor="#64748b" />
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Facebook photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.FacebookPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Instagram photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.InstagramPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="WhatsApp catalog" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.WhatsAppCatalog}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="TikTok photos" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.TikTokPhotos}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Pinterest pin" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.Pinterest}" /></Grid>
+
+                            <BoxView HeightRequest="1" Color="#e2e8f0" Margin="0,4" />
+                            <Label Text="Video (admin app on Save)" FontAttributes="Bold" FontSize="12" TextColor="#64748b" />
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="YouTube upload" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.YouTube}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="Facebook &amp; Instagram video" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.MetaVideo}" /></Grid>
+                            <Grid ColumnDefinitions="*,Auto"><Label Text="TikTok video" VerticalOptions="Center" /><Switch Grid.Column="1" IsToggled="{Binding OnEdit.TikTokVideo}" /></Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Button Text="Save posting rules"
+                            Command="{Binding SaveCommand}"
+                            BackgroundColor="#1a6fe8"
+                            TextColor="White"
+                            CornerRadius="12"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                </VerticalStackLayout>
+
+                <!-- ===================== CAPTION ===================== -->
+                <VerticalStackLayout Spacing="14" IsVisible="{Binding IsCaptionTab}">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Caption &amp; tags" FontAttributes="Bold" FontSize="18" TextColor="#0f172a" />
+                        <Label Text="Shared text used when toys are posted."
+                               FontSize="13" TextColor="#64748b" />
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout Spacing="6">
+                        <Button Text="Description" Command="{Binding SelectCaptionSubTabCommand}" CommandParameter="Description"
+                                BackgroundColor="#e2e8f0" TextColor="#334155" Padding="16,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedCaptionSubTab}" Value="Description">
+                                    <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Text="Tags" Command="{Binding SelectCaptionSubTabCommand}" CommandParameter="Tags"
+                                BackgroundColor="#e2e8f0" TextColor="#334155" Padding="16,6" CornerRadius="16" FontSize="12" FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedCaptionSubTab}" Value="Tags">
+                                    <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </HorizontalStackLayout>
+
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsDescriptionCaptionSubTab}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="YouTube description" FontAttributes="Bold" FontSize="15" />
+                            <Label Text="Used as the video description on YouTube uploads."
+                                   FontSize="12" TextColor="#64748b" />
+                            <Editor Text="{Binding Description}" AutoSize="TextChanges"
+                                    MinimumHeightRequest="120"
+                                    Placeholder="Enter YouTube video description…" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="16" CornerRadius="14" BorderColor="#e2e8f0" BackgroundColor="White" HasShadow="False"
+                           IsVisible="{Binding IsTagsCaptionSubTab}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Hashtags" FontAttributes="Bold" FontSize="15" />
+                            <Label Text="Facebook, Instagram, Pinterest, YouTube use the full list. TikTok uses the first 5 only."
+                                   FontSize="12" TextColor="#64748b" />
+                            <Editor Text="{Binding Tags}" AutoSize="TextChanges"
+                                    MinimumHeightRequest="80"
+                                    Placeholder="#KidsParadise #Toys #Karachi #Pakistan" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Button Text="Save caption settings"
+                            Command="{Binding SaveCommand}"
+                            BackgroundColor="#1a6fe8"
+                            TextColor="White"
+                            CornerRadius="12"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

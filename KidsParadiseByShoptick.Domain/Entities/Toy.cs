@@ -8,6 +8,8 @@ public class Toy : BaseEntity
     public decimal? SalePrice { get; set; }
     public bool IsSold { get; set; }
     public string? VideoLink { get; set; }
+    /// <summary>Server-stored video file (uploads/toy-videos/...) for re-posting to social without re-selecting.</summary>
+    public string? VideoFilePath { get; set; }
 
     public ToyCategory Category { get; set; } = null!;
     public ICollection<ToyImage> Images { get; set; } = [];

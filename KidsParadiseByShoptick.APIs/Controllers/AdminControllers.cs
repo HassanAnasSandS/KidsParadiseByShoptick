@@ -102,15 +102,21 @@ public class AdminToysController : ControllerBase
     private readonly IToyService _toyService;
     private readonly ISocialPostQueue _socialPostQueue;
     private readonly IGoogleMerchantFeedCache _merchantFeedCache;
+    private readonly IToyImageSearchService _imageSearch;
+    private readonly ISocialMediaSettingsService _socialSettings;
 
     public AdminToysController(
         IToyService toyService,
         ISocialPostQueue socialPostQueue,
-        IGoogleMerchantFeedCache merchantFeedCache)
+        IGoogleMerchantFeedCache merchantFeedCache,
+        IToyImageSearchService imageSearch,
+        ISocialMediaSettingsService socialSettings)
     {
         _toyService = toyService;
         _socialPostQueue = socialPostQueue;
         _merchantFeedCache = merchantFeedCache;
+        _imageSearch = imageSearch;
+        _socialSettings = socialSettings;
     }
 
     [HttpGet]
@@ -132,17 +138,62 @@ public class AdminToysController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpPost("search-by-image")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<IReadOnlyList<ToyImageSearchMatchDto>>> SearchByImage(
+        IFormFile file,
+        [FromQuery] int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No image uploaded." });
+
+        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif", ".bmp", ".heic", ".heif" };
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!string.IsNullOrEmpty(ext) && !allowed.Contains(ext))
+            return BadRequest(new { message = "Invalid file type. Please upload an image." });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var results = await _imageSearch.SearchAsync(stream, limit, cancellationToken);
+            return Ok(results);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("index-images")]
+    public async Task<ActionResult<ToyImageIndexResultDto>> IndexImages(CancellationToken cancellationToken)
+        => Ok(await _imageSearch.BackfillAsync(cancellationToken));
+
     [HttpPost]
     public async Task<ActionResult<AdminToySaveResponse>> Create(
         [FromBody] CreateToyRequest request, CancellationToken cancellationToken)
     {
         var toy = await _toyService.CreateAsync(request, cancellationToken);
         _merchantFeedCache.Invalidate();
-        await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
-        var social = new SocialPostResultDto(
-            false, null, false, null,
-            "Posting to Facebook, Instagram, TikTok and Pinterest in background. Google Merchant feed updated.",
-            Queued: true);
+
+        var settings = await _socialSettings.GetAsync(cancellationToken);
+        var actions = settings.OnCreate ?? SocialPostActionsDto.AllEnabled;
+        SocialPostResultDto social;
+        if (actions.HasAnyServerAction)
+        {
+            await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, SocialPostTrigger.Create, cancellationToken);
+            social = new SocialPostResultDto(
+                false, null, false, null,
+                "Posting enabled Create actions in background. Google Merchant feed updated.",
+                Queued: true);
+        }
+        else
+        {
+            social = new SocialPostResultDto(
+                false, null, false, null,
+                "Google Merchant feed updated. No Create social actions enabled.");
+        }
+
         return Ok(new AdminToySaveResponse(toy, social));
     }
 
@@ -173,11 +224,22 @@ public class AdminToysController : ControllerBase
         SocialPostResultDto social;
         if (request.PostToSocialMedia)
         {
-            await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, cancellationToken);
-            social = new SocialPostResultDto(
-                false, null, false, null,
-                "Posting to Facebook, Instagram, TikTok and Pinterest in background. Google Merchant feed updated.",
-                Queued: true);
+            var settings = await _socialSettings.GetAsync(cancellationToken);
+            var actions = settings.OnEdit ?? SocialPostActionsDto.AllEnabled;
+            if (actions.HasAnyServerAction)
+            {
+                await _socialPostQueue.EnqueueAsync(toy.Id, toy.Name, SocialPostTrigger.Edit, cancellationToken);
+                social = new SocialPostResultDto(
+                    false, null, false, null,
+                    "Posting enabled Edit actions in background. Google Merchant feed updated.",
+                    Queued: true);
+            }
+            else
+            {
+                social = new SocialPostResultDto(
+                    false, null, false, null,
+                    "Google Merchant feed updated. No Edit social actions enabled.");
+            }
         }
         else
         {
@@ -280,6 +342,20 @@ public class AdminOrdersController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await _orderService.DeleteAsync(id, cancellationToken);
+            return deleted ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
 
 [ApiController]
@@ -306,6 +382,26 @@ public class AdminUploadController : ControllerBase
 
         await using var stream = file.OpenReadStream();
         var path = await _fileStorage.SaveImageAsync(stream, file.FileName, folder, cancellationToken);
+        return Ok(new UploadResponse(path, _fileStorage.GetPublicUrl(path)));
+    }
+
+    /// <summary>Upload a toy video file for later social re-posting (stored under uploads/toy-videos).</summary>
+    [HttpPost("video")]
+    [RequestSizeLimit(200 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 200 * 1024 * 1024)]
+    public async Task<ActionResult<UploadResponse>> UploadVideo(
+        IFormFile file, CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No video uploaded." });
+
+        var allowed = new[] { ".mp4", ".mov", ".m4v", ".webm" };
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowed.Contains(ext))
+            return BadRequest(new { message = "Invalid video type. Use MP4, MOV, M4V or WEBM." });
+
+        await using var stream = file.OpenReadStream();
+        var path = await _fileStorage.SaveImageAsync(stream, file.FileName, "toy-videos", cancellationToken);
         return Ok(new UploadResponse(path, _fileStorage.GetPublicUrl(path)));
     }
 }
@@ -351,12 +447,116 @@ public class AdminSiteImagesController : ControllerBase
         }
     }
 
+    [HttpPut("{key}/content")]
+    public async Task<ActionResult<SiteImageAdminDto>> UpdateContent(
+        string key, [FromBody] UpdateSiteImageContentRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _siteImageService.UpdateContentAsync(key, request, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{key}/custom")]
     public async Task<ActionResult<SiteImageAdminDto>> Reset(string key, CancellationToken cancellationToken)
     {
         try
         {
             return Ok(await _siteImageService.ResetAsync(key, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+}
+
+[ApiController]
+[Route("api/admin/affiliates")]
+[Authorize(Roles = "Admin")]
+public class AdminAffiliatesController : ControllerBase
+{
+    private readonly IAffiliateService _affiliateService;
+
+    public AdminAffiliatesController(IAffiliateService affiliateService) => _affiliateService = affiliateService;
+
+    [HttpGet]
+    public async Task<ActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isActive = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _affiliateService.GetAdminPagedAsync(search, isActive, page, pageSize, cancellationToken));
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<AffiliatePartnerDto>> GetById(int id, CancellationToken cancellationToken)
+    {
+        var result = await _affiliateService.GetByIdAsync(id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<AffiliatePartnerDto>> Create(
+        [FromBody] CreateAffiliatePartnerRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _affiliateService.CreateAsync(request, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<AffiliatePartnerDto>> Update(
+        int id, [FromBody] UpdateAffiliatePartnerRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _affiliateService.UpdateAsync(id, request, cancellationToken);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await _affiliateService.DeleteAsync(id, cancellationToken);
+            return deleted ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/ledger")]
+    public async Task<ActionResult<AffiliateLedgerDto>> GetLedger(int id, CancellationToken cancellationToken)
+    {
+        var result = await _affiliateService.GetLedgerAsync(id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:int}/payments")]
+    public async Task<ActionResult<AffiliateLedgerEntryDto>> RecordPayment(
+        int id, [FromBody] RecordAffiliatePaymentRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _affiliateService.RecordPaymentAsync(id, request, cancellationToken));
         }
         catch (InvalidOperationException ex)
         {

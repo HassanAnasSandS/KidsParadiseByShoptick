@@ -16,6 +16,8 @@ public class AppDbContext : DbContext
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<SiteImage> SiteImages => Set<SiteImage>();
+    public DbSet<AffiliatePartner> AffiliatePartners => Set<AffiliatePartner>();
+    public DbSet<AffiliateLedgerEntry> AffiliateLedgerEntries => Set<AffiliateLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,12 +44,14 @@ public class AppDbContext : DbContext
             e.Property(x => x.Price).HasPrecision(18, 2);
             e.Property(x => x.SalePrice).HasPrecision(18, 2);
             e.Property(x => x.VideoLink).HasMaxLength(500);
+            e.Property(x => x.VideoFilePath).HasMaxLength(500);
             e.HasOne(x => x.Category).WithMany(x => x.Toys).HasForeignKey(x => x.CategoryId);
         });
 
         modelBuilder.Entity<ToyImage>(e =>
         {
             e.Property(x => x.ImagePath).HasMaxLength(500);
+            e.HasIndex(x => x.PerceptualHash);
             e.HasOne(x => x.Toy).WithMany(x => x.Images).HasForeignKey(x => x.ToyId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -66,6 +70,30 @@ public class AppDbContext : DbContext
             e.Property(x => x.Whatsapp).HasMaxLength(50);
             e.Property(x => x.TrackingNumber).HasMaxLength(100);
             e.HasOne(x => x.Customer).WithMany(x => x.Orders).HasForeignKey(x => x.CustomerId);
+            e.HasOne(x => x.AffiliatePartner).WithMany(x => x.Orders).HasForeignKey(x => x.AffiliatePartnerId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AffiliatePartner>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Whatsapp).HasMaxLength(50);
+            e.Property(x => x.AccountNumber).HasMaxLength(100);
+            e.Property(x => x.WalletBankName).HasMaxLength(120);
+            e.Property(x => x.Code).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<AffiliateLedgerEntry>(e =>
+        {
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.OrderNumber).HasMaxLength(50);
+            e.HasIndex(x => new { x.OrderId, x.Type });
+            e.HasOne(x => x.AffiliatePartner).WithMany(x => x.LedgerEntries)
+                .HasForeignKey(x => x.AffiliatePartnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Order).WithMany().HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<OrderItem>(e =>
@@ -99,6 +127,13 @@ public class AppDbContext : DbContext
             e.Property(x => x.Label).HasMaxLength(200);
             e.Property(x => x.Group).HasMaxLength(100);
             e.Property(x => x.ImagePath).HasMaxLength(500);
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Subtitle).HasMaxLength(500);
+            e.Property(x => x.CtaText).HasMaxLength(100);
+            e.Property(x => x.LinkUrl).HasMaxLength(300);
+            e.Property(x => x.TitleColor).HasMaxLength(20);
+            e.Property(x => x.SubtitleColor).HasMaxLength(20);
+            e.Property(x => x.CtaColor).HasMaxLength(20);
         });
     }
 }

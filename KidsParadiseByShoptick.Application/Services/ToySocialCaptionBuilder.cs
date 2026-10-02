@@ -8,12 +8,19 @@ namespace KidsParadiseByShoptick.Application.Services;
 internal static class ToySocialCaptionBuilder
 {
     public static string Build(Toy toy, string siteBaseUrl, string whatsAppNumber, string? tags = null)
+        => BuildCore(toy, whatsAppNumber, tags, plainText: false);
+
+    /// <summary>Same caption as Facebook/Instagram, without HTML (TikTok / plain text surfaces).</summary>
+    public static string BuildPlainText(Toy toy, string siteBaseUrl, string whatsAppNumber, string? tags = null)
+        => BuildCore(toy, whatsAppNumber, tags, plainText: true);
+
+    static string BuildCore(Toy toy, string whatsAppNumber, string? tags, bool plainText)
     {
         var onSale = toy.SalePrice is not null && toy.SalePrice < toy.Price;
 
         var sb = new StringBuilder();
         sb.AppendLine(toy.Name.Trim());
-        sb.AppendLine(FormatPriceLine(toy, onSale));
+        sb.AppendLine(FormatPriceLine(toy, onSale, plainText));
         sb.AppendLine("Excellent Working Condition");
         sb.AppendLine($"For price and queries please feel free to contact us on WhatsApp {FormatWhatsAppDisplay(whatsAppNumber)}");
         sb.AppendLine();
@@ -25,13 +32,16 @@ internal static class ToySocialCaptionBuilder
         return sb.ToString().Trim();
     }
 
-    static string FormatPriceLine(Toy toy, bool onSale)
+    static string FormatPriceLine(Toy toy, bool onSale, bool plainText)
     {
         var regular = toy.Price.ToString("N0", CultureInfo.InvariantCulture);
         if (!onSale)
             return $"Price: Rs. {regular}";
 
         var sale = toy.SalePrice!.Value.ToString("N0", CultureInfo.InvariantCulture);
+        if (plainText)
+            return $"Price: Rs. {sale} (was Rs. {regular})";
+
         return $"Price: <del>Rs. {regular}</del> <strong>Rs. {sale}</strong>";
     }
 

@@ -1,15 +1,20 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Trash2, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useShopPath } from '@/store/shopFilters';
+import { withAffiliatePath } from '@/store/affiliate';
 import { Button } from '@/components/ui/Button';
 import { formatPrice, placeholderImage, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { ImageLightbox } from '@/components/shop/ImageLightbox';
 
 export function CartPage() {
   const shopPath = useShopPath();
   const { items, removeItem, subTotal, totalItems } = useCartStore();
+  const checkoutPath = withAffiliatePath('/checkout');
+  const [lightbox, setLightbox] = useState<{ images: string[]; alt: string } | null>(null);
 
   if (items.length === 0) {
     return (
@@ -31,11 +36,23 @@ export function CartPage() {
       <div className="space-y-4">
         {items.map((item) => (
           <div key={item.toyId} className="bg-white rounded-2xl p-4 border border-slate-100 flex gap-4 items-center">
-            <img
-              src={item.imageUrl || placeholderImage(item.name)}
-              alt={item.name}
-              className="w-20 h-20 rounded-xl object-cover bg-slate-50 shrink-0"
-            />
+            <button
+              type="button"
+              onClick={() =>
+                setLightbox({
+                  images: [item.imageUrl || placeholderImage(item.name)],
+                  alt: item.name,
+                })
+              }
+              className="shrink-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400"
+              aria-label={`View ${item.name} image`}
+            >
+              <img
+                src={item.imageUrl || placeholderImage(item.name)}
+                alt={item.name}
+                className="w-20 h-20 rounded-xl object-cover bg-slate-50 cursor-zoom-in hover:opacity-90 transition-opacity"
+              />
+            </button>
             <div className="flex-1 min-w-0">
               <Link to={`/product/${item.toyId}`} className="font-semibold text-slate-800 hover:text-brand-600 truncate block">
                 {item.name}
@@ -55,10 +72,18 @@ export function CartPage() {
           <span>{formatPrice(subTotal())}</span>
         </div>
         <p className="text-sm text-slate-500 mt-1">Delivery charge calculated at checkout · {PAYMENT_POLICY}</p>
-        <Link to="/checkout" className="block mt-4">
+        <Link to={checkoutPath} className="block mt-4">
           <Button size="lg" className="w-full">Proceed to Checkout</Button>
         </Link>
       </div>
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   );
 }

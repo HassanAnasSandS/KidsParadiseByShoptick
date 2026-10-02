@@ -30,6 +30,7 @@ KidsParadiseByShoptick.Published/.app-data/
 ## Local secrets (never commit)
 appsettings.Secrets.json
 **/appsettings.Secrets.json
+**/appsettings.Secrets.tiktok-production-backup.json
 
 ## User uploads (runtime content)
 **/uploads/

@@ -10,4 +10,7 @@ public interface ITikTokSocialService
 
     /// <summary>Posts toy photos to TikTok (separate from Facebook/Instagram). Returns publish_id.</summary>
     Task<string?> PostToyPhotosAsync(int toyId, CancellationToken cancellationToken = default);
+
+    /// <summary>Resolves a creator-allowed privacy_level for DIRECT_POST.</summary>
+    Task<string> ResolvePrivacyLevelAsync(string accessToken, CancellationToken cancellationToken = default);
 }

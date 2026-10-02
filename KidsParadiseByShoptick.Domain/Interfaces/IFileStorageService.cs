@@ -6,4 +6,6 @@ public interface IFileStorageService
     Task<string?> CopyImageAsync(string? sourceRelativePath, CancellationToken cancellationToken = default);
     void DeleteImage(string? relativePath);
     string GetPublicUrl(string? relativePath);
+    string? GetAbsolutePath(string? relativePath);
+    bool FileExists(string? relativePath);
 }

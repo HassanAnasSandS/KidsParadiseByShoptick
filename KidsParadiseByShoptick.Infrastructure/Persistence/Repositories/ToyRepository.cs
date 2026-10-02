@@ -78,6 +78,19 @@ public class ToyRepository : Repository<Toy>, IToyRepository
         int? categoryId, string? search, bool? isSold, bool? onSale, CancellationToken cancellationToken = default)
         => BuildAdminQuery(categoryId, search, isSold, onSale).CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Toy>> GetAllWithImagesTrackedAsync(CancellationToken cancellationToken = default)
+        => await DbSet
+            .Include(x => x.Images)
+            .Include(x => x.Category)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Toy>> GetAllWithImagesForSearchAsync(CancellationToken cancellationToken = default)
+        => await DbSet
+            .AsNoTracking()
+            .Include(x => x.Images)
+            .Include(x => x.Category)
+            .ToListAsync(cancellationToken);
+
     private IQueryable<Toy> BuildAdminQuery(int? categoryId, string? search, bool? isSold, bool? onSale)
     {
         var query = DbSet

@@ -38,6 +38,21 @@ export function filtersToSearchParams(filters: ShopFilters): URLSearchParams {
   return params;
 }
 
+/** Keep ?aff= on shop URL rewrites so refresh/share still carries attribution. */
+export function filtersToSearchParamsWithAffiliate(filters: ShopFilters): URLSearchParams {
+  const params = filtersToSearchParams(filters);
+  try {
+    const raw = localStorage.getItem('kids-paradise-aff');
+    if (!raw) return params;
+    const parsed = JSON.parse(raw) as { state?: { code?: string | null }; code?: string | null };
+    const code = (parsed?.state?.code ?? parsed?.code)?.trim();
+    if (code && !params.has('aff') && !params.has('ref')) params.set('aff', code);
+  } catch {
+    // ignore
+  }
+  return params;
+}
+
 export function hasActiveShopFilters(filters: ShopFilters): boolean {
   return (
     filters.search.trim() !== '' ||
@@ -48,7 +63,7 @@ export function hasActiveShopFilters(filters: ShopFilters): boolean {
 }
 
 export function buildShopPath(filters: ShopFilters = DEFAULT_SHOP_FILTERS): string {
-  const params = filtersToSearchParams(filters);
+  const params = filtersToSearchParamsWithAffiliate(filters);
   const qs = params.toString();
   return qs ? `/shop?${qs}` : '/shop';
 }

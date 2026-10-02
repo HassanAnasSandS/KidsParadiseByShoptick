@@ -252,12 +252,69 @@ public partial class SiteImagesViewModel : ObservableObject
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private bool isRefreshing;
     [ObservableProperty] private bool isSavingDelivery;
+    [ObservableProperty] private bool isSavingLinks;
     [ObservableProperty] private string? errorMessage;
     [ObservableProperty] private string karachiChargeText = "300";
     [ObservableProperty] private string otherCitiesChargeText = "400";
+    [ObservableProperty] private string whatsAppNumber = "923217175896";
+    [ObservableProperty] private string whatsAppDisplay = "0321 7175896";
+    [ObservableProperty] private string youTubeUrl = string.Empty;
+    [ObservableProperty] private string facebookUrl = string.Empty;
+    [ObservableProperty] private string instagramUrl = string.Empty;
+    [ObservableProperty] private string tikTokUrl = string.Empty;
+    [ObservableProperty] private string pinterestUrl = string.Empty;
+    [ObservableProperty] private string selectedTab = "Delivery";
+
+    public bool IsDeliveryTab => SelectedTab == "Delivery";
+    public bool IsLinksTab => SelectedTab == "Links";
+    public bool IsBrandTab => SelectedTab == "Brand";
+    public bool IsHeroTab => SelectedTab == "Hero";
+    public bool IsBannersTab => SelectedTab == "Banners";
+    public bool IsPagesTab => SelectedTab == "Pages";
+    public bool IsImagesTab => SelectedTab is "Brand" or "Hero" or "Banners" or "Pages";
+
     public ObservableCollection<SiteImageModel> Items { get; } = [];
+    public ObservableCollection<SiteImageModel> FilteredItems { get; } = [];
 
     public SiteImagesViewModel(AdminApiService api) => _api = api;
+
+    partial void OnSelectedTabChanged(string value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(IsDeliveryTab));
+        OnPropertyChanged(nameof(IsLinksTab));
+        OnPropertyChanged(nameof(IsBrandTab));
+        OnPropertyChanged(nameof(IsHeroTab));
+        OnPropertyChanged(nameof(IsBannersTab));
+        OnPropertyChanged(nameof(IsPagesTab));
+        OnPropertyChanged(nameof(IsImagesTab));
+        RefreshFilteredItems();
+    }
+
+    [RelayCommand]
+    void SelectTab(string? tab)
+    {
+        if (tab is "Delivery" or "Links" or "Brand" or "Hero" or "Banners" or "Pages")
+            SelectedTab = tab;
+    }
+
+    void RefreshFilteredItems()
+    {
+        var group = SelectedTab switch
+        {
+            "Brand" => "Brand",
+            "Hero" => "Hero Slider",
+            "Banners" => "Home Banners",
+            "Pages" => "Pages",
+            _ => null
+        };
+
+        FilteredItems.Clear();
+        if (group is null) return;
+
+        foreach (var img in Items.Where(x => x.Group == group).OrderBy(x => x.SortOrder))
+            FilteredItems.Add(img);
+    }
 
     [RelayCommand]
     async Task AppearingAsync() => await LoadAsync();
@@ -272,16 +329,27 @@ public partial class SiteImagesViewModel : ObservableObject
             IsBusy = true;
             ErrorMessage = null;
             var deliveryTask = _api.GetDeliveryChargesAsync();
+            var linksTask = _api.GetSiteSocialLinksAsync();
             var imagesTask = _api.GetSiteImagesAsync();
-            await Task.WhenAll(deliveryTask, imagesTask);
+            await Task.WhenAll(deliveryTask, linksTask, imagesTask);
 
             var delivery = await deliveryTask;
             KarachiChargeText = delivery.Karachi.ToString("0.##");
             OtherCitiesChargeText = delivery.OtherCities.ToString("0.##");
 
+            var links = await linksTask;
+            WhatsAppNumber = links.WhatsAppNumber;
+            WhatsAppDisplay = links.WhatsAppDisplay;
+            YouTubeUrl = links.YouTubeUrl;
+            FacebookUrl = links.FacebookUrl;
+            InstagramUrl = links.InstagramUrl;
+            TikTokUrl = links.TikTokUrl;
+            PinterestUrl = links.PinterestUrl;
+
             Items.Clear();
             foreach (var img in (await imagesTask).OrderBy(x => x.Group).ThenBy(x => x.SortOrder))
                 Items.Add(img);
+            RefreshFilteredItems();
         }
         catch (Exception ex)
         {
@@ -333,6 +401,50 @@ public partial class SiteImagesViewModel : ObservableObject
     }
 
     [RelayCommand]
+    async Task SaveSocialLinksAsync()
+    {
+        if (string.IsNullOrWhiteSpace(WhatsAppNumber))
+        {
+            await Shell.Current.DisplayAlert("Validation", "WhatsApp number is required.", "OK");
+            return;
+        }
+
+        try
+        {
+            IsSavingLinks = true;
+            var saved = await _api.UpdateSiteSocialLinksAsync(new SiteSocialLinksModel
+            {
+                WhatsAppNumber = WhatsAppNumber.Trim(),
+                WhatsAppDisplay = WhatsAppDisplay.Trim(),
+                YouTubeUrl = YouTubeUrl.Trim(),
+                FacebookUrl = FacebookUrl.Trim(),
+                InstagramUrl = InstagramUrl.Trim(),
+                TikTokUrl = TikTokUrl.Trim(),
+                PinterestUrl = PinterestUrl.Trim(),
+            });
+            WhatsAppNumber = saved.WhatsAppNumber;
+            WhatsAppDisplay = saved.WhatsAppDisplay;
+            YouTubeUrl = saved.YouTubeUrl;
+            FacebookUrl = saved.FacebookUrl;
+            InstagramUrl = saved.InstagramUrl;
+            TikTokUrl = saved.TikTokUrl;
+            PinterestUrl = saved.PinterestUrl;
+            await Shell.Current.DisplayAlert(
+                "Saved",
+                "Social links updated. Website footer, contact, and WhatsApp buttons will use these.",
+                "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        finally
+        {
+            IsSavingLinks = false;
+        }
+    }
+
+    [RelayCommand]
     async Task UploadAsync(SiteImageModel item)
     {
         var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = item.Label });
@@ -367,6 +479,37 @@ public partial class SiteImagesViewModel : ObservableObject
             IsBusy = true;
             await _api.ResetSiteImageAsync(item.Key);
             await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task SaveContentAsync(SiteImageModel item)
+    {
+        if (item is null || !item.SupportsText)
+            return;
+
+        try
+        {
+            IsBusy = true;
+            await _api.UpdateSiteImageContentAsync(
+                item.Key,
+                item.Title,
+                item.Subtitle,
+                item.CtaText,
+                item.LinkUrl,
+                item.TitleColor,
+                item.SubtitleColor,
+                item.CtaColor);
+            await LoadAsync();
+            await Shell.Current.DisplayAlert("Saved", $"Text updated for \"{item.Label}\".", "OK");
         }
         catch (Exception ex)
         {

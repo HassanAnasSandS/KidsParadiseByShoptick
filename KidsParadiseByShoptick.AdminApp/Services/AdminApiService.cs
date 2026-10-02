@@ -25,7 +25,8 @@ public class AdminApiService
         _http = new HttpClient
         {
             BaseAddress = new Uri(AppSettings.ApiBaseUrl.TrimEnd('/') + "/"),
-            Timeout = TimeSpan.FromMinutes(2),
+            // Video uploads to server / social can take a long time on slow links.
+            Timeout = TimeSpan.FromHours(2),
         };
         _session.SessionChanged += ApplyAuthHeader;
         ApplyAuthHeader();
@@ -128,6 +129,21 @@ public class AdminApiService
 
     public Task DeleteToyAsync(int id) => DeleteAsync($"admin/toys/{id}");
 
+    public async Task<List<ToyImageSearchMatchModel>> SearchToysByImageAsync(Stream stream, string fileName, int limit = 20)
+    {
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(streamContent, "file", fileName);
+        using var res = await _http.PostAsync($"admin/toys/search-by-image?limit={limit}", content);
+        await EnsureSuccessAsync(res);
+        return await res.Content.ReadFromJsonAsync<List<ToyImageSearchMatchModel>>(JsonOptions)
+            ?? [];
+    }
+
+    public Task<ToyImageIndexResultModel> IndexToyImagesAsync() =>
+        PostAsync<ToyImageIndexResultModel>("admin/toys/index-images", new { });
+
     public Task<OrderStatusCountsModel> GetOrderStatusCountsAsync() =>
         GetAsync<OrderStatusCountsModel>("admin/orders/status-counts");
 
@@ -225,6 +241,8 @@ public class AdminApiService
     public Task<OrderModel> UpdateOrderStatusAsync(int id, object payload) =>
         PatchAsync<OrderModel>($"admin/orders/{id}/status", payload);
 
+    public Task DeleteOrderAsync(int id) => DeleteAsync($"admin/orders/{id}");
+
     public async Task<List<ReviewModel>> GetReviewsAsync()
     {
         var result = await GetReviewsPagedAsync(1, 500);
@@ -243,20 +261,121 @@ public class AdminApiService
     public Task<SiteImageModel> ResetSiteImageAsync(string key) =>
         DeleteWithBodyAsync<SiteImageModel>($"admin/site-images/{key}/custom");
 
+    public Task<SiteImageModel> UpdateSiteImageContentAsync(
+        string key,
+        string? title,
+        string? subtitle,
+        string? ctaText,
+        string? linkUrl,
+        string? titleColor = null,
+        string? subtitleColor = null,
+        string? ctaColor = null) =>
+        PutAsync<SiteImageModel>($"admin/site-images/{Uri.EscapeDataString(key)}/content", new
+        {
+            title,
+            subtitle,
+            ctaText,
+            linkUrl,
+            titleColor,
+            subtitleColor,
+            ctaColor,
+        });
+
     public Task<DeliveryChargeSettingsModel> GetDeliveryChargesAsync() =>
         GetAsync<DeliveryChargeSettingsModel>("admin/delivery-charges");
 
     public Task<DeliveryChargeSettingsModel> UpdateDeliveryChargesAsync(decimal karachi, decimal otherCities) =>
         PutAsync<DeliveryChargeSettingsModel>("admin/delivery-charges", new { karachi, otherCities });
 
+    public Task<SiteSocialLinksModel> GetSiteSocialLinksAsync() =>
+        GetAsync<SiteSocialLinksModel>("admin/site-social-links");
+
+    public Task<SiteSocialLinksModel> UpdateSiteSocialLinksAsync(SiteSocialLinksModel links) =>
+        PutAsync<SiteSocialLinksModel>("admin/site-social-links", new
+        {
+            whatsAppNumber = links.WhatsAppNumber,
+            whatsAppDisplay = links.WhatsAppDisplay,
+            youTubeUrl = links.YouTubeUrl,
+            facebookUrl = links.FacebookUrl,
+            instagramUrl = links.InstagramUrl,
+            tikTokUrl = links.TikTokUrl,
+            pinterestUrl = links.PinterestUrl,
+        });
+
+    public Task<PagedResult<AffiliatePartnerModel>> GetAffiliatesPagedAsync(
+        int page, int pageSize, string? search = null, bool? isActive = null)
+    {
+        var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+        if (!string.IsNullOrWhiteSpace(search))
+            query.Add($"search={Uri.EscapeDataString(search.Trim())}");
+        if (isActive.HasValue)
+            query.Add($"isActive={isActive.Value.ToString().ToLowerInvariant()}");
+        return GetAsync<PagedResult<AffiliatePartnerModel>>($"admin/affiliates?{string.Join('&', query)}");
+    }
+
+    public async Task<List<AffiliatePartnerModel>> GetAffiliatesAsync(bool? isActive = true)
+    {
+        var result = await GetAffiliatesPagedAsync(1, 500, isActive: isActive);
+        return result.Items;
+    }
+
+    public Task<AffiliatePartnerModel> GetAffiliateAsync(int id) =>
+        GetAsync<AffiliatePartnerModel>($"admin/affiliates/{id}");
+
+    public Task<AffiliatePartnerModel> CreateAffiliateAsync(object payload) =>
+        PostAsync<AffiliatePartnerModel>("admin/affiliates", payload);
+
+    public Task<AffiliatePartnerModel> UpdateAffiliateAsync(int id, object payload) =>
+        PutAsync<AffiliatePartnerModel>($"admin/affiliates/{id}", payload);
+
+    public Task DeleteAffiliateAsync(int id) => DeleteAsync($"admin/affiliates/{id}");
+
+    public Task<AffiliateLedgerModel> GetAffiliateLedgerAsync(int id) =>
+        GetAsync<AffiliateLedgerModel>($"admin/affiliates/{id}/ledger");
+
+    public Task<AffiliateLedgerEntryModel> RecordAffiliatePaymentAsync(int id, decimal amount, string? notes) =>
+        PostAsync<AffiliateLedgerEntryModel>($"admin/affiliates/{id}/payments", new { amount, notes });
+
     public Task<SocialMediaSettingsModel> GetSocialMediaSettingsAsync() =>
         GetAsync<SocialMediaSettingsModel>("admin/social-media-settings");
 
-    public Task<SocialMediaSettingsModel> UpdateSocialMediaSettingsAsync(string description, string tags) =>
-        PutAsync<SocialMediaSettingsModel>("admin/social-media-settings", new { description, tags });
+    public Task<SocialMediaSettingsModel> UpdateSocialMediaSettingsAsync(SocialMediaSettingsModel settings) =>
+        PutAsync<SocialMediaSettingsModel>("admin/social-media-settings", new
+        {
+            description = settings.Description,
+            tags = settings.Tags,
+            tikTokPostMode = settings.TikTokPostMode,
+            onCreate = settings.OnCreate,
+            onEdit = settings.OnEdit,
+        });
+
+    public Task<SocialMediaSettingsModel> UpdateSocialMediaSettingsAsync(string description, string tags, string? tikTokPostMode = null) =>
+        PutAsync<SocialMediaSettingsModel>("admin/social-media-settings", new
+        {
+            description,
+            tags,
+            tikTokPostMode,
+        });
 
     public Task<MetaRequirementsStatusModel> GetMetaRequirementsAsync() =>
         GetAsync<MetaRequirementsStatusModel>("admin/meta/requirements");
+
+    public Task<MetaConnectionStatusModel> GetMetaStatusAsync() =>
+        GetAsync<MetaConnectionStatusModel>("admin/meta/status");
+
+    public async Task ConnectMetaAsync(string userAccessToken, string? facebookPageId = null, string? whatsAppCatalogId = null)
+    {
+        using var res = await _http.PostAsJsonAsync("admin/meta/connect", new
+        {
+            userAccessToken,
+            facebookPageId,
+            whatsAppCatalogId,
+        }, JsonOptions);
+        await EnsureSuccessAsync(res);
+    }
+
+    public Task DisconnectMetaAsync() =>
+        DeleteAsync("admin/meta/disconnect");
 
     public Task<MetaRequirementsStatusModel> LinkWhatsAppCatalogAsync(string catalogId) =>
         PostAsync<MetaRequirementsStatusModel>("admin/meta/link-catalog", new { catalogId });
@@ -300,9 +419,15 @@ public class AdminApiService
     public Task<TikTokStatusModel> GetTikTokStatusAsync() =>
         GetAsync<TikTokStatusModel>("admin/tiktok/status");
 
-    public async Task<string> GetTikTokAuthUrlAsync()
+    public Task<TikTokStatusModel> UpdateTikTokPostModeAsync(string postMode) =>
+        PutAsync<TikTokStatusModel>("admin/tiktok/post-mode", new { postMode });
+
+    public async Task<string> GetTikTokAuthUrlAsync(string? postMode = null)
     {
-        using var res = await _http.GetAsync("admin/tiktok/auth-url");
+        var path = string.IsNullOrWhiteSpace(postMode)
+            ? "admin/tiktok/auth-url"
+            : $"admin/tiktok/auth-url?postMode={Uri.EscapeDataString(postMode)}";
+        using var res = await _http.GetAsync(path);
         var body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -377,6 +502,46 @@ public class AdminApiService
     public Task DisconnectPinterestAsync() =>
         PostAsync<PinterestStatusModel>("admin/pinterest/disconnect", new { });
 
+    public Task<YouTubeConnectionStatusModel> GetYouTubeStatusAsync() =>
+        GetAsync<YouTubeConnectionStatusModel>("admin/youtube/status");
+
+    public async Task<string> GetYouTubeAuthUrlAsync()
+    {
+        using var res = await _http.GetAsync("admin/youtube/auth-url");
+        var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("message", out var message))
+                    throw new InvalidOperationException(message.GetString() ?? body);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch
+            {
+                // fall through
+            }
+
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body)
+                    ? $"YouTube auth URL request failed ({(int)res.StatusCode})."
+                    : body);
+        }
+
+        var data = JsonSerializer.Deserialize<YouTubeAuthUrlModel>(body, JsonOptions)
+            ?? throw new InvalidOperationException("Server returned empty YouTube auth URL.");
+        if (string.IsNullOrWhiteSpace(data.Url))
+            throw new InvalidOperationException("Server did not return a YouTube auth URL.");
+        return data.Url;
+    }
+
+    public Task DisconnectYouTubeAsync() =>
+        DeleteAsync("admin/youtube/disconnect");
+
     /// <summary>
     /// Returns TikTok upload credentials. When not connected, AccessToken is empty and AuthUrl may be set.
     /// </summary>
@@ -424,6 +589,21 @@ public class AdminApiService
         await EnsureSuccessAsync(res);
         return await res.Content.ReadFromJsonAsync<UploadResult>(JsonOptions)
             ?? throw new InvalidOperationException("Upload failed.");
+    }
+
+    public async Task<UploadResult> UploadVideoAsync(Stream stream, string fileName)
+    {
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue("video/mp4");
+        content.Add(streamContent, "file", fileName);
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, "admin/upload/video") { Content = content };
+        using var cts = new CancellationTokenSource(TimeSpan.FromHours(2));
+        using var res = await _http.SendAsync(req, cts.Token);
+        await EnsureSuccessAsync(res);
+        return await res.Content.ReadFromJsonAsync<UploadResult>(JsonOptions)
+            ?? throw new InvalidOperationException("Video upload failed.");
     }
 
     public async Task<SiteImageModel> UploadSiteImageAsync(string key, Stream stream, string fileName)

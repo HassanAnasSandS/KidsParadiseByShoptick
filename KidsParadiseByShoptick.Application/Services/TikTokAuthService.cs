@@ -56,7 +56,7 @@ public class TikTokAuthService : ITikTokAuthService
         }
     }
 
-    public string BuildAuthorizationUrl(out string state)
+    public string BuildAuthorizationUrl(string? postMode, out string state)
     {
         EnsureOAuthConfigured();
         if (string.IsNullOrWhiteSpace(_options.RedirectUri))
@@ -65,12 +65,30 @@ public class TikTokAuthService : ITikTokAuthService
         state = Guid.NewGuid().ToString("N");
         _cache.Set(CacheKeyPrefix + state, true, TimeSpan.FromMinutes(15));
 
+        var mode = TikTokSocialOptions.NormalizePostMode(
+            string.IsNullOrWhiteSpace(postMode) ? _options.PostMode : postMode);
+
+        // TikTok expects a comma-separated scope list. Encode each scope value, but keep
+        // commas literal — encoding them as %2C triggers TikTok's "scope" auth error for some apps.
+        var scopes = NormalizeScopes(TikTokSocialOptions.ScopesForPostMode(mode));
+        if (string.IsNullOrWhiteSpace(scopes))
+            throw new InvalidOperationException("TikTok OAuth scopes are empty.");
+
         return AuthUri +
                $"?client_key={Uri.EscapeDataString(_options.ClientKey)}" +
-               $"&scope={Uri.EscapeDataString(_options.Scopes)}" +
+               $"&scope={scopes}" +
                "&response_type=code" +
                $"&redirect_uri={Uri.EscapeDataString(_options.RedirectUri)}" +
                $"&state={Uri.EscapeDataString(state)}";
+    }
+
+    static string NormalizeScopes(string scopes)
+    {
+        var parts = scopes
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(s => s.Length > 0)
+            .Select(Uri.EscapeDataString);
+        return string.Join(",", parts);
     }
 
     public async Task CompleteAuthorizationAsync(string state, string code, CancellationToken cancellationToken = default)

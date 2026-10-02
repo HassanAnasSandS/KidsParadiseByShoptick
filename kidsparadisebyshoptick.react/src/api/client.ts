@@ -154,10 +154,22 @@ export const api = {
     city: string;
     address: string;
     toyIds: number[];
-  }) => request<{ orderNumber: string; total: number; deliveryCharge: number }>('/orders', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+    affiliateCode?: string | null;
+  }) => {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      whatsapp: data.whatsapp,
+      city: data.city,
+      address: data.address,
+      toyIds: data.toyIds,
+    };
+    // Always send key so API binding never misses optional affiliate attribution.
+    if (data.affiliateCode) payload.affiliateCode = data.affiliateCode;
+    return request<{ orderNumber: string; total: number; deliveryCharge: number }>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
   trackOrdersByWhatsapp: (whatsapp: string, page = 1, pageSize = 20) =>
     request<PagedResult<Order>>(
       `/orders/track${buildQuery({ whatsapp, page, pageSize })}`
@@ -191,8 +203,68 @@ export const api = {
     imagePath?: string;
   }) => request<Review>('/reviews', { method: 'POST', body: JSON.stringify(data) }),
 
-  getSiteImages: () => request<Record<string, string>>('/site-images'),
+  getSiteImages: () =>
+    request<
+      Record<
+        string,
+        | string
+        | {
+            imageUrl: string;
+            title?: string | null;
+            subtitle?: string | null;
+            ctaText?: string | null;
+            linkUrl?: string | null;
+            titleColor?: string | null;
+            subtitleColor?: string | null;
+            ctaColor?: string | null;
+          }
+      >
+    >('/site-images'),
+
+  getSiteSocialLinks: () =>
+    request<{
+      whatsAppNumber: string;
+      whatsAppDisplay: string;
+      youTubeUrl: string;
+      facebookUrl: string;
+      instagramUrl: string;
+      tikTokUrl: string;
+      pinterestUrl: string;
+    }>('/site-social-links'),
+
+  getAffiliateLedgerByCode: (code: string) =>
+    request<AffiliateLedger>(`/affiliates/ledger${buildQuery({ code: code.trim() })}`),
 };
+
+export interface AffiliatePartnerSummary {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+  createdAt: string;
+  totalCommission: number;
+  totalPaid: number;
+  balance: number;
+  attributedOrders: number;
+}
+
+export interface AffiliateLedgerEntry {
+  id: number;
+  type: string;
+  amount: number;
+  description: string | null;
+  orderId: number | null;
+  orderNumber: string | null;
+  createdAt: string;
+}
+
+export interface AffiliateLedger {
+  partner: AffiliatePartnerSummary;
+  totalCommission: number;
+  totalPaid: number;
+  balance: number;
+  entries: AffiliateLedgerEntry[];
+}
 
 export function toyPrimaryImage(toy: { imageUrls: string[]; name: string }) {
   return toy.imageUrls[0] ?? null;

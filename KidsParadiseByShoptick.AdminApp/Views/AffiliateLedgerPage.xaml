@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.AffiliateLedgerPage"
+             x:DataType="vm:AffiliateLedgerViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource PageBg}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Refresh" Command="{Binding ReloadCommand}" />
+    </ContentPage.ToolbarItems>
+    <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="10">
+        <Frame Grid.Row="0" Padding="12" CornerRadius="12" BorderColor="#e2e8f0" BackgroundColor="White">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{Binding PartnerName}" FontAttributes="Bold" FontSize="16" />
+                <Label Text="{Binding SummaryText}" FontSize="12" TextColor="#64748b" />
+                <Label Text="{Binding BalanceText}" FontAttributes="Bold" FontSize="15" TextColor="#0f766e" />
+                <Label Text="Formula: Commission − Reversals − Payments = Outstanding"
+                       FontSize="11" TextColor="#94a3b8" />
+                <Button Text="WhatsApp Partner (ledger details)"
+                        Command="{Binding OpenWhatsAppCommand}"
+                        IsEnabled="{Binding CanOpenWhatsApp}"
+                        BackgroundColor="#25D366"
+                        TextColor="White"
+                        FontAttributes="Bold" />
+            </VerticalStackLayout>
+        </Frame>
+
+        <Frame Grid.Row="1" Padding="12" CornerRadius="12" BorderColor="#e2e8f0" BackgroundColor="White"
+               IsVisible="{Binding CanRecordPayment}">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Record Payment" FontAttributes="Bold" />
+                <Label Text="{Binding PaymentHint}" FontSize="12" TextColor="#64748b" />
+                <Entry Placeholder="Amount (Rs.)" Keyboard="Numeric" Text="{Binding PaymentAmount}" />
+                <Entry Placeholder="Notes (optional)" Text="{Binding PaymentNotes}" />
+                <Button Text="Save Payment" Command="{Binding RecordPaymentCommand}"
+                        BackgroundColor="#0f766e" TextColor="White" />
+            </VerticalStackLayout>
+        </Frame>
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Entries}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="24" Spacing="6">
+                    <Label Text="No ledger entries yet"
+                           HorizontalOptions="Center" FontAttributes="Bold" TextColor="#64748b" />
+                    <Label Text="Commission appears when an affiliated order is marked Delivered."
+                           HorizontalOptions="Center" FontSize="12" TextColor="#94a3b8" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:AffiliateLedgerEntryModel">
+                    <Frame Margin="0,4" Padding="12" CornerRadius="12" HasShadow="False" BorderColor="#e2e8f0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="{Binding TypeLabel}" FontAttributes="Bold" />
+                                <Label Text="{Binding Description}" FontSize="12" TextColor="#64748b"
+                                       LineBreakMode="WordWrap" />
+                                <Label Text="{Binding OrderNumber, StringFormat='Order: {0}'}"
+                                       IsVisible="{Binding OrderNumber, Converter={StaticResource NullToBool}}"
+                                       FontSize="11" TextColor="#64748b" />
+                                <Label Text="{Binding CreatedAt, StringFormat='{0:g}'}" FontSize="11" TextColor="#94a3b8" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding AmountDisplay}"
+                                   FontAttributes="Bold" VerticalOptions="Center" TextColor="#0f766e" />
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

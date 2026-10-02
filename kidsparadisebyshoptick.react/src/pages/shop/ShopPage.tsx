@@ -1,26 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
-import { Search, Filter, X, Loader2 } from 'lucide-react';
+import { Search, Filter, X, Loader2, ArrowRight } from 'lucide-react';
 import { api } from '@/api/client';
 import { ToyCard, ToyCardSkeleton } from '@/components/shop/ToyCard';
 import { CategoryFilterSlider, CategoryFilterSliderSkeleton } from '@/components/shop/CategoryFilterSlider';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { useSiteImages } from '@/hooks/useSiteImages';
+import { resolveSiteColor, resolveSiteText } from '@/lib/siteImages';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
 import {
+  DEFAULT_SHOP_FILTERS,
   hasActiveShopFilters,
   parseShopSearchParams,
-  filtersToSearchParams,
+  filtersToSearchParamsWithAffiliate,
 } from '@/lib/shopFilters';
 import { clearScrollForPath, getScrollKey, migrateListScrollSnapshot, scrollToTop } from '@/lib/scroll';
 import { useShopFiltersStore } from '@/store/shopFilters';
+import { withAffiliatePath } from '@/store/affiliate';
 import { useScrollRestore } from '@/hooks/useScrollRestore';
 
 export function ShopPage() {
-  const { get } = useSiteImages();
+  const { getContent } = useSiteImages();
+  const shopHeader = getContent('shop_header');
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const syncFromSearchParams = useShopFiltersStore((s) => s.syncFromSearchParams);
@@ -55,7 +59,7 @@ export function ShopPage() {
     const stored = useShopFiltersStore.getState().filters;
     if (hasActiveShopFilters(stored)) {
       const fromKey = getScrollKey(location.pathname, location.search);
-      const nextParams = filtersToSearchParams(stored);
+      const nextParams = filtersToSearchParamsWithAffiliate(stored);
       const toKey = getScrollKey('/shop', nextParams.toString() ? `?${nextParams.toString()}` : '');
       migrateListScrollSnapshot(fromKey, toKey);
       setSearchParams(nextParams, { replace: true });
@@ -134,13 +138,20 @@ export function ShopPage() {
       if (value) next.set(key, value);
       else next.delete(key);
     });
+    // Never drop affiliate token while browsing shop filters.
+    if (!next.has('aff') && !next.has('ref')) {
+      const withAff = filtersToSearchParamsWithAffiliate(parseShopSearchParams(next));
+      const aff = withAff.get('aff');
+      if (aff) next.set('aff', aff);
+    }
     setSearchParams(next);
   };
 
   const clearFilters = () => {
     setSearchInput('');
     resetFiltersStore();
-    setSearchParams({});
+    const next = filtersToSearchParamsWithAffiliate(DEFAULT_SHOP_FILTERS);
+    setSearchParams(next);
     setShowFilters(false);
     clearScrollForPath('/shop');
     scrollToTop();
@@ -170,18 +181,39 @@ export function ShopPage() {
       />
       <div className="relative h-40 md:h-52 overflow-hidden">
         <img
-          src={get('shop_header')}
+          src={shopHeader.imageUrl}
           alt=""
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-800/90 to-brand-600/60 flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">
-              Shop Kids Toys Online Pakistan
-            </h1>
-            <p className="text-white/85 mt-1">
-              {totalCount} unique toys · cash on delivery · Karachi &amp; nationwide
-            </p>
+            {shopHeader.title?.trim() ? (
+              <h1
+                className="text-3xl md:text-4xl font-extrabold drop-shadow"
+                style={{ color: resolveSiteColor(shopHeader.titleColor) }}
+              >
+                {shopHeader.title.trim()}
+              </h1>
+            ) : null}
+            {shopHeader.subtitle?.trim() ? (
+              <p
+                className="mt-1"
+                style={{ color: resolveSiteColor(shopHeader.subtitleColor, '#FFFFFFD9') }}
+              >
+                {resolveSiteText(shopHeader.subtitle, { count: totalCount })}
+              </p>
+            ) : null}
+            {shopHeader.ctaText?.trim() ? (
+              <Link to={withAffiliatePath(shopHeader.linkUrl?.trim() || '/')} className="inline-block mt-4">
+                <Button
+                  size="lg"
+                  className="bg-accent-500 hover:bg-accent-400 shadow-lg shadow-accent-500/30 border-0"
+                  style={{ color: resolveSiteColor(shopHeader.ctaColor) }}
+                >
+                  {shopHeader.ctaText.trim()} <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            ) : null}
           </div>
         </div>
         <div

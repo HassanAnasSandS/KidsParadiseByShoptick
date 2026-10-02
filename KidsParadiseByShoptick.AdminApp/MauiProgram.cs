@@ -53,6 +53,9 @@ public static class MauiProgram
         builder.Services.AddTransient<SocialMediaSettingsViewModel>();
         builder.Services.AddTransient<NotificationsViewModel>();
         builder.Services.AddTransient<ShellViewModel>();
+        builder.Services.AddTransient<AffiliatesViewModel>();
+        builder.Services.AddTransient<AffiliateEditViewModel>();
+        builder.Services.AddTransient<AffiliateLedgerViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<DashboardPage>();
@@ -69,6 +72,10 @@ public static class MauiProgram
         builder.Services.AddTransient<SiteImagesPage>();
         builder.Services.AddTransient<SocialMediaSettingsPage>();
         builder.Services.AddTransient<NotificationsPage>();
+        builder.Services.AddTransient<AffiliatesPage>();
+        builder.Services.AddTransient<AffiliateEditPage>();
+        builder.Services.AddTransient<AffiliateLedgerPage>();
+        builder.Services.AddTransient<ImageViewerPage>();
         builder.Services.AddSingleton<AppShell>();
 
         builder.Services.AddSingleton<ImageUrlConverter>();

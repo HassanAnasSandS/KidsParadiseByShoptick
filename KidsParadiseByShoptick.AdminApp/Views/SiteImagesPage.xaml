@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
+             xmlns:controls="clr-namespace:KidsParadiseByShoptick.AdminApp.Controls"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.SiteImagesPage"
              x:Name="ThisPage"
              x:DataType="vm:SiteImagesViewModel"
@@ -11,60 +13,275 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
     </ContentPage.ToolbarItems>
-    <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
-        <ScrollView Padding="12">
-            <VerticalStackLayout Spacing="14">
-                <Frame Padding="14" CornerRadius="12" BorderColor="#e2e8f0">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="Delivery Charges" FontAttributes="Bold" FontSize="16" />
-                        <Label Text="Used on website checkout, order totals, footer, and product pages."
-                               FontSize="12" TextColor="#64748b" />
+    <Grid RowDefinitions="Auto,Auto,*">
+        <VerticalStackLayout Grid.Row="0" Padding="16,12,16,0" Spacing="8">
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#dc2626"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#1a6fe8" />
+        </VerticalStackLayout>
 
-                        <Label Text="Karachi (Rs.)" FontAttributes="Bold" />
-                        <Entry Text="{Binding KarachiChargeText}"
-                               Keyboard="Numeric"
-                               Placeholder="e.g. 300" />
-
-                        <Label Text="Other cities (Rs.)" FontAttributes="Bold" />
-                        <Entry Text="{Binding OtherCitiesChargeText}"
-                               Keyboard="Numeric"
-                               Placeholder="e.g. 400" />
-
-                        <Button Text="Save Delivery Charges"
-                                Command="{Binding SaveDeliveryChargesCommand}"
-                                BackgroundColor="#1a6fe8"
-                                TextColor="White"
-                                IsEnabled="{Binding IsSavingDelivery, Converter={StaticResource InverseBool}}" />
-                        <ActivityIndicator IsRunning="{Binding IsSavingDelivery}"
-                                           IsVisible="{Binding IsSavingDelivery}"
-                                           Color="#1a6fe8" />
-                    </VerticalStackLayout>
-                </Frame>
-
-                <Label Text="Site Images" FontAttributes="Bold" FontSize="16" Margin="4,4,0,0" />
-                <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
-
-                <CollectionView ItemsSource="{Binding Items}"
-                                HeightRequest="520"
-                                SelectionMode="None">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="models:SiteImageModel">
-                            <Frame Margin="0,6" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
-                                <VerticalStackLayout Spacing="8">
-                                    <Label Text="{Binding Label}" FontAttributes="Bold" />
-                                    <Label Text="{Binding Group}" FontSize="11" TextColor="#64748b" />
-                                    <Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="120" Aspect="AspectFit" />
-                                    <HorizontalStackLayout Spacing="8">
-                                        <Button Text="Upload" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.UploadCommand}" CommandParameter="{Binding .}" />
-                                        <Button Text="Reset" BackgroundColor="#64748b" TextColor="White" IsVisible="{Binding IsCustom}"
-                                                Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.ResetCommand}" CommandParameter="{Binding .}" />
-                                    </HorizontalStackLayout>
-                                </VerticalStackLayout>
-                            </Frame>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </VerticalStackLayout>
+        <ScrollView Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    BackgroundColor="White">
+            <HorizontalStackLayout Spacing="8" Padding="16,12">
+                <Button Text="Delivery"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Delivery"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Delivery">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Links"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Links"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Links">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Brand"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Brand"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Brand">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Hero"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Hero"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Hero">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Banners"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Banners"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Banners">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+                <Button Text="Pages"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Pages"
+                        BackgroundColor="#e2e8f0"
+                        TextColor="#334155"
+                        Padding="16,8"
+                        FontAttributes="Bold">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding SelectedTab}" Value="Pages">
+                            <Setter Property="BackgroundColor" Value="#1a6fe8" />
+                            <Setter Property="TextColor" Value="White" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </HorizontalStackLayout>
         </ScrollView>
-    </RefreshView>
+
+        <RefreshView Grid.Row="2"
+                     Command="{Binding LoadCommand}"
+                     IsRefreshing="{Binding IsRefreshing}">
+            <ScrollView Padding="16">
+                <VerticalStackLayout Spacing="16">
+                    <Frame Padding="14"
+                           CornerRadius="12"
+                           BorderColor="#e2e8f0"
+                           IsVisible="{Binding IsDeliveryTab}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Delivery Charges" FontAttributes="Bold" FontSize="16" />
+                            <Label Text="Used on website checkout, order totals, footer, and product pages."
+                                   FontSize="12" TextColor="#64748b" />
+
+                            <Label Text="Karachi (Rs.)" FontAttributes="Bold" />
+                            <Entry Text="{Binding KarachiChargeText}"
+                                   Keyboard="Numeric"
+                                   Placeholder="e.g. 300" />
+
+                            <Label Text="Other cities (Rs.)" FontAttributes="Bold" />
+                            <Entry Text="{Binding OtherCitiesChargeText}"
+                                   Keyboard="Numeric"
+                                   Placeholder="e.g. 400" />
+
+                            <Button Text="Save Delivery Charges"
+                                    Command="{Binding SaveDeliveryChargesCommand}"
+                                    BackgroundColor="#1a6fe8"
+                                    TextColor="White"
+                                    IsEnabled="{Binding IsSavingDelivery, Converter={StaticResource InverseBool}}" />
+                            <ActivityIndicator IsRunning="{Binding IsSavingDelivery}"
+                                               IsVisible="{Binding IsSavingDelivery}"
+                                               Color="#1a6fe8" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <Frame Padding="14"
+                           CornerRadius="12"
+                           BorderColor="#e2e8f0"
+                           IsVisible="{Binding IsLinksTab}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Social &amp; Contact Links" FontAttributes="Bold" FontSize="16" />
+                            <Label Text="Used on website footer, contact page, and WhatsApp buttons. Leave a URL blank to hide that icon."
+                                   FontSize="12" TextColor="#64748b" />
+
+                            <Label Text="WhatsApp number (with country code)" FontAttributes="Bold" />
+                            <Entry Text="{Binding WhatsAppNumber}"
+                                   Keyboard="Telephone"
+                                   Placeholder="e.g. 923217175896" />
+
+                            <Label Text="WhatsApp display" FontAttributes="Bold" />
+                            <Entry Text="{Binding WhatsAppDisplay}"
+                                   Placeholder="e.g. 0321 7175896" />
+
+                            <Label Text="YouTube URL" FontAttributes="Bold" />
+                            <Entry Text="{Binding YouTubeUrl}"
+                                   Placeholder="https://www.youtube.com/@..."
+                                   Keyboard="Url" />
+
+                            <Label Text="Facebook URL" FontAttributes="Bold" />
+                            <Entry Text="{Binding FacebookUrl}"
+                                   Placeholder="https://www.facebook.com/..."
+                                   Keyboard="Url" />
+
+                            <Label Text="Instagram URL" FontAttributes="Bold" />
+                            <Entry Text="{Binding InstagramUrl}"
+                                   Placeholder="https://www.instagram.com/..."
+                                   Keyboard="Url" />
+
+                            <Label Text="TikTok URL" FontAttributes="Bold" />
+                            <Entry Text="{Binding TikTokUrl}"
+                                   Placeholder="https://www.tiktok.com/@..."
+                                   Keyboard="Url" />
+
+                            <Label Text="Pinterest URL (optional)" FontAttributes="Bold" />
+                            <Entry Text="{Binding PinterestUrl}"
+                                   Placeholder="https://www.pinterest.com/..."
+                                   Keyboard="Url" />
+
+                            <Button Text="Save Links"
+                                    Command="{Binding SaveSocialLinksCommand}"
+                                    BackgroundColor="#1a6fe8"
+                                    TextColor="White"
+                                    IsEnabled="{Binding IsSavingLinks, Converter={StaticResource InverseBool}}" />
+                            <ActivityIndicator IsRunning="{Binding IsSavingLinks}"
+                                               IsVisible="{Binding IsSavingLinks}"
+                                               Color="#1a6fe8" />
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding IsImagesTab}">
+                        <Label Text="Favicon / Logo"
+                               FontAttributes="Bold"
+                               FontSize="16"
+                               IsVisible="{Binding IsBrandTab}" />
+                        <Label Text="Used in the website header, footer, and browser tab icon."
+                               FontSize="12"
+                               TextColor="#64748b"
+                               IsVisible="{Binding IsBrandTab}" />
+                        <Label Text="Hero Slider"
+                               FontAttributes="Bold"
+                               FontSize="16"
+                               IsVisible="{Binding IsHeroTab}" />
+                        <Label Text="Home Banners"
+                               FontAttributes="Bold"
+                               FontSize="16"
+                               IsVisible="{Binding IsBannersTab}" />
+                        <Label Text="Pages"
+                               FontAttributes="Bold"
+                               FontSize="16"
+                               IsVisible="{Binding IsPagesTab}" />
+                        <Label Text="Upload or reset site images for this section. Edit Title / Subtitle / CTA where available."
+                               FontSize="12"
+                               TextColor="#64748b"
+                               IsVisible="{Binding IsBrandTab, Converter={StaticResource InverseBool}}" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredItems}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:SiteImageModel">
+                                    <Frame Margin="0,6" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
+                                        <VerticalStackLayout Spacing="8">
+                                            <Label Text="{Binding Label}" FontAttributes="Bold" />
+                                            <Label Text="{Binding Group}" FontSize="11" TextColor="#64748b" />
+                                            <Image Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="120" Aspect="AspectFit">
+                                                <Image.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                                        CommandParameter="{Binding ImageUrl}" />
+                                                </Image.GestureRecognizers>
+                                            </Image>
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Button Text="Upload" Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.UploadCommand}" CommandParameter="{Binding .}" />
+                                                <Button Text="Reset" BackgroundColor="#64748b" TextColor="White" IsVisible="{Binding IsCustom}"
+                                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.ResetCommand}" CommandParameter="{Binding .}" />
+                                            </HorizontalStackLayout>
+
+                                            <VerticalStackLayout Spacing="6" IsVisible="{Binding SupportsText}">
+                                                <BoxView HeightRequest="1" Color="#e2e8f0" Margin="0,4" />
+                                                <Label Text="Text content" FontAttributes="Bold" FontSize="13" />
+                                                <Label Text="Title" FontSize="11" TextColor="#64748b" />
+                                                <Entry Text="{Binding Title}" Placeholder="Headline" />
+                                                <Label Text="Title color" FontSize="11" TextColor="#64748b" />
+                                                <controls:ColorPalettePicker SelectedHex="{Binding TitleColor}" />
+                                                <Label Text="Subtitle" FontSize="11" TextColor="#64748b" />
+                                                <Editor Text="{Binding Subtitle}"
+                                                        Placeholder="Supporting text. Use {delivery} or {count} for live values."
+                                                        AutoSize="TextChanges"
+                                                        HeightRequest="70" />
+                                                <Label Text="Subtitle color" FontSize="11" TextColor="#64748b" />
+                                                <controls:ColorPalettePicker SelectedHex="{Binding SubtitleColor}" />
+                                                <Label Text="Button / link text" FontSize="11" TextColor="#64748b" />
+                                                <Entry Text="{Binding CtaText}" Placeholder="e.g. Shop Now" />
+                                                <Label Text="Button / link color" FontSize="11" TextColor="#64748b" />
+                                                <controls:ColorPalettePicker SelectedHex="{Binding CtaColor}" />
+                                                <Label Text="Link URL" FontSize="11" TextColor="#64748b" />
+                                                <Entry Text="{Binding LinkUrl}" Placeholder="/shop" />
+                                                <Label Text="Tap a swatch, or type a custom hex. Blank = default white."
+                                                       FontSize="11" TextColor="#94a3b8" />
+                                                <Button Text="Save Text"
+                                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.SaveContentCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Frame>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+    </Grid>
 </ContentPage>

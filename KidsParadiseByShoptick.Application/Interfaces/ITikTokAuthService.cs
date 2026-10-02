@@ -5,7 +5,7 @@ public interface ITikTokAuthService
     bool IsOAuthConfigured { get; }
     bool IsConnected { get; }
 
-    string BuildAuthorizationUrl(out string state);
+    string BuildAuthorizationUrl(string? postMode, out string state);
 
     Task CompleteAuthorizationAsync(string state, string code, CancellationToken cancellationToken = default);
 

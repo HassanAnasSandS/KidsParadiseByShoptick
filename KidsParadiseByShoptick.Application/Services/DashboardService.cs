@@ -28,6 +28,15 @@ public class DashboardService : IDashboardService
             stats.AllSoldToysTotalAmount,
             stats.TotalCustomers,
             stats.TotalDeliveredOrders,
-            stats.AllDeliveredOrdersTotalAmount);
+            stats.AllDeliveredOrdersTotalAmount,
+            stats.TotalAffiliatePartners,
+            stats.ActiveAffiliatePartners,
+            stats.AffiliatedOrdersCount,
+            stats.AffiliateCommissionTotal,
+            stats.AffiliatePaidTotal,
+            stats.AffiliateOutstandingTotal,
+            stats.AffiliatePartners.Select(p => new DashboardAffiliatePartnerDto(
+                p.Id, p.Name, p.Code, p.IsActive, p.AttributedOrders,
+                p.TotalCommission, p.TotalPaid, p.Balance)).ToList());
     }
 }

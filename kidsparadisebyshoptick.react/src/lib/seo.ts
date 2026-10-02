@@ -7,7 +7,7 @@ export const SITE = {
     'Buy kids toys online in Karachi & Pakistan with cash on delivery. Soft toys, dolls, RC cars, educational toys & gifts. 10% advance, balance on delivery.',
   keywords:
     'buy toys online Pakistan, kids toys Karachi, online toy shop Pakistan, cash on delivery toys, soft toys, educational toys, RC cars, Shoptick Kids Paradise',
-  ogImage: 'https://kidsparadise.shoptick.shop/hero/slide-2.jpg',
+  ogImage: 'https://kidsparadise.shoptick.shop/uploads/site/d1b0e2a546a0425b94ffad7ab55e5d62.jpg',
   locale: 'en_PK',
   region: 'PK',
   twitterCard: 'summary_large_image' as const,
@@ -86,7 +86,7 @@ export function buildOrganizationJsonLd() {
     '@type': 'OnlineStore',
     name: SITE.name,
     url: SITE.url,
-    logo: absoluteUrl('/favicon.svg'),
+    logo: absoluteUrl('/favicon.png'),
     image: SITE.ogImage,
     description: SITE.description,
     areaServed: { '@type': 'Country', name: 'Pakistan' },
@@ -261,13 +261,13 @@ export const PAGE_SEO = {
     path: '/contact',
   },
   privacy: {
-    title: 'Privacy Policy',
-    description: 'Privacy policy for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
+    title: 'KidsParadiseByShoptick Privacy Policy',
+    description: 'KidsParadiseByShoptick Privacy Policy for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
     path: '/privacy-policy',
   },
   terms: {
-    title: 'Terms of Service',
-    description: 'Terms of service for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
+    title: 'KidsParadiseByShoptick Terms of Service',
+    description: 'KidsParadiseByShoptick Terms of Service for Kids Paradise by Shoptick online toy shop at kidsparadise.shoptick.shop.',
     path: '/terms-of-service',
   },
   trackOrder: {
@@ -292,6 +292,12 @@ export const PAGE_SEO = {
     title: 'Order Placed',
     description: 'Your order has been placed successfully.',
     path: '/order-success',
+    noIndex: true,
+  },
+  partnerPortal: {
+    title: 'Affiliate Partner Ledger',
+    description: 'Read-only affiliate partner ledger for Kids Paradise by Shoptick partners.',
+    path: '/partner',
     noIndex: true,
   },
 } as const;

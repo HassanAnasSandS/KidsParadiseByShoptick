@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.ReviewsPage"
              x:Name="ThisPage"
              x:DataType="vm:ReviewsViewModel"
@@ -11,15 +12,32 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
     </ContentPage.ToolbarItems>
-    <Grid RowDefinitions="Auto,*" Padding="12">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="12" RowSpacing="8">
         <SearchBar Grid.Row="0" Placeholder="Search reviews..." Text="{Binding SearchText}" />
         <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
-            <CollectionView ItemsSource="{Binding Items}">
+            <CollectionView ItemsSource="{Binding Items}"
+                            RemainingItemsThreshold="8"
+                            RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                <CollectionView.EmptyView>
+                    <Label Text="No reviews found."
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           TextColor="#94a3b8"
+                           Margin="24" />
+                </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:ReviewModel">
                         <Frame Margin="0,4" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
                             <Grid ColumnDefinitions="56,*,Auto" ColumnSpacing="8">
-                                <Image Grid.Column="0" Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}" HeightRequest="48" WidthRequest="48" Aspect="AspectFill" />
+                                <Image Grid.Column="0"
+                                       Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}"
+                                       HeightRequest="48" WidthRequest="48" Aspect="AspectFill">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                            CommandParameter="{Binding ImageUrl}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
                                 <VerticalStackLayout Grid.Column="1">
                                     <Label Text="{Binding ReviewerName}" FontAttributes="Bold" />
                                     <Label Text="{Binding ToyName}" FontSize="12" TextColor="#1a6fe8" />
@@ -31,7 +49,23 @@
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
+                <CollectionView.Footer>
+                    <VerticalStackLayout Padding="8,12" IsVisible="{Binding IsLoadingMore}">
+                        <ActivityIndicator IsRunning="{Binding IsLoadingMore}" />
+                        <Label Text="Loading more…"
+                               FontSize="12"
+                               TextColor="#94a3b8"
+                               HorizontalOptions="Center"
+                               Margin="0,6,0,0" />
+                    </VerticalStackLayout>
+                </CollectionView.Footer>
             </CollectionView>
         </RefreshView>
+        <VerticalStackLayout Grid.Row="2" Spacing="6">
+            <Label Text="{Binding StatusText}" FontSize="12" TextColor="#64748b" />
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#dc2626"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>

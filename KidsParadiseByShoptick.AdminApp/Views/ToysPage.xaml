@@ -3,16 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.ToysPage"
              x:Name="ThisPage"
              x:DataType="vm:ToysViewModel"
              Title="Toys"
              BackgroundColor="{StaticResource PageBg}">
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="By Image" Command="{Binding SearchByImageCommand}" />
+        <ToolbarItem Text="Index" Command="{Binding IndexImagesCommand}" />
         <ToolbarItem Text="Add" Command="{Binding AddCommand}" />
         <ToolbarItem Text="Refresh" Command="{Binding LoadCommand}" />
     </ContentPage.ToolbarItems>
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <SearchBar Grid.Column="0" Placeholder="Search by toy name..." Text="{Binding SearchText}" />
             <Button Grid.Column="1"
@@ -33,7 +36,13 @@
             <Picker Title="Sort By" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortFilter}" />
         </VerticalStackLayout>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <Label Grid.Row="2"
+               Text="{Binding ImageSearchHint}"
+               FontSize="12"
+               TextColor="#7c3aed"
+               IsVisible="{Binding IsImageSearchActive}" />
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <Label Grid.Column="0"
                    Text="{Binding StatusText}"
                    FontSize="12"
@@ -50,7 +59,7 @@
                     VerticalOptions="Center" />
         </Grid>
 
-        <RefreshView Grid.Row="3" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
+        <RefreshView Grid.Row="4" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsRefreshing}">
             <CollectionView ItemsSource="{Binding Items}"
                             RemainingItemsThreshold="8"
                             RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
@@ -58,7 +67,15 @@
                     <DataTemplate x:DataType="models:ToyListModel">
                         <Frame Margin="0,4" Padding="12" CornerRadius="12" BorderColor="#e2e8f0">
                             <Grid ColumnDefinitions="56,*,Auto,Auto,Auto" ColumnSpacing="6">
-                                <Image Grid.Column="0" Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}" HeightRequest="48" WidthRequest="48" Aspect="AspectFit" />
+                                <Image Grid.Column="0"
+                                       Source="{Binding PrimaryImage, Converter={StaticResource ImageUrl}}"
+                                       HeightRequest="48" WidthRequest="48" Aspect="AspectFit">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                            CommandParameter="{Binding PrimaryImage}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
                                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                     <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
                                     <Label Text="{Binding CategoryName}" FontSize="12" TextColor="#64748b" />
@@ -82,8 +99,9 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </RefreshView>
-        <VerticalStackLayout Grid.Row="4" Spacing="6">
+        <VerticalStackLayout Grid.Row="5" Spacing="6">
             <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" Color="#1a6fe8" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="#7c3aed" />
             <Label Text="{Binding ErrorMessage}" TextColor="#dc2626" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBool}}" />
         </VerticalStackLayout>
     </Grid>

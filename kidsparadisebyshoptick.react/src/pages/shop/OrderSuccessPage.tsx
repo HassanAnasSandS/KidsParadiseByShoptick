@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
-import { CheckCircle, Copy, Check } from 'lucide-react';
+import { CheckCircle, Copy, Check, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { BrandName } from '@/components/ui/BrandName';
 import { formatPrice, PAYMENT_POLICY } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
 import { useShopPath } from '@/store/shopFilters';
+import { buildOrderSuccessWhatsAppUrl } from '@/lib/whatsapp';
 
 export function OrderSuccessPage() {
   const shopPath = useShopPath();
@@ -25,6 +26,14 @@ export function OrderSuccessPage() {
       /* clipboard unavailable */
     }
   };
+
+  const whatsappHref = orderNumber
+    ? buildOrderSuccessWhatsAppUrl({
+        orderNumber,
+        total: state?.total,
+        deliveryCharge: state?.deliveryCharge,
+      })
+    : undefined;
 
   return (
     <div className="max-w-lg mx-auto px-4 py-20 text-center animate-fade-in">
@@ -52,7 +61,8 @@ export function OrderSuccessPage() {
             {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
           </button>
         </div>
-        {copied && <p className="text-xs text-green-600 mt-1">Copied to clipboard!</p>}        {state?.total != null && (
+        {copied && <p className="text-xs text-green-600 mt-1">Copied to clipboard!</p>}
+        {state?.total != null && (
           <p className="mt-3 text-slate-700">Total: <span className="font-bold">{formatPrice(state.total)}</span></p>
         )}
         {state?.deliveryCharge != null && (
@@ -63,6 +73,18 @@ export function OrderSuccessPage() {
       <p className="text-sm text-slate-500 mt-4">
         We&apos;ll contact you shortly to confirm your order. {PAYMENT_POLICY}.
       </p>
+
+      {whatsappHref && (
+        <a
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-flex w-full sm:w-auto items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-semibold shadow-md transition-all hover:scale-[1.02]"
+        >
+          <MessageCircle className="w-5 h-5 fill-white shrink-0" />
+          WhatsApp Order Confirmation
+        </a>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
         <Link to="/track-order"><Button variant="outline">My Orders</Button></Link>

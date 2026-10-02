@@ -15,7 +15,9 @@ public class OrderRepository : Repository<Order>, IOrderRepository
 
     public async Task<Order?> GetWithDetailsAsync(int id, CancellationToken cancellationToken = default)
         => await DbSet
+            .AsSplitQuery()
             .Include(x => x.Customer)
+            .Include(x => x.AffiliatePartner)
             .Include(x => x.Items)
             .ThenInclude(i => i.Toy)
             .ThenInclude(t => t.Images)
@@ -41,7 +43,7 @@ public class OrderRepository : Repository<Order>, IOrderRepository
         string? status, string? search, string? city, DateTime? dateFrom, DateTime? dateTo, string? sort,
         int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = ApplyAdminFilters(AdminDetailsQuery(), status, search, city, dateFrom, dateTo);
+        var query = ApplyAdminFilters(AdminListQuery(), status, search, city, dateFrom, dateTo);
         query = ApplyAdminSort(query, sort);
         return await query
             .Skip((page - 1) * pageSize)
@@ -52,7 +54,8 @@ public class OrderRepository : Repository<Order>, IOrderRepository
     public Task<int> CountAdminAsync(
         string? status, string? search, string? city, DateTime? dateFrom, DateTime? dateTo,
         CancellationToken cancellationToken = default)
-        => ApplyAdminFilters(AdminDetailsQuery(), status, search, city, dateFrom, dateTo).CountAsync(cancellationToken);
+        => ApplyAdminFilters(DbSet.AsNoTracking(), status, search, city, dateFrom, dateTo)
+            .CountAsync(cancellationToken);
 
     public async Task<(int Total, int Pending, int Confirmed, int Shipped, int Delivered, int Cancelled)> GetStatusCountsAsync(
         CancellationToken cancellationToken = default)
@@ -106,10 +109,20 @@ public class OrderRepository : Repository<Order>, IOrderRepository
             .Where(x => x.Customer.Whatsapp == key);
     }
 
-    private IQueryable<Order> AdminDetailsQuery()
+    private IQueryable<Order> AdminListQuery()
         => DbSet
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.AffiliatePartner)
+            .Include(x => x.Items)
+            .ThenInclude(i => i.Toy);
+
+    private IQueryable<Order> AdminDetailsQuery()
+        => DbSet
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.Customer)
+            .Include(x => x.AffiliatePartner)
             .Include(x => x.Items)
             .ThenInclude(i => i.Toy)
             .ThenInclude(t => t.Images);
@@ -154,12 +167,7 @@ public class OrderRepository : Repository<Order>, IOrderRepository
             : query.OrderByDescending(x => x.CreatedAt);
 
     public async Task<IReadOnlyList<Order>> GetAllWithDetailsAsync(CancellationToken cancellationToken = default)
-        => await DbSet
-            .AsNoTracking()
-            .Include(x => x.Customer)
-            .Include(x => x.Items)
-            .ThenInclude(i => i.Toy)
-            .ThenInclude(t => t.Images)
+        => await AdminDetailsQuery()
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 

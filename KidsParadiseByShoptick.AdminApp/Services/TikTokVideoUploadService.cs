@@ -45,11 +45,12 @@ public class TikTokVideoUploadService : ITikTokVideoUploadService
 
         var postCaption = string.IsNullOrWhiteSpace(caption)
             ? MetaVideoUploadService.BuildPhotoStyleCaption(
-                title, price, salePrice, whatsApp, settings.Tags)
+                title, price, salePrice, whatsApp, settings.Tags, plainText: true, maxHashtags: 5)
             : caption.Trim();
+        postCaption = MetaVideoUploadService.LimitHashtagsInCaption(postCaption, 5);
 
         await using var prepared = await PrepareUploadStreamAsync(videoStream, fileName, cancellationToken);
-        return await TikTokApiClient.UploadVideoAsync(
+        var publishId = await TikTokApiClient.UploadVideoAsync(
             creds.AccessToken,
             creds.PostMode,
             creds.PrivacyLevel,
@@ -60,6 +61,22 @@ public class TikTokVideoUploadService : ITikTokVideoUploadService
             postCaption,
             progress,
             cancellationToken);
+
+        var isDraft = string.Equals(creds.PostMode, "MEDIA_UPLOAD", StringComparison.OrdinalIgnoreCase);
+        if (isDraft && !string.IsNullOrWhiteSpace(postCaption))
+        {
+            try
+            {
+                await Clipboard.Default.SetTextAsync(postCaption);
+                progress?.Report("TikTok draft uploaded. Caption copied — paste it in the TikTok editor.");
+            }
+            catch
+            {
+                progress?.Report("TikTok draft uploaded. TikTok does not accept video-draft captions via API — paste the caption in TikTok.");
+            }
+        }
+
+        return publishId;
     }
 
     static async Task<PreparedUploadStream> PrepareUploadStreamAsync(

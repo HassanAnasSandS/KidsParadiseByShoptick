@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:KidsParadiseByShoptick.AdminApp.Models"
              xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             xmlns:helpers="clr-namespace:KidsParadiseByShoptick.AdminApp.Helpers"
              x:Class="KidsParadiseByShoptick.AdminApp.Views.OrderDetailPage"
              x:DataType="vm:OrderDetailViewModel"
              Title="Order Detail"
@@ -34,6 +35,24 @@
                             Padding="0"
                             VerticalOptions="Start" />
                 </Grid>
+            </Frame>
+
+            <!-- Affiliate -->
+            <Frame Padding="14" CornerRadius="14" BorderColor="#99f6e4" BackgroundColor="#f0fdfa"
+                   IsVisible="{Binding Order.HasAffiliate}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Affiliated Order" FontAttributes="Bold" FontSize="15" TextColor="#0f766e" />
+                    <Label Text="{Binding Order.AffiliateDisplay, StringFormat='Partner: {0}'}"
+                           FontSize="14" FontAttributes="Bold" TextColor="#115e59" />
+                    <Label Text="{Binding Order.AffiliateCode, StringFormat='Code: {0}'}"
+                           IsVisible="{Binding Order.AffiliateCode, Converter={StaticResource NullToBool}}"
+                           FontSize="12" TextColor="#0f766e" />
+                    <Label Text="{Binding Order.AffiliateCommissionDetail}"
+                           IsVisible="{Binding Order.AffiliateCommissionDetail, Converter={StaticResource NullToBool}}"
+                           FontSize="13" FontAttributes="Bold" TextColor="#0f766e" />
+                    <Label Text="10% of order subtotal (delivery charges excluded)"
+                           FontSize="11" TextColor="#64748b" />
+                </VerticalStackLayout>
             </Frame>
 
             <!-- Customer -->
@@ -112,7 +131,13 @@
                                 <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="10" Padding="0,6">
                                     <Image Grid.Column="0"
                                            Source="{Binding ImageUrl, Converter={StaticResource ImageUrl}}"
-                                           HeightRequest="52" WidthRequest="52" Aspect="AspectFill" />
+                                           HeightRequest="52" WidthRequest="52" Aspect="AspectFill">
+                                        <Image.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{x:Static helpers:ImageViewer.OpenCommand}"
+                                                CommandParameter="{Binding ImageUrl}" />
+                                        </Image.GestureRecognizers>
+                                    </Image>
                                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                         <Label Text="{Binding ToyName}" FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" />
                                         <Label Text="{Binding PriceLine}" FontSize="11" TextColor="#64748b" />
@@ -186,6 +211,11 @@
                     <Entry Placeholder="Discount amount" Keyboard="Numeric" Text="{Binding DiscountText}" />
                     <Button Text="Save Status" Command="{Binding SaveStatusCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
                     <Button Text="Full Edit" Command="{Binding EditCommand}" />
+                    <Button Text="Delete Order"
+                            Command="{Binding DeleteCommand}"
+                            IsVisible="{Binding CanDelete}"
+                            BackgroundColor="#dc2626"
+                            TextColor="White" />
                 </VerticalStackLayout>
             </Frame>
 

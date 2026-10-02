@@ -17,7 +17,9 @@ public class Order : BaseEntity
     public string Phone { get; set; } = string.Empty;
     public string Whatsapp { get; set; } = string.Empty;
     public string? TrackingNumber { get; set; }
+    public int? AffiliatePartnerId { get; set; }
 
     public Customer Customer { get; set; } = null!;
+    public AffiliatePartner? AffiliatePartner { get; set; }
     public ICollection<OrderItem> Items { get; set; } = [];
 }

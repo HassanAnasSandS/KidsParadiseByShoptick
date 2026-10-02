@@ -22,7 +22,7 @@ export function CategoryPage() {
   }
 
   if (!data) {
-    return <Navigate to="/shop" replace />;
+    return <Navigate to={buildShopPath()} replace />;
   }
 
   const target = buildShopPath(

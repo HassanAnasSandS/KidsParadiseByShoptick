@@ -48,6 +48,7 @@ public interface IOrderService
     Task<OrderDto?> GetByIdAdminAsync(int id, CancellationToken cancellationToken = default);
     Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default);
     Task<OrderDto?> UpdateAdminAsync(int id, AdminUpdateOrderRequest request, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
 
 public interface IReviewService

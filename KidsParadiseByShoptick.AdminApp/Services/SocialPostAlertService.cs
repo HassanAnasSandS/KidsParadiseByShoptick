@@ -135,7 +135,7 @@ public class SocialPostAlertService
             lines.Add("Meta catalog: updated (WhatsApp app may need WABA sync — see Social Settings Step 3)");
 
         if (payload.TikTokPosted)
-            lines.Add("TikTok: photo post started");
+            lines.Add("TikTok: posted");
 
         if (payload.PinterestPosted)
             lines.Add("Pinterest: pin created");

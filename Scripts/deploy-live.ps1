@@ -10,6 +10,13 @@ Write-Host "==> Publishing API to Live..."
 Set-Location "$root\KidsParadiseByShoptick.APIs"
 dotnet publish -c Release -o "$root\KidsParadiseByShoptick.Published\Live"
 
+# dotnet publish can skip/stale wwwroot SPA assets — always sync React build output.
+Write-Host "==> Syncing wwwroot SPA assets to Live..."
+$wwwSrc = "$root\KidsParadiseByShoptick.APIs\wwwroot"
+$wwwDst = "$root\KidsParadiseByShoptick.Published\Live\wwwroot"
+New-Item -ItemType Directory -Force -Path $wwwDst | Out-Null
+Copy-Item "$wwwSrc\*" $wwwDst -Recurse -Force
+
 Write-Host "==> Ensuring upload folders..."
 @("categories", "toys", "reviews", "site") | ForEach-Object {
     New-Item -ItemType Directory -Force -Path "$root\KidsParadiseByShoptick.Published\uploads\$_" | Out-Null

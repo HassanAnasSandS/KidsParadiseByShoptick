@@ -11,6 +11,7 @@ import { OrderWhatsAppButton } from '@/components/shop/OrderWhatsAppButton';
 import { formatPrice, placeholderImage } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
+import { ImageLightbox } from '@/components/shop/ImageLightbox';
 
 const statusColors: Record<string, string> = {
   Pending: 'bg-yellow-100 text-yellow-700',
@@ -21,19 +22,38 @@ const statusColors: Record<string, string> = {
 };
 
 function OrderItemLine({ item }: { item: Order['items'][number] }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const src = item.imageUrl || placeholderImage(item.toyName);
+
   return (
-    <div className="flex items-center gap-3">
-      <img
-        src={item.imageUrl || placeholderImage(item.toyName)}
-        alt=""
-        className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate-100"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-slate-700 font-medium truncate">{item.toyName}</p>
-        <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+    <>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          className="shrink-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400"
+          aria-label={`View ${item.toyName} image`}
+        >
+          <img
+            src={src}
+            alt={item.toyName}
+            className="w-12 h-12 rounded-lg object-cover bg-slate-100 cursor-zoom-in hover:opacity-90 transition-opacity"
+          />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-slate-700 font-medium truncate">{item.toyName}</p>
+          <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+        </div>
+        <span className="font-semibold text-slate-800 shrink-0">{formatPrice(item.price)}</span>
       </div>
-      <span className="font-semibold text-slate-800 shrink-0">{formatPrice(item.price)}</span>
-    </div>
+      {lightboxOpen && (
+        <ImageLightbox
+          images={[src]}
+          alt={item.toyName}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+    </>
   );
 }
 

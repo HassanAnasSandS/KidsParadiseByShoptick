@@ -18,6 +18,7 @@ import {
 } from '@/lib/seo';
 import { buildShopPath, mergeShopFilters } from '@/lib/shopFilters';
 import { useShopPath, useShopFiltersStore } from '@/store/shopFilters';
+import { withAffiliatePath } from '@/store/affiliate';
 import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 function BackToShopButton({ shopPath }: { shopPath: string }) {
@@ -116,7 +117,7 @@ export function ProductPage() {
   };
 
   const handleOrderNow = () => {
-    navigate('/checkout', {
+    navigate(withAffiliatePath('/checkout'), {
       state: {
         buyNow: {
           toyId: toy.id,

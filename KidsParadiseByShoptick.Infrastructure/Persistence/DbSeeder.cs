@@ -27,16 +27,17 @@ public static class DbSeeder
 
         foreach (var def in SiteImageDefaults.All)
         {
-            if (await context.SiteImages.AnyAsync(x => x.Key == def.Key))
-                continue;
-
-            context.SiteImages.Add(new SiteImage
+            var existing = await context.SiteImages.FirstOrDefaultAsync(x => x.Key == def.Key);
+            if (existing is null)
             {
-                Key = def.Key,
-                Label = def.Label,
-                Group = def.Group,
-                SortOrder = def.SortOrder,
-            });
+                context.SiteImages.Add(new SiteImage
+                {
+                    Key = def.Key,
+                    Label = def.Label,
+                    Group = def.Group,
+                    SortOrder = def.SortOrder,
+                });
+            }
         }
 
         await context.SaveChangesAsync();

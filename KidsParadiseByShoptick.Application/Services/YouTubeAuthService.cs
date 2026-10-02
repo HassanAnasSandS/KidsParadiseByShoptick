@@ -43,6 +43,14 @@ public class YouTubeAuthService : IYouTubeAuthService
 
     public bool IsConnected => File.Exists(_tokenFilePath) && !string.IsNullOrWhiteSpace(LoadRefreshToken());
 
+    public Task DisconnectAsync(CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        if (File.Exists(_tokenFilePath))
+            File.Delete(_tokenFilePath);
+        return Task.CompletedTask;
+    }
+
     public string BuildAuthorizationUrl(out string state)
     {
         EnsureOAuthConfigured();

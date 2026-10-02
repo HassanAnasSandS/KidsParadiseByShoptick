@@ -21,7 +21,16 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 200 * 1024 * 1024;
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 200 * 1024 * 1024;
+});
 builder.Services.AddMemoryCache();
 builder.Services.Configure<SeoOptions>(builder.Configuration.GetSection(SeoOptions.SectionName));
 builder.Services.Configure<GoogleOAuthOptions>(options =>
@@ -45,12 +54,11 @@ builder.Services.Configure<TikTokSocialOptions>(options =>
     if (!string.IsNullOrWhiteSpace(siteBase) && string.IsNullOrWhiteSpace(options.RedirectUri))
         options.RedirectUri = $"{siteBase}/api/admin/tiktok/oauth/callback";
     if (string.IsNullOrWhiteSpace(options.PostMode))
-        options.PostMode = "MEDIA_UPLOAD";
+        options.PostMode = TikTokSocialOptions.DirectPost;
+    options.PostMode = TikTokSocialOptions.NormalizePostMode(options.PostMode);
     if (string.IsNullOrWhiteSpace(options.PrivacyLevel))
-        options.PrivacyLevel = "SELF_ONLY";
-    // Draft posting only — matches Content Posting API without Direct Post / video.publish audit.
-    if (string.IsNullOrWhiteSpace(options.Scopes))
-        options.Scopes = "user.info.basic,video.upload";
+        options.PrivacyLevel = "PUBLIC_TO_EVERYONE";
+    // Scopes are derived at Connect time from the Admin-selected post mode.
 });
 builder.Services.Configure<PinterestSocialOptions>(options =>
 {
@@ -164,12 +172,29 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // Never cache the SPA shell — stale index.html + new hashed assets = blank page.
+        if (ctx.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+            ctx.Context.Response.Headers.Pragma = "no-cache";
+            ctx.Context.Response.Headers.Expires = "0";
+        }
+        else if (ctx.Context.Request.Path.StartsWithSegments("/assets"))
+        {
+            // Hashed Vite assets are immutable.
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+    },
+});
 
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(publishedPath),
-    RequestPath = ""
+    RequestPath = "",
 });
 
 app.UseAuthentication();
@@ -248,6 +273,7 @@ app.MapGet("/product/{id:int}", async (
 foreach (var (route, pageSeo) in KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.StaticPages)
 {
     app.MapGet(route, async (
+        HttpContext http,
         IOptions<SeoOptions> seoOptions,
         IWebHostEnvironment env,
         CancellationToken cancellationToken) =>
@@ -259,6 +285,8 @@ foreach (var (route, pageSeo) in KidsParadiseByShoptick.Application.Helpers.Page
         var html = await System.IO.File.ReadAllTextAsync(indexPath, cancellationToken);
         html = KidsParadiseByShoptick.Application.Helpers.PageSeoHelper.InjectIntoIndexHtml(
             html, pageSeo, seoOptions.Value);
+        http.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+        http.Response.Headers.Pragma = "no-cache";
         return Results.Content(html, "text/html; charset=utf-8");
     });
 }

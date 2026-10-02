@@ -14,22 +14,126 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
     [ObservableProperty] private bool isCheckingMeta;
     [ObservableProperty] private bool isCheckingTikTok;
     [ObservableProperty] private bool isCheckingPinterest;
+    [ObservableProperty] private bool isCheckingYouTube;
     [ObservableProperty] private string description = string.Empty;
     [ObservableProperty] private string tags = string.Empty;
     [ObservableProperty] private string? errorMessage;
-    [ObservableProperty] private string metaSummary = "Tap Check to verify Meta setup.";
+
+    [ObservableProperty] private bool metaConnected;
+    [ObservableProperty] private string metaStatusLabel = "Checking…";
+    [ObservableProperty] private string metaSummary = "Facebook, Instagram & WhatsApp catalog.";
+    [ObservableProperty] private string metaUserAccessToken = string.Empty;
     [ObservableProperty] private string catalogIdToLink = string.Empty;
-    [ObservableProperty] private string tikTokSummary = "Tap Refresh to check TikTok connection.";
+    [ObservableProperty] private bool showMetaConnectForm;
+
+    [ObservableProperty] private string tikTokSummary = "Checking…";
+    [ObservableProperty] private string tikTokStatusLabel = "Checking…";
     [ObservableProperty] private bool tikTokConnected;
     [ObservableProperty] private bool tikTokConfigured;
-    [ObservableProperty] private string pinterestSummary = "Tap Refresh to check Pinterest connection.";
+    [ObservableProperty] private string tikTokPostMode = "DIRECT_POST";
+    [ObservableProperty] private bool isTikTokDraftMode;
+    [ObservableProperty] private bool isTikTokDirectPostMode = true;
+
+    [ObservableProperty] private string pinterestSummary = "Checking…";
+    [ObservableProperty] private string pinterestStatusLabel = "Checking…";
     [ObservableProperty] private bool pinterestConnected;
     [ObservableProperty] private bool pinterestConfigured;
+
+    [ObservableProperty] private string youTubeSummary = "Checking…";
+    [ObservableProperty] private string youTubeStatusLabel = "Checking…";
+    [ObservableProperty] private bool youTubeConnected;
+    [ObservableProperty] private bool youTubeConfigured;
+
     [ObservableProperty] private string googleMerchantFeedUrl = "https://kidsparadise.shoptick.shop/google-merchant-feed.xml";
+    [ObservableProperty] private string selectedTab = "Accounts";
+    [ObservableProperty] private string selectedAccountsSubTab = "Meta";
+    [ObservableProperty] private string selectedPostingSubTab = "Create";
+    [ObservableProperty] private string selectedCaptionSubTab = "Description";
+    [ObservableProperty] private SocialPostActionsModel onCreate = new();
+    [ObservableProperty] private SocialPostActionsModel onEdit = new();
+
+    public bool IsAccountsTab => SelectedTab == "Accounts";
+    public bool IsPostingTab => SelectedTab == "Posting";
+    public bool IsCaptionTab => SelectedTab == "Caption";
+
+    public bool IsMetaSubTab => SelectedAccountsSubTab == "Meta";
+    public bool IsTikTokSubTab => SelectedAccountsSubTab == "TikTok";
+    public bool IsPinterestSubTab => SelectedAccountsSubTab == "Pinterest";
+    public bool IsYouTubeSubTab => SelectedAccountsSubTab == "YouTube";
+    public bool IsGoogleSubTab => SelectedAccountsSubTab == "Google";
+
+    public bool IsCreatePostingSubTab => SelectedPostingSubTab == "Create";
+    public bool IsEditPostingSubTab => SelectedPostingSubTab == "Edit";
+
+    public bool IsDescriptionCaptionSubTab => SelectedCaptionSubTab == "Description";
+    public bool IsTagsCaptionSubTab => SelectedCaptionSubTab == "Tags";
 
     public ObservableCollection<MetaRequirementCheckModel> MetaRequirements { get; } = [];
 
     public SocialMediaSettingsViewModel(AdminApiService api) => _api = api;
+
+    partial void OnSelectedTabChanged(string value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(IsAccountsTab));
+        OnPropertyChanged(nameof(IsPostingTab));
+        OnPropertyChanged(nameof(IsCaptionTab));
+    }
+
+    partial void OnSelectedAccountsSubTabChanged(string value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(IsMetaSubTab));
+        OnPropertyChanged(nameof(IsTikTokSubTab));
+        OnPropertyChanged(nameof(IsPinterestSubTab));
+        OnPropertyChanged(nameof(IsYouTubeSubTab));
+        OnPropertyChanged(nameof(IsGoogleSubTab));
+    }
+
+    partial void OnSelectedPostingSubTabChanged(string value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(IsCreatePostingSubTab));
+        OnPropertyChanged(nameof(IsEditPostingSubTab));
+    }
+
+    partial void OnSelectedCaptionSubTabChanged(string value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(IsDescriptionCaptionSubTab));
+        OnPropertyChanged(nameof(IsTagsCaptionSubTab));
+    }
+
+    [RelayCommand]
+    void SelectTab(string? tab)
+    {
+        if (tab is "Accounts" or "Posting" or "Caption")
+            SelectedTab = tab;
+    }
+
+    [RelayCommand]
+    void SelectAccountsSubTab(string? tab)
+    {
+        if (tab is "Meta" or "TikTok" or "Pinterest" or "YouTube" or "Google")
+            SelectedAccountsSubTab = tab;
+    }
+
+    [RelayCommand]
+    void SelectPostingSubTab(string? tab)
+    {
+        if (tab is "Create" or "Edit")
+            SelectedPostingSubTab = tab;
+    }
+
+    [RelayCommand]
+    void SelectCaptionSubTab(string? tab)
+    {
+        if (tab is "Description" or "Tags")
+            SelectedCaptionSubTab = tab;
+    }
+
+    [RelayCommand]
+    void ToggleMetaConnectForm() => ShowMetaConnectForm = !ShowMetaConnectForm;
 
     [RelayCommand]
     async Task CopyGoogleMerchantFeedUrlAsync()
@@ -55,9 +159,17 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
     async Task AppearingAsync()
     {
         await LoadAsync();
-        await CheckMetaRequirementsAsync();
-        await RefreshTikTokStatusAsync();
-        await RefreshPinterestStatusAsync();
+        await RefreshAllAccountsAsync();
+    }
+
+    [RelayCommand]
+    async Task RefreshAllAccountsAsync()
+    {
+        await Task.WhenAll(
+            CheckMetaRequirementsAsync(),
+            RefreshTikTokStatusAsync(),
+            RefreshPinterestStatusAsync(),
+            RefreshYouTubeStatusAsync());
     }
 
     [RelayCommand]
@@ -68,9 +180,7 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         {
             IsBusy = true;
             ErrorMessage = null;
-            var settings = await _api.GetSocialMediaSettingsAsync();
-            Description = settings.Description;
-            Tags = settings.Tags;
+            ApplySettings(await _api.GetSocialMediaSettingsAsync());
         }
         catch (Exception ex)
         {
@@ -84,6 +194,15 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         }
     }
 
+    void ApplySettings(SocialMediaSettingsModel settings)
+    {
+        Description = settings.Description;
+        Tags = settings.Tags;
+        ApplyTikTokPostMode(settings.TikTokPostMode);
+        OnCreate = settings.OnCreate ?? new SocialPostActionsModel();
+        OnEdit = settings.OnEdit ?? new SocialPostActionsModel();
+    }
+
     [RelayCommand]
     async Task CheckMetaRequirementsAsync()
     {
@@ -92,20 +211,107 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         {
             IsCheckingMeta = true;
             ErrorMessage = null;
-            var status = await _api.GetMetaRequirementsAsync();
+
+            var statusTask = _api.GetMetaStatusAsync();
+            var requirementsTask = _api.GetMetaRequirementsAsync();
+            await Task.WhenAll(statusTask, requirementsTask);
+
+            var connection = await statusTask;
+            var status = await requirementsTask;
+
+            MetaConnected = connection.Connected;
             MetaRequirements.Clear();
             foreach (var item in status.Requirements.OrderBy(r => r.Step))
                 MetaRequirements.Add(item);
 
             CatalogIdToLink = status.WhatsAppCatalogId ?? CatalogIdToLink;
-            MetaSummary = status.AllMet
-                ? "All 4 Meta requirements are met."
-                : $"{status.Requirements.Count(r => r.IsMet)}/{status.Requirements.Count} requirements met.";
+
+            if (!connection.Connected)
+            {
+                MetaStatusLabel = "Not connected";
+                MetaSummary = "Connect Facebook Page + Instagram + WhatsApp catalog with a Meta user token.";
+            }
+            else if (status.AllMet)
+            {
+                MetaStatusLabel = "Connected";
+                MetaSummary = string.IsNullOrWhiteSpace(status.FacebookPageId)
+                    ? "All Meta requirements are met."
+                    : $"Ready · Page {status.FacebookPageId}";
+            }
+            else
+            {
+                MetaStatusLabel = "Needs setup";
+                MetaSummary = $"{status.Requirements.Count(r => r.IsMet)}/{status.Requirements.Count} requirements met.";
+            }
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            MetaSummary = "Could not check Meta requirements.";
+            MetaConnected = false;
+            MetaStatusLabel = "Error";
+            MetaSummary = "Could not check Meta status.";
+        }
+        finally
+        {
+            IsCheckingMeta = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task ConnectMetaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(MetaUserAccessToken))
+        {
+            await Shell.Current.DisplayAlert(
+                "Token required",
+                "Paste a Meta User Access Token from Graph API Explorer (with page + Instagram + WhatsApp permissions).",
+                "OK");
+            ShowMetaConnectForm = true;
+            return;
+        }
+
+        try
+        {
+            IsCheckingMeta = true;
+            await _api.ConnectMetaAsync(
+                MetaUserAccessToken.Trim(),
+                facebookPageId: null,
+                whatsAppCatalogId: string.IsNullOrWhiteSpace(CatalogIdToLink) ? null : CatalogIdToLink.Trim());
+            MetaUserAccessToken = string.Empty;
+            ShowMetaConnectForm = false;
+            await CheckMetaRequirementsAsync();
+            await Shell.Current.DisplayAlert("Connected", "Facebook / Instagram / WhatsApp catalog connected.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Meta connect failed", ex.Message, "OK");
+        }
+        finally
+        {
+            IsCheckingMeta = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task DisconnectMetaAsync()
+    {
+        if (!await Shell.Current.DisplayAlert(
+                "Disconnect Meta?",
+                "Facebook, Instagram and WhatsApp catalog posting will stop until you reconnect.",
+                "Disconnect",
+                "Cancel"))
+            return;
+
+        try
+        {
+            IsCheckingMeta = true;
+            await _api.DisconnectMetaAsync();
+            await CheckMetaRequirementsAsync();
+            await Shell.Current.DisplayAlert("Disconnected", "Meta account disconnected.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
         }
         finally
         {
@@ -123,21 +329,37 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
             var status = await _api.GetTikTokStatusAsync();
             TikTokConfigured = status.Configured;
             TikTokConnected = status.Connected;
+            ApplyTikTokPostMode(status.PostMode);
 
             if (!status.Enabled)
-                TikTokSummary = "TikTok is disabled on the server (TikTokSocial:Enabled=false).";
+            {
+                TikTokStatusLabel = "Disabled";
+                TikTokSummary = "TikTok is disabled on the server.";
+            }
             else if (!status.Configured)
-                TikTokSummary = "TikTok keys missing. Set ClientKey/ClientSecret in appsettings.Secrets.json.";
+            {
+                TikTokStatusLabel = "Setup needed";
+                TikTokSummary = "Add ClientKey / ClientSecret in server secrets.";
+            }
             else if (status.Connected)
-                TikTokSummary = $"Connected. Mode: {status.PostMode} (photos via server, video from admin app).";
+            {
+                TikTokStatusLabel = "Connected";
+                TikTokSummary = IsTikTokDraftMode
+                    ? "Draft mode · posts go to TikTok inbox."
+                    : "Direct Post · publishes immediately.";
+            }
             else
-                TikTokSummary = "Configured but not connected. Tap Connect TikTok.";
+            {
+                TikTokStatusLabel = "Not connected";
+                TikTokSummary = "Choose Draft or Direct Post, then connect.";
+            }
         }
         catch (Exception ex)
         {
             TikTokConfigured = false;
             TikTokConnected = false;
-            TikTokSummary = $"Could not load TikTok status: {ex.Message}";
+            TikTokStatusLabel = "Error";
+            TikTokSummary = ex.Message;
         }
         finally
         {
@@ -151,11 +373,11 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         try
         {
             IsCheckingTikTok = true;
-            var url = await _api.GetTikTokAuthUrlAsync();
+            var url = await _api.GetTikTokAuthUrlAsync(TikTokPostMode);
             await Launcher.OpenAsync(new Uri(url));
             await Shell.Current.DisplayAlert(
                 "TikTok",
-                "Complete TikTok sign-in in the browser, then tap Refresh Status.",
+                "Finish sign-in in the browser, then tap Refresh.",
                 "OK");
         }
         catch (Exception ex)
@@ -171,12 +393,12 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
     [RelayCommand]
     async Task DisconnectTikTokAsync()
     {
-        var confirm = await Shell.Current.DisplayAlert(
-            "Disconnect TikTok?",
-            "Toy posts will stop going to TikTok until you reconnect.",
-            "Disconnect",
-            "Cancel");
-        if (!confirm) return;
+        if (!await Shell.Current.DisplayAlert(
+                "Disconnect TikTok?",
+                "TikTok posting will stop until you reconnect.",
+                "Disconnect",
+                "Cancel"))
+            return;
 
         try
         {
@@ -207,24 +429,35 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
             PinterestConnected = status.Connected;
 
             if (!status.Enabled)
-                PinterestSummary = "Pinterest is disabled on the server (PinterestSocial:Enabled=false).";
+            {
+                PinterestStatusLabel = "Disabled";
+                PinterestSummary = "Pinterest is disabled on the server.";
+            }
             else if (!status.Configured)
-                PinterestSummary = "Pinterest keys missing. Set AppId/AppSecret in appsettings.Secrets.json.";
+            {
+                PinterestStatusLabel = "Setup needed";
+                PinterestSummary = "Add AppId / AppSecret in server secrets.";
+            }
             else if (status.Connected)
             {
+                PinterestStatusLabel = "Connected";
                 var board = string.IsNullOrWhiteSpace(status.BoardId)
-                    ? status.DefaultBoardName ?? "Kids Paradise Toys"
+                    ? status.DefaultBoardName ?? "default board"
                     : status.BoardId;
-                PinterestSummary = $"Connected. Pins go to board: {board}.";
+                PinterestSummary = $"Pins go to: {board}";
             }
             else
-                PinterestSummary = "Configured but not connected. Tap Connect Pinterest.";
+            {
+                PinterestStatusLabel = "Not connected";
+                PinterestSummary = "Tap Connect to authorize Pinterest.";
+            }
         }
         catch (Exception ex)
         {
             PinterestConfigured = false;
             PinterestConnected = false;
-            PinterestSummary = $"Could not load Pinterest status: {ex.Message}";
+            PinterestStatusLabel = "Error";
+            PinterestSummary = ex.Message;
         }
         finally
         {
@@ -242,7 +475,7 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
             await Launcher.OpenAsync(new Uri(url));
             await Shell.Current.DisplayAlert(
                 "Pinterest",
-                "Complete Pinterest sign-in in the browser, then tap Refresh Status.",
+                "Finish sign-in in the browser, then tap Refresh.",
                 "OK");
         }
         catch (Exception ex)
@@ -258,12 +491,12 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
     [RelayCommand]
     async Task DisconnectPinterestAsync()
     {
-        var confirm = await Shell.Current.DisplayAlert(
-            "Disconnect Pinterest?",
-            "Toy posts will stop going to Pinterest until you reconnect.",
-            "Disconnect",
-            "Cancel");
-        if (!confirm) return;
+        if (!await Shell.Current.DisplayAlert(
+                "Disconnect Pinterest?",
+                "Pinterest pinning will stop until you reconnect.",
+                "Disconnect",
+                "Cancel"))
+            return;
 
         try
         {
@@ -279,6 +512,96 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         finally
         {
             IsCheckingPinterest = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task RefreshYouTubeStatusAsync()
+    {
+        if (IsCheckingYouTube) return;
+        try
+        {
+            IsCheckingYouTube = true;
+            var status = await _api.GetYouTubeStatusAsync();
+            YouTubeConfigured = status.Configured;
+            YouTubeConnected = status.Connected;
+
+            if (!status.Configured)
+            {
+                YouTubeStatusLabel = "Setup needed";
+                YouTubeSummary = "Add Google OAuth ClientId / RedirectUri on the server.";
+            }
+            else if (status.Connected)
+            {
+                YouTubeStatusLabel = "Connected";
+                YouTubeSummary = "Ready for video uploads from the admin app.";
+            }
+            else
+            {
+                YouTubeStatusLabel = "Not connected";
+                YouTubeSummary = "Tap Connect to authorize YouTube upload.";
+            }
+        }
+        catch (Exception ex)
+        {
+            YouTubeConfigured = false;
+            YouTubeConnected = false;
+            YouTubeStatusLabel = "Error";
+            YouTubeSummary = ex.Message;
+        }
+        finally
+        {
+            IsCheckingYouTube = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task ConnectYouTubeAsync()
+    {
+        try
+        {
+            IsCheckingYouTube = true;
+            var url = await _api.GetYouTubeAuthUrlAsync();
+            await Launcher.OpenAsync(new Uri(url));
+            await Shell.Current.DisplayAlert(
+                "YouTube",
+                "Finish Google sign-in in the browser, then tap Refresh.",
+                "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("YouTube connect failed", ex.Message, "OK");
+        }
+        finally
+        {
+            IsCheckingYouTube = false;
+        }
+    }
+
+    [RelayCommand]
+    async Task DisconnectYouTubeAsync()
+    {
+        if (!await Shell.Current.DisplayAlert(
+                "Disconnect YouTube?",
+                "YouTube uploads will stop until you reconnect.",
+                "Disconnect",
+                "Cancel"))
+            return;
+
+        try
+        {
+            IsCheckingYouTube = true;
+            await _api.DisconnectYouTubeAsync();
+            await RefreshYouTubeStatusAsync();
+            await Shell.Current.DisplayAlert("Disconnected", "YouTube account disconnected.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        finally
+        {
+            IsCheckingYouTube = false;
         }
     }
 
@@ -309,6 +632,55 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    async Task SelectTikTokPostModeAsync(string? mode)
+    {
+        var next = string.Equals(mode, "MEDIA_UPLOAD", StringComparison.OrdinalIgnoreCase)
+            ? "MEDIA_UPLOAD"
+            : "DIRECT_POST";
+        if (string.Equals(next, TikTokPostMode, StringComparison.OrdinalIgnoreCase)
+            && ((next == "MEDIA_UPLOAD") == IsTikTokDraftMode))
+            return;
+
+        var wasConnected = TikTokConnected;
+        ApplyTikTokPostMode(next);
+
+        try
+        {
+            IsCheckingTikTok = true;
+            var status = await _api.UpdateTikTokPostModeAsync(next);
+            TikTokConfigured = status.Configured;
+            TikTokConnected = status.Connected;
+            ApplyTikTokPostMode(status.PostMode);
+            await RefreshTikTokStatusAsync();
+
+            if (wasConnected || status.NeedsReconnect)
+            {
+                await Shell.Current.DisplayAlert(
+                    "Reconnect TikTok",
+                    "Posting mode changed. Disconnect and Connect again so TikTok grants the matching permission.",
+                    "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("TikTok mode failed", ex.Message, "OK");
+        }
+        finally
+        {
+            IsCheckingTikTok = false;
+        }
+    }
+
+    void ApplyTikTokPostMode(string? mode)
+    {
+        TikTokPostMode = string.Equals(mode, "MEDIA_UPLOAD", StringComparison.OrdinalIgnoreCase)
+            ? "MEDIA_UPLOAD"
+            : "DIRECT_POST";
+        IsTikTokDraftMode = TikTokPostMode == "MEDIA_UPLOAD";
+        IsTikTokDirectPostMode = !IsTikTokDraftMode;
+    }
+
+    [RelayCommand]
     async Task ShowFixAsync(MetaRequirementCheckModel? item)
     {
         if (item is null) return;
@@ -323,9 +695,15 @@ public partial class SocialMediaSettingsViewModel : ObservableObject
         {
             IsBusy = true;
             ErrorMessage = null;
-            var settings = await _api.UpdateSocialMediaSettingsAsync(Description, Tags);
-            Description = settings.Description;
-            Tags = settings.Tags;
+            var payload = new SocialMediaSettingsModel
+            {
+                Description = Description,
+                Tags = Tags,
+                TikTokPostMode = TikTokPostMode,
+                OnCreate = OnCreate,
+                OnEdit = OnEdit,
+            };
+            ApplySettings(await _api.UpdateSocialMediaSettingsAsync(payload));
             await Shell.Current.DisplayAlert("Saved", "Social media settings updated.", "OK");
         }
         catch (Exception ex)

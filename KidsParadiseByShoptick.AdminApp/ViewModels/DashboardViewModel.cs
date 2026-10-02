@@ -35,6 +35,13 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private int totalDeliveredOrders;
     [ObservableProperty] private string allDeliveredOrdersTotalAmountText = "Rs. 0";
 
+    [ObservableProperty] private int totalAffiliatePartners;
+    [ObservableProperty] private int activeAffiliatePartners;
+    [ObservableProperty] private int affiliatedOrdersCount;
+    [ObservableProperty] private string affiliateCommissionTotalText = "Rs. 0";
+    [ObservableProperty] private string affiliatePaidTotalText = "Rs. 0";
+    [ObservableProperty] private string affiliateOutstandingTotalText = "Rs. 0";
+
     public DashboardViewModel(AdminApiService api, AuthSession session)
     {
         _api = api;
@@ -87,6 +94,9 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     async Task OpenOrdersAsync() => await Shell.Current.GoToAsync("//orders");
 
+    [RelayCommand]
+    async Task OpenAffiliatesAsync() => await Shell.Current.GoToAsync("//affiliates");
+
     private async Task LoadAsync(bool refreshing)
     {
         ErrorMessage = null;
@@ -116,6 +126,13 @@ public partial class DashboardViewModel : ObservableObject
             TotalCustomers = stats.TotalCustomers;
             TotalDeliveredOrders = stats.TotalDeliveredOrders;
             AllDeliveredOrdersTotalAmountText = FormatHelpers.Price(stats.AllDeliveredOrdersTotalAmount);
+
+            TotalAffiliatePartners = stats.TotalAffiliatePartners;
+            ActiveAffiliatePartners = stats.ActiveAffiliatePartners;
+            AffiliatedOrdersCount = stats.AffiliatedOrdersCount;
+            AffiliateCommissionTotalText = FormatHelpers.Price(stats.AffiliateCommissionTotal);
+            AffiliatePaidTotalText = FormatHelpers.Price(stats.AffiliatePaidTotal);
+            AffiliateOutstandingTotalText = FormatHelpers.Price(stats.AffiliateOutstandingTotal);
 
             FilterSummary = IsFilterActive
                 ? $"{FromDate:dd MMM yyyy} – {ToDate:dd MMM yyyy}"

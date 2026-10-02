@@ -34,7 +34,7 @@
                             <Label Grid.Column="1" Text="📅" FontSize="22" VerticalOptions="Center" />
                         </Grid>
 
-                        <Label Text="Applies to customers &amp; delivered orders. Toy stats are live inventory."
+                        <Label Text="Applies to customers, delivered orders &amp; affiliate commissions. Toy stats are live inventory. Affiliate commission is NOT deducted from sales/revenue."
                                FontSize="11" TextColor="#94a3b8" />
 
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
@@ -154,6 +154,47 @@
                             </VerticalStackLayout>
                         </Frame>
 
+                    </Grid>
+                </VerticalStackLayout>
+
+                <!-- Affiliate section (informational — not deducted from revenue) -->
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Affiliate Partners" FontSize="17" FontAttributes="Bold" TextColor="#0f172a" />
+                        <Button Grid.Column="1" Text="Manage" FontSize="12" Padding="10,4"
+                                Command="{Binding OpenAffiliatesCommand}" BackgroundColor="Transparent"
+                                TextColor="#0f766e" BorderColor="#0f766e" BorderWidth="1" CornerRadius="8" />
+                    </Grid>
+                    <Label Text="Commission is tracked separately and is not deducted from Revenue / Sold amounts above."
+                           FontSize="11" TextColor="#94a3b8" />
+
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                        <Frame Grid.Row="0" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#99f6e4" BackgroundColor="#f0fdfa">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Partners" FontSize="12" TextColor="#0f766e" />
+                                <Label Text="{Binding TotalAffiliatePartners}" FontSize="28" FontAttributes="Bold" TextColor="#0f766e" />
+                                <Label Text="{Binding ActiveAffiliatePartners, StringFormat='Active: {0}'}" FontSize="11" TextColor="#115e59" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="0" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="#99f6e4" BackgroundColor="#f0fdfa">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Affiliated Orders" FontSize="12" TextColor="#0f766e" />
+                                <Label Text="{Binding AffiliatedOrdersCount}" FontSize="28" FontAttributes="Bold" TextColor="#0f766e" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="1" Grid.Column="0" Padding="14" CornerRadius="16" BorderColor="#99f6e4" BackgroundColor="#f0fdfa">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Commission Earned" FontSize="12" TextColor="#0f766e" />
+                                <Label Text="{Binding AffiliateCommissionTotalText}" FontSize="18" FontAttributes="Bold" TextColor="#0f766e" LineBreakMode="WordWrap" />
+                                <Label Text="{Binding AffiliatePaidTotalText, StringFormat='Paid: {0}'}" FontSize="11" TextColor="#115e59" />
+                            </VerticalStackLayout>
+                        </Frame>
+                        <Frame Grid.Row="1" Grid.Column="1" Padding="14" CornerRadius="16" BorderColor="#99f6e4" BackgroundColor="#0f766e">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Outstanding" FontSize="12" TextColor="#ccfbf1" />
+                                <Label Text="{Binding AffiliateOutstandingTotalText}" FontSize="18" FontAttributes="Bold" TextColor="White" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Frame>
                     </Grid>
                 </VerticalStackLayout>
 

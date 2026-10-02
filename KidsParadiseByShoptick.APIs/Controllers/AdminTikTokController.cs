@@ -1,3 +1,4 @@
+using KidsParadiseByShoptick.Application.DTOs;
 using KidsParadiseByShoptick.Application.Interfaces;
 using KidsParadiseByShoptick.Application.Options;
 using Microsoft.AspNetCore.Authorization;
@@ -11,34 +12,69 @@ namespace KidsParadiseByShoptick.APIs.Controllers;
 public class AdminTikTokController : ControllerBase
 {
     private readonly ITikTokAuthService _tikTokAuth;
+    private readonly ITikTokSocialService _tikTokSocial;
+    private readonly ISocialMediaSettingsService _socialSettings;
     private readonly TikTokSocialOptions _options;
 
-    public AdminTikTokController(ITikTokAuthService tikTokAuth, IOptions<TikTokSocialOptions> options)
+    public AdminTikTokController(
+        ITikTokAuthService tikTokAuth,
+        ITikTokSocialService tikTokSocial,
+        ISocialMediaSettingsService socialSettings,
+        IOptions<TikTokSocialOptions> options)
     {
         _tikTokAuth = tikTokAuth;
+        _tikTokSocial = tikTokSocial;
+        _socialSettings = socialSettings;
         _options = options.Value;
     }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("status")]
-    public ActionResult<object> GetStatus()
-        => Ok(new
+    public async Task<ActionResult<object>> GetStatus(CancellationToken cancellationToken)
+    {
+        var postMode = await _socialSettings.GetTikTokPostModeAsync(cancellationToken);
+        return Ok(new
         {
             enabled = _options.Enabled,
             configured = _tikTokAuth.IsOAuthConfigured,
             connected = _tikTokAuth.IsConnected,
-            postMode = _options.PostMode,
-            privacyLevel = _options.PrivacyLevel,
+            postMode,
+            privacyLevel = PrivacyForMode(postMode),
         });
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("post-mode")]
+    public async Task<ActionResult<object>> SetPostMode(
+        [FromBody] UpdateTikTokPostModeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var postMode = await _socialSettings.SetTikTokPostModeAsync(request.PostMode, cancellationToken);
+        return Ok(new
+        {
+            enabled = _options.Enabled,
+            configured = _tikTokAuth.IsOAuthConfigured,
+            connected = _tikTokAuth.IsConnected,
+            postMode,
+            privacyLevel = PrivacyForMode(postMode),
+            needsReconnect = _tikTokAuth.IsConnected,
+        });
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpGet("auth-url")]
-    public ActionResult<object> GetAuthUrl()
+    public async Task<ActionResult<object>> GetAuthUrl(
+        [FromQuery] string? postMode,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var url = _tikTokAuth.BuildAuthorizationUrl(out _);
-            return Ok(new { url });
+            if (!string.IsNullOrWhiteSpace(postMode))
+                await _socialSettings.SetTikTokPostModeAsync(postMode, cancellationToken);
+
+            var mode = await _socialSettings.GetTikTokPostModeAsync(cancellationToken);
+            var url = _tikTokAuth.BuildAuthorizationUrl(mode, out _);
+            return Ok(new { url, postMode = mode });
         }
         catch (InvalidOperationException ex)
         {
@@ -53,12 +89,17 @@ public class AdminTikTokController : ControllerBase
         try
         {
             var (accessToken, openId) = await _tikTokAuth.GetAccessTokenAsync(cancellationToken);
+            var postMode = await _socialSettings.GetTikTokPostModeAsync(cancellationToken);
+            var privacyLevel = TikTokSocialOptions.IsDraft(postMode)
+                ? (string.IsNullOrWhiteSpace(_options.PrivacyLevel) ? "SELF_ONLY" : _options.PrivacyLevel)
+                : await _tikTokSocial.ResolvePrivacyLevelAsync(accessToken, cancellationToken);
+
             return Ok(new
             {
                 accessToken,
                 openId,
-                postMode = _options.PostMode,
-                privacyLevel = _options.PrivacyLevel,
+                postMode,
+                privacyLevel,
             });
         }
         catch (InvalidOperationException ex)
@@ -67,7 +108,10 @@ public class AdminTikTokController : ControllerBase
             try
             {
                 if (_tikTokAuth.IsOAuthConfigured)
-                    authUrl = _tikTokAuth.BuildAuthorizationUrl(out _);
+                {
+                    var mode = await _socialSettings.GetTikTokPostModeAsync(cancellationToken);
+                    authUrl = _tikTokAuth.BuildAuthorizationUrl(mode, out _);
+                }
             }
             catch
             {
@@ -80,6 +124,23 @@ public class AdminTikTokController : ControllerBase
                 needsAuth = true,
                 authUrl,
             });
+        }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("post-photos/{toyId:int}")]
+    public async Task<ActionResult<object>> PostPhotos(int toyId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var publishId = await _tikTokSocial.PostToyPhotosAsync(toyId, cancellationToken);
+            if (string.IsNullOrWhiteSpace(publishId))
+                return BadRequest(new { message = "TikTok is not connected or photos were skipped." });
+            return Ok(new { publishId, message = "TikTok photo draft/post started." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -130,4 +191,9 @@ public class AdminTikTokController : ControllerBase
                 "text/html");
         }
     }
+
+    string PrivacyForMode(string postMode) =>
+        string.IsNullOrWhiteSpace(_options.PrivacyLevel)
+            ? (TikTokSocialOptions.IsDraft(postMode) ? "SELF_ONLY" : "PUBLIC_TO_EVERYONE")
+            : _options.PrivacyLevel;
 }

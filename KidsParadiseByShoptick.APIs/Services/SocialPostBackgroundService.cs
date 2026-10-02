@@ -41,7 +41,7 @@ public class SocialPostBackgroundService : BackgroundService
         {
             using var scope = _scopeFactory.CreateScope();
             var socialMedia = scope.ServiceProvider.GetRequiredService<ISocialMediaService>();
-            result = await socialMedia.PostToyAsync(job.ToyId, cancellationToken);
+            result = await socialMedia.PostToyAsync(job.ToyId, job.Trigger, cancellationToken);
         }
         catch (Exception ex)
         {

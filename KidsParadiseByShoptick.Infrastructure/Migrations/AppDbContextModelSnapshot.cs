@@ -51,6 +51,91 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                     b.ToTable("AdminUsers");
                 });
 
+            modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.AffiliateLedgerEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AffiliatePartnerId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OrderNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AffiliatePartnerId");
+
+                    b.HasIndex("OrderId", "Type");
+
+                    b.ToTable("AffiliateLedgerEntries");
+                });
+
+            modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.AffiliatePartner", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("WalletBankName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Whatsapp")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("AffiliatePartners");
+                });
+
             modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -117,6 +202,9 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("AffiliatePartnerId")
+                        .HasColumnType("int");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -167,6 +255,8 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AffiliatePartnerId");
 
                     b.HasIndex("CustomerId");
 
@@ -262,6 +352,14 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CtaText")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CtaColor")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("Group")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -281,8 +379,28 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("LinkUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
+
+                    b.Property<string>("Subtitle")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SubtitleColor")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TitleColor")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
@@ -321,6 +439,10 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                     b.Property<decimal?>("SalePrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VideoFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("VideoLink")
                         .HasMaxLength(500)
@@ -369,10 +491,16 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("Embedding")
+                        .HasColumnType("varbinary(max)");
+
                     b.Property<string>("ImagePath")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("PerceptualHash")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
@@ -382,18 +510,45 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PerceptualHash");
+
                     b.HasIndex("ToyId");
 
                     b.ToTable("ToyImages");
                 });
 
+            modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.AffiliateLedgerEntry", b =>
+                {
+                    b.HasOne("KidsParadiseByShoptick.Domain.Entities.AffiliatePartner", "AffiliatePartner")
+                        .WithMany("LedgerEntries")
+                        .HasForeignKey("AffiliatePartnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KidsParadiseByShoptick.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AffiliatePartner");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.Order", b =>
                 {
+                    b.HasOne("KidsParadiseByShoptick.Domain.Entities.AffiliatePartner", "AffiliatePartner")
+                        .WithMany("Orders")
+                        .HasForeignKey("AffiliatePartnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("KidsParadiseByShoptick.Domain.Entities.Customer", "Customer")
                         .WithMany("Orders")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AffiliatePartner");
 
                     b.Navigation("Customer");
                 });
@@ -464,6 +619,13 @@ namespace KidsParadiseByShoptick.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Toy");
+                });
+
+            modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.AffiliatePartner", b =>
+                {
+                    b.Navigation("LedgerEntries");
+
+                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("KidsParadiseByShoptick.Domain.Entities.Customer", b =>

@@ -12,6 +12,8 @@ import { useSiteImages } from '@/hooks/useSiteImages';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useScrollRestore } from '@/hooks/useScrollRestore';
 import { useShopPath } from '@/store/shopFilters';
+import { withAffiliatePath } from '@/store/affiliate';
+import { resolveSiteColor } from '@/lib/siteImages';
 import { SeoHead } from '@/components/seo/SeoHead';
 import {
   PAGE_SEO,
@@ -24,7 +26,7 @@ import {
 import { useDeliveryRates } from '@/hooks/useDeliveryRates';
 
 export function HomePage() {
-  const { get } = useSiteImages();
+  const { getContent } = useSiteImages();
   const shopPath = useShopPath();
   const { label: deliveryLabel, rates } = useDeliveryRates();
   const homeFaqs = [
@@ -116,36 +118,46 @@ export function HomePage() {
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="relative rounded-3xl overflow-hidden h-48 md:h-56 group">
-            <img
-              src={get('banner_new_arrivals')}
-              alt=""
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-pink-600/80 to-transparent flex items-center p-5 sm:p-8">
-              <div>
-                <Sparkles className="w-8 h-8 text-white mb-2" />
-                <h3 className="text-2xl font-bold text-white">New Arrivals</h3>
-                <p className="text-white/90 text-sm mt-1">Fresh toys added regularly</p>
-                <Link to={shopPath} className="inline-block mt-3 text-sm font-semibold text-white underline">Shop now →</Link>
+          {([
+            { key: 'banner_new_arrivals' as const, Icon: Sparkles, gradient: 'from-pink-600/80' },
+            { key: 'banner_perfect_gifts' as const, Icon: Gift, gradient: 'from-brand-700/80' },
+          ]).map(({ key, Icon, gradient }) => {
+            const content = getContent(key);
+            const href = withAffiliatePath(content.linkUrl?.trim() || shopPath);
+            const title = content.title?.trim() || '';
+            const subtitle = content.subtitle?.trim() || '';
+            const cta = content.ctaText?.trim() || '';
+            const titleColor = resolveSiteColor(content.titleColor);
+            const subtitleColor = resolveSiteColor(content.subtitleColor, '#FFFFFFE6');
+            const ctaColor = resolveSiteColor(content.ctaColor);
+            return (
+              <div key={key} className="relative rounded-3xl overflow-hidden h-48 md:h-56 group">
+                <img
+                  src={content.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className={`absolute inset-0 bg-gradient-to-r ${gradient} to-transparent flex items-center p-5 sm:p-8`}>
+                  {(title || subtitle || cta) ? (
+                    <div>
+                      <Icon className="w-8 h-8 mb-2" style={{ color: titleColor }} />
+                      {title ? (
+                        <h3 className="text-2xl font-bold" style={{ color: titleColor }}>{title}</h3>
+                      ) : null}
+                      {subtitle ? (
+                        <p className="text-sm mt-1" style={{ color: subtitleColor }}>{subtitle}</p>
+                      ) : null}
+                      {cta ? (
+                        <Link to={href} className="inline-block mt-3 text-sm font-semibold underline" style={{ color: ctaColor }}>
+                          {cta}
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="relative rounded-3xl overflow-hidden h-48 md:h-56 group">
-            <img
-              src={get('banner_perfect_gifts')}
-              alt=""
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-700/80 to-transparent flex items-center p-5 sm:p-8">
-              <div>
-                <Gift className="w-8 h-8 text-white mb-2" />
-                <h3 className="text-2xl font-bold text-white">Perfect Gifts</h3>
-                <p className="text-white/90 text-sm mt-1">Make every birthday special</p>
-                <Link to={shopPath} className="inline-block mt-3 text-sm font-semibold text-white underline">Find gifts →</Link>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </section>
 

@@ -47,14 +47,22 @@ public class MetaSocialMediaService : ISocialMediaService
         _logger = logger;
     }
 
-    public async Task<SocialPostResultDto> PostToyAsync(int toyId, CancellationToken cancellationToken = default)
+    public async Task<SocialPostResultDto> PostToyAsync(
+        int toyId,
+        SocialPostTrigger trigger = SocialPostTrigger.Create,
+        CancellationToken cancellationToken = default)
     {
         var toy = await _unitOfWork.Toys.GetWithDetailsAsync(toyId, cancellationToken);
         if (toy is null)
             return new SocialPostResultDto(false, null, false, null, "Toy not found for social posting.");
 
         var settings = await _socialSettings.GetAsync(cancellationToken);
-        var caption = ToySocialCaptionBuilder.Build(toy, _options.SiteBaseUrl, _options.WhatsAppNumber, settings.Tags);
+        var actions = trigger == SocialPostTrigger.Edit
+            ? (settings.OnEdit ?? SocialPostActionsDto.AllEnabled)
+            : (settings.OnCreate ?? SocialPostActionsDto.AllEnabled);
+
+        // Plain text for Facebook/Instagram/TikTok (HTML tags look broken on feed captions).
+        var caption = ToySocialCaptionBuilder.BuildPlainText(toy, _options.SiteBaseUrl, _options.WhatsAppNumber, settings.Tags);
         var imageUrls = ToySocialCaptionBuilder.BuildAbsoluteImageUrls(
             toy, _options.SiteBaseUrl, _fileStorage.GetPublicUrl);
 
@@ -65,134 +73,160 @@ public class MetaSocialMediaService : ISocialMediaService
         string? pinterestPinId = null;
         var messages = new List<string>();
 
+        if (!actions.HasAnyServerAction)
+        {
+            return new SocialPostResultDto(
+                false, null, false, null,
+                $"No server social actions enabled for {trigger}.");
+        }
+
         MetaPageCredentials? credentials = null;
-        if (!_metaToken.IsConfigured)
+        var needsMeta = actions.FacebookPhotos || actions.InstagramPhotos || actions.WhatsAppCatalog;
+        if (needsMeta)
         {
-            messages.Add("Facebook/Instagram/WhatsApp: not configured on the server.");
-        }
-        else
-        {
-            try
+            if (!_metaToken.IsConfigured)
             {
-                credentials = await _metaToken.EnsureCredentialsAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Meta credentials unavailable for toy {ToyId}", toyId);
-                messages.Add($"Facebook/Instagram/WhatsApp: {ex.Message}");
-            }
-        }
-
-        if (credentials is not null)
-        {
-            try
-            {
-                facebookPostId = await PostToFacebookAsync(credentials, caption, imageUrls, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Facebook post failed for toy {ToyId}", toyId);
-                messages.Add($"Facebook: {ex.Message}");
-            }
-
-            var igId = credentials.InstagramBusinessAccountId;
-            if (!string.IsNullOrWhiteSpace(igId))
-            {
-                if (imageUrls.Count == 0)
-                {
-                    messages.Add("Instagram: skipped (at least one photo is required).");
-                }
-                else
-                {
-                    try
-                    {
-                        instagramPostId = await PostToInstagramAsync(credentials, igId, caption, imageUrls, cancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Instagram post failed for toy {ToyId}", toyId);
-                        messages.Add($"Instagram: {ex.Message}");
-                    }
-                }
-            }
-
-            var catalogId = FirstNonEmpty(_options.WhatsAppCatalogId, credentials.WhatsAppCatalogId);
-            if (!_options.WhatsAppCatalogEnabled)
-            {
-                // Temporarily disabled — re-enable via MetaSocial:WhatsAppCatalogEnabled.
-            }
-            else if (string.IsNullOrWhiteSpace(catalogId))
-            {
-                messages.Add("Meta catalog: skipped (WhatsAppCatalogId not configured).");
-            }
-            else if (imageUrls.Count == 0)
-            {
-                messages.Add("Meta catalog: skipped (at least one photo is required).");
+                messages.Add("Facebook/Instagram/WhatsApp: not configured on the server.");
             }
             else
             {
                 try
                 {
-                    whatsAppCatalogProductId = await UpsertWhatsAppCatalogProductAsync(
-                        catalogId, credentials.PageAccessToken, toy, caption, imageUrls, cancellationToken);
+                    credentials = await _metaToken.EnsureCredentialsAsync(cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Meta catalog upsert failed for toy {ToyId}", toyId);
-                    messages.Add($"Meta catalog: {ex.Message}");
+                    _logger.LogError(ex, "Meta credentials unavailable for toy {ToyId}", toyId);
+                    messages.Add($"Facebook/Instagram/WhatsApp: {ex.Message}");
+                }
+            }
+        }
+
+        if (credentials is not null)
+        {
+            if (actions.FacebookPhotos)
+            {
+                try
+                {
+                    facebookPostId = await PostToFacebookAsync(credentials, caption, imageUrls, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Facebook post failed for toy {ToyId}", toyId);
+                    messages.Add($"Facebook: {ex.Message}");
+                }
+            }
+
+            if (actions.InstagramPhotos)
+            {
+                var igId = credentials.InstagramBusinessAccountId;
+                if (!string.IsNullOrWhiteSpace(igId))
+                {
+                    if (imageUrls.Count == 0)
+                    {
+                        messages.Add("Instagram: skipped (at least one photo is required).");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            instagramPostId = await PostToInstagramAsync(credentials, igId, caption, imageUrls, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Instagram post failed for toy {ToyId}", toyId);
+                            messages.Add($"Instagram: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
+            if (actions.WhatsAppCatalog)
+            {
+                var catalogId = FirstNonEmpty(_options.WhatsAppCatalogId, credentials.WhatsAppCatalogId);
+                if (!_options.WhatsAppCatalogEnabled)
+                {
+                    // Temporarily disabled — re-enable via MetaSocial:WhatsAppCatalogEnabled.
+                }
+                else if (string.IsNullOrWhiteSpace(catalogId))
+                {
+                    messages.Add("Meta catalog: skipped (WhatsAppCatalogId not configured).");
+                }
+                else if (imageUrls.Count == 0)
+                {
+                    messages.Add("Meta catalog: skipped (at least one photo is required).");
+                }
+                else
+                {
+                    try
+                    {
+                        whatsAppCatalogProductId = await UpsertWhatsAppCatalogProductAsync(
+                            catalogId, credentials.PageAccessToken, toy, caption, imageUrls, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Meta catalog upsert failed for toy {ToyId}", toyId);
+                        messages.Add($"Meta catalog: {ex.Message}");
+                    }
                 }
             }
         }
 
         // TikTok runs independently of Meta (same Create/Update social queue).
-        if (!_tikTok.IsOAuthConfigured)
+        if (actions.TikTokPhotos)
         {
-            messages.Add("TikTok: skipped (not enabled/configured on the server).");
-        }
-        else if (!_tikTok.IsConfigured)
-        {
-            messages.Add("TikTok: skipped (not connected — open Social Settings → Connect TikTok).");
-        }
-        else if (imageUrls.Count == 0)
-        {
-            messages.Add("TikTok: skipped (at least one photo is required).");
-        }
-        else
-        {
-            try
+            if (!_tikTok.IsOAuthConfigured)
             {
-                tikTokPublishId = await _tikTok.PostToyPhotosAsync(toyId, cancellationToken);
+                messages.Add("TikTok: skipped (not enabled/configured on the server).");
             }
-            catch (Exception ex)
+            else if (!_tikTok.IsConfigured)
             {
-                _logger.LogError(ex, "TikTok photo post failed for toy {ToyId}", toyId);
-                messages.Add($"TikTok: {ex.Message}");
+                messages.Add("TikTok: skipped (not connected — open Social Settings → Connect TikTok).");
+            }
+            else if (imageUrls.Count == 0)
+            {
+                messages.Add("TikTok: skipped (at least one photo is required).");
+            }
+            else
+            {
+                try
+                {
+                    tikTokPublishId = await _tikTok.PostToyPhotosAsync(toyId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "TikTok photo post failed for toy {ToyId}", toyId);
+                    messages.Add($"TikTok: {ex.Message}");
+                }
             }
         }
 
         // Pinterest runs independently (same Create/Update social queue).
-        if (!_pinterest.IsOAuthConfigured)
+        if (actions.Pinterest)
         {
-            messages.Add("Pinterest: skipped (not enabled/configured on the server).");
-        }
-        else if (!_pinterest.IsConfigured)
-        {
-            messages.Add("Pinterest: skipped (not connected — open Social Settings → Connect Pinterest).");
-        }
-        else if (imageUrls.Count == 0)
-        {
-            messages.Add("Pinterest: skipped (at least one photo is required).");
-        }
-        else
-        {
-            try
+            if (!_pinterest.IsOAuthConfigured)
             {
-                pinterestPinId = await _pinterest.PostToyPinAsync(toyId, cancellationToken);
+                messages.Add("Pinterest: skipped (not enabled/configured on the server).");
             }
-            catch (Exception ex)
+            else if (!_pinterest.IsConfigured)
             {
-                _logger.LogError(ex, "Pinterest pin failed for toy {ToyId}", toyId);
-                messages.Add($"Pinterest: {ex.Message}");
+                messages.Add("Pinterest: skipped (not connected — open Social Settings → Connect Pinterest).");
+            }
+            else if (imageUrls.Count == 0)
+            {
+                messages.Add("Pinterest: skipped (at least one photo is required).");
+            }
+            else
+            {
+                try
+                {
+                    pinterestPinId = await _pinterest.PostToyPinAsync(toyId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Pinterest pin failed for toy {ToyId}", toyId);
+                    messages.Add($"Pinterest: {ex.Message}");
+                }
             }
         }
 
@@ -561,7 +595,8 @@ public class MetaSocialMediaService : ISocialMediaService
         if (facebookPostId is not null) parts.Add("Facebook posted.");
         if (instagramPostId is not null) parts.Add("Instagram posted.");
         if (whatsAppCatalogProductId is not null) parts.Add("Meta catalog updated.");
-        if (tikTokPublishId is not null) parts.Add("TikTok photo post started.");
+        if (tikTokPublishId is not null)
+            parts.Add("TikTok: posted (direct).");
         if (pinterestPinId is not null) parts.Add("Pinterest pin created.");
         return parts.Count == 0 ? "Nothing posted." : string.Join(" ", parts);
     }

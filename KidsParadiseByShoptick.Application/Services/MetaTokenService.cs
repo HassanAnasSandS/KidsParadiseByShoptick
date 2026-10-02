@@ -54,6 +54,14 @@ public class MetaTokenService : IMetaTokenService
         }
     }
 
+    public Task DisconnectAsync(CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        if (File.Exists(_tokenFilePath))
+            File.Delete(_tokenFilePath);
+        return Task.CompletedTask;
+    }
+
     public async Task<MetaPageCredentials> EnsureCredentialsAsync(CancellationToken cancellationToken = default)
     {
         await _refreshLock.WaitAsync(cancellationToken);

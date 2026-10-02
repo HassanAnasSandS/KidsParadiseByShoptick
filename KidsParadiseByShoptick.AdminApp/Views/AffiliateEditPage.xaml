@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:KidsParadiseByShoptick.AdminApp.ViewModels"
+             x:Class="KidsParadiseByShoptick.AdminApp.Views.AffiliateEditPage"
+             x:DataType="vm:AffiliateEditViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource PageBg}">
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="12">
+            <Button Text="WhatsApp Partner"
+                    Command="{Binding OpenWhatsAppCommand}"
+                    IsEnabled="{Binding CanOpenWhatsApp}"
+                    BackgroundColor="#25D366"
+                    TextColor="White"
+                    FontAttributes="Bold" />
+            <Entry Placeholder="Partner name *" Text="{Binding Name}" />
+            <Entry Placeholder="WhatsApp *" Text="{Binding Whatsapp}" Keyboard="Telephone" />
+            <Entry Placeholder="Account number *" Text="{Binding AccountNumber}" />
+            <Entry Placeholder="Wallet / Bank name *" Text="{Binding WalletBankName}" />
+            <HorizontalStackLayout Spacing="10">
+                <CheckBox IsChecked="{Binding IsActive}" VerticalOptions="Center" />
+                <Label Text="Active" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <Label Text="Referral code (auto — opaque)"
+                   FontSize="12" TextColor="#64748b"
+                   IsVisible="{Binding Code, Converter={StaticResource NullToBool}}" />
+            <Label Text="{Binding Code}"
+                   FontAttributes="Bold"
+                   FontSize="14"
+                   TextColor="#0f766e"
+                   IsVisible="{Binding Code, Converter={StaticResource NullToBool}}" />
+            <Label Text="{Binding ReferralLink}"
+                   IsVisible="{Binding ReferralLink, Converter={StaticResource NullToBool}}"
+                   FontSize="12"
+                   TextColor="#64748b"
+                   LineBreakMode="WordWrap" />
+            <Button Text="Copy Link" Command="{Binding CopyLinkCommand}"
+                    IsVisible="{Binding ReferralLink, Converter={StaticResource NullToBool}}"
+                    BackgroundColor="#0f766e" TextColor="White" />
+            <Button Text="Save" Command="{Binding SaveCommand}" BackgroundColor="#1a6fe8" TextColor="White" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

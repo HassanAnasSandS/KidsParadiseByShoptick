@@ -10,7 +10,9 @@ public static class DependencyInjection
     {
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IToyService, ToyService>();
+        services.AddScoped<IToyImageSearchService, ToyImageSearchService>();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IAffiliateService, AffiliateService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAdminAuthService, AdminAuthService>();
         services.AddScoped<ISiteImageService, SiteImageService>();
@@ -31,6 +33,7 @@ public static class DependencyInjection
         services.AddHttpClient<IMetaRequirementsService, MetaRequirementsService>();
         services.AddSingleton<ISocialMediaSettingsService, SocialMediaSettingsService>();
         services.AddSingleton<IDeliveryChargeService, DeliveryChargeService>();
+        services.AddSingleton<ISiteSocialLinksService, SiteSocialLinksService>();
         return services;
     }
 }

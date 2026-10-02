@@ -1,12 +1,14 @@
 import { MessageCircle, MapPin, Truck } from 'lucide-react';
-import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
+import { getWhatsAppUrl } from '@/lib/whatsapp';
 import { PAYMENT_POLICY_DETAIL } from '@/lib/utils';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_SEO } from '@/lib/seo';
 import { useDeliveryRates } from '@/hooks/useDeliveryRates';
+import { useSocialLinks } from '@/hooks/useSocialLinks';
 
 export function ContactPage() {
   const { shortLabel } = useDeliveryRates();
+  const { links } = useSocialLinks();
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <SeoHead
@@ -32,7 +34,7 @@ export function ContactPage() {
           </div>
           <div>
             <p className="font-semibold text-slate-800">WhatsApp</p>
-            <p className="text-sm text-slate-500">{WHATSAPP_DISPLAY}</p>
+            <p className="text-sm text-slate-500">{links.whatsAppDisplay}</p>
           </div>
         </a>
 

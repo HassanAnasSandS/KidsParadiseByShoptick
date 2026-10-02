@@ -7,8 +7,9 @@ public class TikTokStatusModel
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
     [JsonPropertyName("configured")] public bool Configured { get; set; }
     [JsonPropertyName("connected")] public bool Connected { get; set; }
-    [JsonPropertyName("postMode")] public string PostMode { get; set; } = "MEDIA_UPLOAD";
-    [JsonPropertyName("privacyLevel")] public string PrivacyLevel { get; set; } = "SELF_ONLY";
+    [JsonPropertyName("postMode")] public string PostMode { get; set; } = "DIRECT_POST";
+    [JsonPropertyName("privacyLevel")] public string PrivacyLevel { get; set; } = "PUBLIC_TO_EVERYONE";
+    [JsonPropertyName("needsReconnect")] public bool NeedsReconnect { get; set; }
 }
 
 public class TikTokAuthUrlModel
@@ -20,8 +21,8 @@ public class TikTokAccessTokenModel
 {
     [JsonPropertyName("accessToken")] public string AccessToken { get; set; } = string.Empty;
     [JsonPropertyName("openId")] public string? OpenId { get; set; }
-    [JsonPropertyName("postMode")] public string PostMode { get; set; } = "MEDIA_UPLOAD";
-    [JsonPropertyName("privacyLevel")] public string PrivacyLevel { get; set; } = "SELF_ONLY";
+    [JsonPropertyName("postMode")] public string PostMode { get; set; } = "DIRECT_POST";
+    [JsonPropertyName("privacyLevel")] public string PrivacyLevel { get; set; } = "PUBLIC_TO_EVERYONE";
     [JsonPropertyName("needsAuth")] public bool NeedsAuth { get; set; }
     [JsonPropertyName("authUrl")] public string? AuthUrl { get; set; }
     [JsonPropertyName("message")] public string? Message { get; set; }

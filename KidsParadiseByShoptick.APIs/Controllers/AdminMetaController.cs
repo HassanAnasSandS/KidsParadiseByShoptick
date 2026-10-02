@@ -27,8 +27,29 @@ public class AdminMetaController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpGet("status")]
-    public ActionResult<object> GetStatus()
-        => Ok(new { connected = _metaToken.IsConfigured });
+    public async Task<ActionResult<object>> GetStatus(CancellationToken cancellationToken)
+    {
+        MetaRequirementsStatusDto? checklist = null;
+        try
+        {
+            checklist = await _requirements.GetStatusAsync(cancellationToken);
+        }
+        catch
+        {
+            // Status still returns connected flag even if checklist fails.
+        }
+
+        return Ok(new
+        {
+            connected = _metaToken.IsConfigured,
+            facebookPageId = checklist?.FacebookPageId,
+            whatsAppBusinessAccountId = checklist?.WhatsAppBusinessAccountId,
+            whatsAppCatalogId = checklist?.WhatsAppCatalogId,
+            allRequirementsMet = checklist?.AllMet ?? false,
+            metCount = checklist?.Requirements.Count(r => r.IsMet) ?? 0,
+            totalCount = checklist?.Requirements.Count ?? 0,
+        });
+    }
 
     /// <summary>
     /// Page token + IDs for Admin app direct Facebook/Instagram video upload (video bytes never hit this server).
@@ -105,6 +126,14 @@ public class AdminMetaController : ControllerBase
             whatsAppCatalogId = credentials.WhatsAppCatalogId,
             requirements = checklist,
         });
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("disconnect")]
+    public async Task<ActionResult<object>> Disconnect(CancellationToken cancellationToken)
+    {
+        await _metaToken.DisconnectAsync(cancellationToken);
+        return Ok(new { connected = false, message = "Meta account disconnected." });
     }
 }
 

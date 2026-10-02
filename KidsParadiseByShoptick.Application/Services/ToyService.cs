@@ -9,11 +9,16 @@ public class ToyService : IToyService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorage;
+    private readonly IToyImageSearchService _imageSearch;
 
-    public ToyService(IUnitOfWork unitOfWork, IFileStorageService fileStorage)
+    public ToyService(
+        IUnitOfWork unitOfWork,
+        IFileStorageService fileStorage,
+        IToyImageSearchService imageSearch)
     {
         _unitOfWork = unitOfWork;
         _fileStorage = fileStorage;
+        _imageSearch = imageSearch;
     }
 
     public async Task<PagedResult<ToyListDto>> GetAvailableAsync(
@@ -66,10 +71,12 @@ public class ToyService : IToyService
             Price = request.Price,
             SalePrice = request.SalePrice,
             VideoLink = NormalizeVideoLink(request.VideoLink),
+            VideoFilePath = NormalizeVideoFilePath(request.VideoFilePath),
             Images = ToyMapper.BuildImages(0, request.ImagePaths)
         };
         await _unitOfWork.Toys.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await TryIndexAsync(entity.Id, cancellationToken);
         var category = await _unitOfWork.Categories.GetByIdAsync(entity.CategoryId, cancellationToken);
         var withImages = await _unitOfWork.Toys.GetWithImagesAsync(entity.Id, cancellationToken) ?? entity;
         return ToyMapper.MapList(withImages, category?.Name ?? "", _fileStorage, null);
@@ -98,12 +105,14 @@ public class ToyService : IToyService
             Price = source.Price,
             SalePrice = source.SalePrice,
             VideoLink = source.VideoLink,
+            VideoFilePath = await _fileStorage.CopyImageAsync(source.VideoFilePath, cancellationToken),
             IsSold = false,
             Images = ToyMapper.BuildImages(0, imagePaths),
         };
 
         await _unitOfWork.Toys.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await TryIndexAsync(entity.Id, cancellationToken);
 
         var category = await _unitOfWork.Categories.GetByIdAsync(entity.CategoryId, cancellationToken);
         var withImages = await _unitOfWork.Toys.GetWithImagesAsync(entity.Id, cancellationToken) ?? entity;
@@ -120,6 +129,15 @@ public class ToyService : IToyService
         entity.Price = request.Price;
         entity.SalePrice = request.SalePrice;
         entity.VideoLink = NormalizeVideoLink(request.VideoLink);
+
+        var newVideoPath = NormalizeVideoFilePath(request.VideoFilePath);
+        if (!string.IsNullOrWhiteSpace(newVideoPath)
+            && !string.Equals(entity.VideoFilePath, newVideoPath, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(entity.VideoFilePath))
+                _fileStorage.DeleteImage(entity.VideoFilePath);
+            entity.VideoFilePath = newVideoPath;
+        }
 
         var newPaths = request.ImagePaths?
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -154,6 +172,7 @@ public class ToyService : IToyService
 
         await _unitOfWork.Toys.UpdateAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await TryIndexAsync(entity.Id, cancellationToken);
 
         var category = await _unitOfWork.Categories.GetByIdAsync(entity.CategoryId, cancellationToken);
         return ToyMapper.MapList(entity, category?.Name ?? "", _fileStorage, null);
@@ -166,6 +185,8 @@ public class ToyService : IToyService
 
         foreach (var img in entity.Images)
             _fileStorage.DeleteImage(img.ImagePath);
+        if (!string.IsNullOrWhiteSpace(entity.VideoFilePath))
+            _fileStorage.DeleteImage(entity.VideoFilePath);
         await _unitOfWork.Toys.DeleteAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
@@ -183,7 +204,9 @@ public class ToyService : IToyService
         return new ToyDetailDto(
             toy.Id, toy.Name, toy.Price, toy.SalePrice, toy.IsSold,
             imagePaths, ToyMapper.ImageUrls(toy, _fileStorage), toy.Category?.Name ?? "", toy.CategoryId,
-            avg, reviews.Count, toy.VideoLink);
+            avg, reviews.Count, toy.VideoLink,
+            toy.VideoFilePath,
+            string.IsNullOrWhiteSpace(toy.VideoFilePath) ? null : _fileStorage.GetPublicUrl(toy.VideoFilePath));
     }
 
     private static string? NormalizeVideoLink(string? videoLink)
@@ -192,5 +215,25 @@ public class ToyService : IToyService
             return null;
 
         return videoLink.Trim();
+    }
+
+    private static string? NormalizeVideoFilePath(string? videoFilePath)
+    {
+        if (string.IsNullOrWhiteSpace(videoFilePath))
+            return null;
+
+        return videoFilePath.Trim().Replace('\\', '/');
+    }
+
+    private async Task TryIndexAsync(int toyId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _imageSearch.IndexToyAsync(toyId, cancellationToken);
+        }
+        catch
+        {
+            // Indexing must never block toy save.
+        }
     }
 }
